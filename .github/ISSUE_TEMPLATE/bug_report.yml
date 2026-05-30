@@ -1,0 +1,56 @@
+name: Bug report
+description: Report something broken or incorrect
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Jade Court. Please search [existing issues](https://github.com/OWNER/REPO/issues) first.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+      placeholder: When I join a room, the board stays empty...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the behavior.
+      placeholder: |
+        1. Run `pnpm dev`
+        2. Open /multiplayer
+        3. Create a room
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Web UI
+        - Server / multiplayer
+        - xiangqi-engine
+        - PWA / install
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version (optional)
+      placeholder: main @ abc1234
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Browser console, server output, or screenshots if helpful.
+      render: shell
