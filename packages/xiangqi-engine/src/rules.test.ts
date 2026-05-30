@@ -24,6 +24,36 @@ describe('xiangqi rules', () => {
     expect(X.inCheck(b, 'r')).toBe(true);
   });
 
+  it('replaying moves from snapshots restores captures', () => {
+    const b = Array.from({ length: 10 }, () => Array(9).fill(null)) as ReturnType<
+      typeof X.initialBoard
+    >;
+    b[9][4] = { t: 'G', s: 'r' };
+    b[6][4] = { t: 'C', s: 'r' };
+    b[3][4] = { t: 'S', s: 'b' };
+    b[2][4] = { t: 'R', s: 'b' };
+    b[0][3] = { t: 'G', s: 'b' };
+    const capture = X.legalMoves(b, 'r').find((m) => m.to[0] === 2 && m.to[1] === 4)!;
+    const frozen = { from: [...capture.from], to: [...capture.to] };
+    const boardBefore = X.cloneBoard(b);
+    const after = X.applyMove(b, frozen);
+    expect(after[2][4]?.t).toBe('C');
+    expect(after[6][4]).toBeNull();
+
+    const restored = X.cloneBoard(boardBefore);
+    expect(restored[2][4]?.t).toBe('R');
+    expect(restored[6][4]?.t).toBe('C');
+  });
+
+  it('cloning move coords preserves replay after mutation', () => {
+    const b = X.initialBoard();
+    const move = X.legalMoves(b, 'r')[0];
+    const frozen = { from: [...move.from], to: [...move.to] };
+    move.from[0] = 99;
+    const replayed = X.applyMove(X.initialBoard(), frozen);
+    expect(replayed[frozen.to[0]][frozen.to[1]]).not.toBeNull();
+  });
+
   it('puzzle p1 cannon capture is legal', () => {
     const b = Array.from({ length: 10 }, () => Array(9).fill(null)) as ReturnType<
       typeof X.initialBoard

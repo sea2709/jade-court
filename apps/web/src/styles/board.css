@@ -1,0 +1,95 @@
+/* ===== Board ===== */
+.board-wrap {
+  position: relative;
+  border-radius: var(--r-lg);
+  padding: 14px;
+  background: linear-gradient(150deg, #C58a4d, #9c6a35);
+  box-shadow: var(--shadow-lg), inset 0 2px 0 rgba(255,255,255,.25);
+}
+.board {
+  position: relative;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(91deg, rgba(150,99,47,.05) 0 2px, transparent 2px 26px),
+    linear-gradient(160deg, var(--board) 0%, var(--board-2) 100%);
+  box-shadow: inset 0 0 0 2px rgba(151,99,47,.35), inset 0 0 40px rgba(120,75,30,.18);
+  overflow: hidden;
+}
+.board svg { position: absolute; inset: 0; pointer-events: none; }
+.river-text {
+  position: absolute; pointer-events: none;
+  font-family: var(--font-piece); font-weight: 700;
+  color: rgba(120,75,30,.55); letter-spacing: .5em;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* points / pieces */
+.point { position: absolute; transform: translate(-50%, -50%); }
+.piece {
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-piece); font-weight: 700;
+  background:
+    radial-gradient(circle at 35% 30%, #FFFDF4, #F2E3C3 70%, #E4CF a0 100%);
+  background: radial-gradient(circle at 36% 30%, #FFFDF5, #F1E1C0 72%, #E3CC9C 100%);
+  box-shadow: 0 4px 7px rgba(90,60,20,.34), inset 0 1px 0 rgba(255,255,255,.8);
+  cursor: pointer; user-select: none;
+  transition: transform .12s, box-shadow .15s;
+  border: 2px solid;
+}
+.piece::after {
+  content: ""; position: absolute; border-radius: 50%;
+  inset: 13%;
+  border: 1.5px solid currentColor; opacity: .5;
+}
+.piece.red { color: var(--red-deep); border-color: var(--red); }
+.piece.black { color: var(--black-deep); border-color: #5a5249; }
+.piece.clickable:hover { transform: scale(1.07); box-shadow: 0 7px 12px rgba(90,60,20,.4); }
+.piece.selected {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 4px var(--jade), 0 8px 16px rgba(90,60,20,.4);
+}
+.piece.lastmove { box-shadow: 0 0 0 4px var(--gold), 0 6px 12px rgba(90,60,20,.4); }
+.piece.incheck { animation: checkPulse 1s ease-in-out infinite; }
+@keyframes checkPulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(213,69,44,.9), 0 6px 12px rgba(90,60,20,.4); }
+  50% { box-shadow: 0 0 0 9px rgba(213,69,44,.18), 0 6px 12px rgba(90,60,20,.4); }
+}
+
+/* move markers */
+.marker { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+.marker .dot {
+  border-radius: 50%; background: rgba(31,158,129,.55);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.5);
+  animation: popIn .2s both;
+}
+.marker.capture .ring {
+  border-radius: 50%; border: 4px solid var(--gold);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.4);
+  animation: popIn .2s both;
+}
+.hit { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; cursor: pointer; z-index: 5; }
+.hint-from, .hint-to {
+  position: absolute; transform: translate(-50%,-50%); border-radius: 50%;
+  border: 3px dashed var(--jade-deep); pointer-events: none;
+  animation: popIn .25s both;
+}
+.last-dot { position: absolute; transform: translate(-50%,-50%); border-radius:50%; background: rgba(231,172,63,.28); pointer-events:none; }
+
+/* ===== piece-style variants (set via body class) ===== */
+/* bold: solid colored discs, white characters */
+body.pcs-bold .piece.red {
+  background: radial-gradient(circle at 36% 30%, #E8674E, var(--red-deep));
+  color: #fff; border-color: rgba(255,255,255,.55);
+}
+body.pcs-bold .piece.black {
+  background: radial-gradient(circle at 36% 30%, #5a544c, var(--black-deep));
+  color: #fff; border-color: rgba(255,255,255,.4);
+}
+body.pcs-bold .piece::after { border-color: rgba(255,255,255,.6); opacity: .45; }
+
+/* flat: minimal ivory, thin ring, no inner circle */
+body.pcs-flat .piece {
+  background: #FCF6E8; box-shadow: 0 2px 4px rgba(90,60,20,.22); border-width: 1.5px;
+}
+body.pcs-flat .piece::after { display: none; }
