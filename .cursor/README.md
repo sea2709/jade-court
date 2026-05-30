@@ -16,7 +16,7 @@ Long-form planning documents. The main roadmap is [`plans/jade-court-implementat
 
 ## rules/
 
-`.mdc` rule files with YAML frontmatter. Rules can apply always or only when matching files are open. See [`rules/jade-court.mdc`](rules/jade-court.mdc) for project conventions and [`rules/github-issues.mdc`](rules/github-issues.mdc) for issue-driven development.
+`.mdc` rule files with YAML frontmatter. Rules can apply always or only when matching files are open. See [`rules/jade-court.mdc`](rules/jade-court.mdc) for project conventions, [`rules/github-issues.mdc`](rules/github-issues.mdc) for issue-driven development, and [`rules/code-comments.mdc`](rules/code-comments.mdc) for teaching comments in engine/server/web code.
 
 ## docs/
 

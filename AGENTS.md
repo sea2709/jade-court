@@ -51,5 +51,6 @@ Build the engine before first dev run if needed: `pnpm build`.
 - **UI theme** is fixed (Jade Court look); no user theme panel. See `apps/web/src/lib/theme.ts`.
 - **Do not edit** `.cursor/plans/` unless the user explicitly asks.
 - Prefer focused diffs over broad refactors.
+- **Teaching comments** when editing `packages/xiangqi-engine`, `apps/server`, or `apps/web`: follow [.cursor/rules/code-comments.mdc](.cursor/rules/code-comments.mdc) (file headers, JSDoc on exports, section labels on non-obvious logic — not line-by-line noise).
 
-Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`).
+Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `code-comments.mdc`).

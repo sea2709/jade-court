@@ -1,0 +1,33 @@
+---
+description: Teaching comments for engine, server, and web app code
+globs: packages/xiangqi-engine/**/*.{ts,tsx},apps/server/**/*.{ts,tsx},apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Code comments for learning
+
+Applies when editing files under `packages/xiangqi-engine`, `apps/server`, or `apps/web`.
+
+## When to comment
+
+- **Do** comment non-obvious logic: Xiangqi rules, AI/search, coach grading, WebSocket/room sync, move validation, React state and effects.
+- **Do** add a short file header (2–4 lines) on new modules: what the file owns.
+- **Do** add JSDoc on exported functions, hooks, and types (purpose, params, return).
+- **Do** use section labels in long files (e.g. `// --- AI move after human ply ---`).
+
+## When not to comment
+
+- **Don't** restate obvious code (`// return board`, `// set state`).
+- **Don't** comment every line; one block above a tricky section is enough.
+- **Don't** remove correct existing comments.
+
+## Style
+
+- Plain English; short sentences.
+- Use domain terms where helpful: Red/Black, legal moves, check, room code, guest id, negamax depth.
+- Update comments when behavior changes.
+
+## Project constraints
+
+- Follow `.cursor/rules/jade-court.mdc`: game rules only in `packages/xiangqi-engine`; server re-validates moves with that package.
+- Prefer minimal diffs; comments are for clarity, not drive-by refactors.
