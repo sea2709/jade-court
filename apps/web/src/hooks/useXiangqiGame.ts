@@ -9,7 +9,7 @@ import type {
   PieceType,
   Side,
 } from '@jade-court/xiangqi-engine';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 
 export interface MoveMeta {
   captured: PieceType | null;
@@ -26,21 +26,142 @@ export interface GameConfig {
   onAIThinking?: (thinking: boolean) => void;
 }
 
+interface HistoryEntry {
+  move: Move;
+  side: Side;
+  capturedType: PieceType | null;
+  boardBefore: Board;
+}
+
+interface GameState {
+  board: Board;
+  turn: Side;
+  selected: Coord | null;
+  targets: Move[];
+  lastMove: { from: Coord; to: Coord } | null;
+  history: HistoryEntry[];
+  status: GameStatus;
+  hintMove: { from: Coord; to: Coord } | null;
+}
+
+type GameAction =
+  | { type: 'POINT'; r: number; c: number; locked?: boolean; aiSide?: Side }
+  | { type: 'APPLY_MOVE'; move: Move }
+  | { type: 'UNDO'; count: number }
+  | { type: 'RESET'; startBoard?: Board }
+  | { type: 'SET_HINT'; move: { from: Coord; to: Coord } | null };
+
+function freezeMove(move: Move): Move {
+  return { from: [...move.from], to: [...move.to], capture: move.capture };
+}
+
+function initialGameState(startBoard?: Board): GameState {
+  return {
+    board: startBoard ? X.cloneBoard(startBoard) : X.initialBoard(),
+    turn: 'r',
+    selected: null,
+    targets: [],
+    lastMove: null,
+    history: [],
+    status: null,
+    hintMove: null,
+  };
+}
+
+function gameReducer(state: GameState, action: GameAction): GameState {
+  switch (action.type) {
+    case 'POINT': {
+      if (state.status) return state;
+      if (action.locked) return state;
+      const { r, c } = action;
+      if (r < 0) return { ...state, selected: null, targets: [] };
+
+      const humanCanMove = (side: Side) => !action.aiSide || side !== action.aiSide;
+      const p = state.board[r][c];
+
+      if (state.selected) {
+        const t = state.targets.find((m) => m.to[0] === r && m.to[1] === c);
+        if (t) return gameReducer(state, { type: 'APPLY_MOVE', move: t });
+      }
+      if (p && p.s === state.turn && humanCanMove(p.s)) {
+        return {
+          ...state,
+          selected: [r, c],
+          targets: X.movesFrom(state.board, r, c),
+          hintMove: null,
+        };
+      }
+      return { ...state, selected: null, targets: [] };
+    }
+    case 'APPLY_MOVE': {
+      const move = freezeMove(action.move);
+      const mover = state.board[move.from[0]][move.from[1]];
+      if (!mover) return state;
+
+      const boardBefore = X.cloneBoard(state.board);
+      const capturedPiece = state.board[move.to[0]][move.to[1]];
+      const board = X.applyMove(state.board, move);
+      const side = mover.s;
+      const turn = X.opp(side);
+      const status = X.gameStatus(board, turn);
+
+      return {
+        board,
+        turn,
+        selected: null,
+        targets: [],
+        lastMove: { from: move.from, to: move.to },
+        history: [
+          ...state.history,
+          {
+            move,
+            side,
+            capturedType: capturedPiece?.t ?? null,
+            boardBefore,
+          },
+        ],
+        status,
+        hintMove: null,
+      };
+    }
+    case 'UNDO': {
+      const keep = Math.max(0, state.history.length - action.count);
+      const board =
+        keep > 0 ? X.cloneBoard(state.history[keep].boardBefore) : X.initialBoard();
+      const lastEntry = keep > 0 ? state.history[keep - 1] : null;
+      const turn = lastEntry ? X.opp(lastEntry.side) : 'r';
+      return {
+        board,
+        turn,
+        selected: null,
+        targets: [],
+        lastMove: lastEntry
+          ? { from: [...lastEntry.move.from], to: [...lastEntry.move.to] }
+          : null,
+        history: state.history.slice(0, keep),
+        status: keep > 0 ? X.gameStatus(board, turn) : null,
+        hintMove: null,
+      };
+    }
+    case 'RESET':
+      return initialGameState(action.startBoard);
+    case 'SET_HINT':
+      return { ...state, hintMove: action.move };
+    default:
+      return state;
+  }
+}
+
 export function useXiangqiGame(config: GameConfig = {}) {
   const cfgRef = useRef(config);
   cfgRef.current = config;
 
-  const [board, setBoard] = useState<Board>(() => X.initialBoard());
-  const [turn, setTurn] = useState<Side>('r');
-  const [selected, setSelected] = useState<Coord | null>(null);
-  const [targets, setTargets] = useState<Move[]>([]);
-  const [lastMove, setLastMove] = useState<{ from: Coord; to: Coord } | null>(null);
-  const [history, setHistory] = useState<
-    { move: Move; side: Side; capturedType: PieceType | null }[]
-  >([]);
-  const [status, setStatus] = useState<GameStatus>(null);
+  const [state, dispatch] = useReducer(gameReducer, undefined, () => initialGameState());
   const [aiThinking, setAiThinking] = useState(false);
-  const [hintMove, setHintMove] = useState<{ from: Coord; to: Coord } | null>(null);
+  const boardRef = useRef(state.board);
+  boardRef.current = state.board;
+
+  const { board, turn, selected, targets, lastMove, history, status, hintMove } = state;
 
   const checkSide = X.inCheck(board, turn) ? turn : null;
   const checkPos = checkSide ? X.findGeneral(board, checkSide) : null;
@@ -51,63 +172,49 @@ export function useXiangqiGame(config: GameConfig = {}) {
   });
 
   const applyAndAdvance = useCallback((move: Move) => {
-    setBoard((prevBoard) => {
-      const mover = prevBoard[move.from[0]][move.from[1]];
-      if (!mover) return prevBoard;
-      const capturedPiece = prevBoard[move.to[0]][move.to[1]];
-      const boardBefore = prevBoard;
-      const nb = X.applyMove(prevBoard, move);
-      const side = mover.s;
-      const next = X.opp(side);
-      const st = X.gameStatus(nb, next);
+    const cfg = cfgRef.current;
+    const prevBoard = boardRef.current;
+    const mover = prevBoard[move.from[0]][move.from[1]];
+    if (!mover) return;
 
-      cfgRef.current.onMove?.(move, boardBefore, side, {
-        captured: capturedPiece ? capturedPiece.t : null,
-        gaveCheck: X.inCheck(nb, next),
-        status: st,
-      });
+    const capturedPiece = prevBoard[move.to[0]][move.to[1]];
+    const side = mover.s;
+    const nb = X.applyMove(prevBoard, move);
+    const next = X.opp(side);
+    const st = X.gameStatus(nb, next);
 
-      setHistory((h) => [...h, { move, side, capturedType: capturedPiece?.t ?? null }]);
-      setLastMove({ from: move.from, to: move.to });
-      setTurn(next);
-      setStatus(st);
-      setSelected(null);
-      setTargets([]);
-      setHintMove(null);
-      return nb;
+    cfg.onMove?.(move, prevBoard, side, {
+      captured: capturedPiece ? capturedPiece.t : null,
+      gaveCheck: X.inCheck(nb, next),
+      status: st,
     });
+
+    dispatch({ type: 'APPLY_MOVE', move });
   }, []);
 
   const onPoint = useCallback(
     (r: number, c: number) => {
-      if (status) return;
       const cfg = cfgRef.current;
+      if (status) return;
       if (cfg.locked) return;
-      if (r < 0) {
-        setSelected(null);
-        setTargets([]);
-        return;
-      }
-      const p = board[r][c];
-      const humanCanMove = (side: Side) => !cfg.aiSide || side !== cfg.aiSide;
 
-      if (selected) {
-        const t = targets.find((m) => m.to[0] === r && m.to[1] === c);
-        if (t) {
-          applyAndAdvance(t);
+      if (r >= 0) {
+        const p = board[r][c];
+        const humanCanMove = (side: Side) => !cfg.aiSide || side !== cfg.aiSide;
+        if (selected) {
+          const t = targets.find((m) => m.to[0] === r && m.to[1] === c);
+          if (t) {
+            applyAndAdvance(t);
+            return;
+          }
+        }
+        if (p && p.s === turn && humanCanMove(p.s)) {
+          dispatch({ type: 'POINT', r, c, locked: cfg.locked, aiSide: cfg.aiSide });
+          cfg.onSelect?.(p, X.movesFrom(board, r, c).length, [r, c]);
           return;
         }
       }
-      if (p && p.s === turn && humanCanMove(p.s)) {
-        setSelected([r, c]);
-        const mv = X.movesFrom(board, r, c);
-        setTargets(mv);
-        setHintMove(null);
-        cfg.onSelect?.(p, mv.length, [r, c]);
-        return;
-      }
-      setSelected(null);
-      setTargets([]);
+      dispatch({ type: 'POINT', r, c, locked: cfg.locked, aiSide: cfg.aiSide });
     },
     [board, turn, selected, targets, status, applyAndAdvance],
   );
@@ -134,44 +241,25 @@ export function useXiangqiGame(config: GameConfig = {}) {
   }, [turn, board, status, applyAndAdvance]);
 
   const reset = useCallback((startBoard?: Board) => {
-    setBoard(startBoard ? X.cloneBoard(startBoard) : X.initialBoard());
-    setTurn('r');
-    setSelected(null);
-    setTargets([]);
-    setLastMove(null);
-    setHistory([]);
-    setStatus(null);
-    setHintMove(null);
+    dispatch({ type: 'RESET', startBoard });
     setAiThinking(false);
   }, []);
 
   const undoLast = useCallback((count = 1) => {
-    setHistory((h) => {
-      const keep = Math.max(0, h.length - count);
-      let b = X.initialBoard();
-      for (let i = 0; i < keep; i++) b = X.applyMove(b, h[i].move);
-      setBoard(b);
-      const lastSide = keep > 0 ? h[keep - 1].side : null;
-      setTurn(lastSide ? X.opp(lastSide) : 'r');
-      setLastMove(keep > 0 ? { from: h[keep - 1].move.from, to: h[keep - 1].move.to } : null);
-      setStatus(null);
-      setSelected(null);
-      setTargets([]);
-      setHintMove(null);
-      return h.slice(0, keep);
-    });
+    dispatch({ type: 'UNDO', count });
+    setAiThinking(false);
   }, []);
 
   const showHint = useCallback(
     (depth = 2) => {
       const h = Coach.hint(board, turn, depth);
-      if (h.move) setHintMove({ from: h.move.from, to: h.move.to });
+      if (h.move) dispatch({ type: 'SET_HINT', move: { from: h.move.from, to: h.move.to } });
       return h;
     },
     [board, turn],
   );
 
-  const clearHint = useCallback(() => setHintMove(null), []);
+  const clearHint = useCallback(() => dispatch({ type: 'SET_HINT', move: null }), []);
 
   return {
     board,
@@ -192,7 +280,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
     undoLast,
     showHint,
     clearHint,
-    setBoard,
-    setTurn,
+    setBoard: (b: Board) => dispatch({ type: 'RESET', startBoard: b }),
+    setTurn: () => {},
   };
 }
