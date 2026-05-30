@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build outputs (regenerate with pnpm build)
+dist/
+**/dist/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & debug
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test & coverage
+coverage/
+.nyc_output/
+
+# OS & editors
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE (optional — commit shared editor config only)
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# Vite / PWA dev
+*.local
+
+# Cursor — keep plans/rules in git; ignore local scratch
+.cursor/tmp/
+
+# Extracted prototype decode (large, regenerable from chinese-chess.html)
+reference/extracted/
+
+# E2E / local tooling
+.playwright/
+test-results/
