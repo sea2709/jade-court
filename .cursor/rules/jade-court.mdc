@@ -1,0 +1,31 @@
+---
+description: Jade Court monorepo conventions and guardrails
+alwaysApply: true
+---
+
+# Jade Court
+
+## Monorepo layout
+
+- `apps/web` — Vite React PWA (UI, routing, room client)
+- `apps/server` — Hono REST + WebSocket (rooms, move validation)
+- `packages/xiangqi-engine` — shared rules, AI, coach (no React deps)
+
+## Game logic
+
+- Port and maintain engine logic **only** in `packages/xiangqi-engine`.
+- The server **re-validates every online move** with the same engine package; do not duplicate rules on the server.
+
+## UI and theme
+
+- Fixed Jade Court look: bamboo board tones, **flat** pieces (`pcs-flat`), jade accent (`#1F9E81`), warm cream background.
+- **No Tweaks panel** — theme is applied at startup (`apps/web/src/lib/theme.ts`), not user-configurable.
+
+## Code style
+
+- Match existing patterns in the file you are editing.
+- Prefer minimal, focused diffs over broad refactors.
+
+## Plans
+
+- Do **not** edit files under `.cursor/plans/` unless the user explicitly asks.

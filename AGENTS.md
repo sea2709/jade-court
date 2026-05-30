@@ -1,0 +1,55 @@
+# Agent guide — Jade Court
+
+Instructions for Cursor and other coding agents working in this repository.
+
+## Project overview
+
+Jade Court is a TypeScript monorepo for learning and playing Xiangqi (Chinese chess): React PWA, Hono server, shared rules engine. See [README.md](README.md) for features, stack, and local dev setup.
+
+## Issue-driven workflow
+
+Work from GitHub issues when the user or task references one.
+
+1. **List or view issues** (requires [GitHub CLI](https://cli.github.com/)):
+   ```bash
+   gh issue list
+   gh issue view <n>
+   ./scripts/issue-context.sh <n>   # formatted title, body, labels for context
+   ```
+2. **Branch** from `main`:
+   ```bash
+   git checkout -b issue-<n>-short-slug
+   ```
+   Use a short kebab-case slug from the issue title (e.g. `issue-42-fix-room-sync`).
+3. **Implement** with minimal, focused diffs. Match existing patterns in touched files.
+4. **Commit** with the issue reference:
+   ```bash
+   git commit -m "fix: describe change (#<n>)"
+   ```
+   Use conventional prefixes: `fix:`, `feat:`, `docs:`, `chore:`, etc.
+5. **Open a PR** that closes the issue (`Closes #<n>` in the body). Follow [.github/pull_request_template.md](.github/pull_request_template.md).
+
+Full human + agent steps: [.cursor/docs/github-workflow.md](.cursor/docs/github-workflow.md).
+
+## Monorepo commands
+
+Run from the repo root:
+
+| Command | Purpose |
+|---------|---------|
+| `pnpm install` | Install all workspace dependencies |
+| `pnpm build` | Build engine, web, and server |
+| `pnpm test` | Run Vitest in packages that define tests |
+| `pnpm dev` | Web (:5173) + server (:3001) in parallel |
+| `pnpm typecheck` | Typecheck all packages |
+
+Build the engine before first dev run if needed: `pnpm build`.
+
+## Conventions (summary)
+
+- **Game logic** lives only in `packages/xiangqi-engine`. The server re-validates online moves with that package — do not duplicate rules on the server.
+- **UI theme** is fixed (Jade Court look); no user theme panel. See `apps/web/src/lib/theme.ts`.
+- **Do not edit** `.cursor/plans/` unless the user explicitly asks.
+- Prefer focused diffs over broad refactors.
+
+Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`).

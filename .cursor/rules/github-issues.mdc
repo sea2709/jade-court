@@ -1,0 +1,24 @@
+---
+description: GitHub issue-driven development workflow for agents
+alwaysApply: true
+---
+
+# GitHub issues
+
+When the user references a GitHub issue number or asks to implement/fix an issue:
+
+1. **Fetch context** with the GitHub CLI:
+   ```bash
+   gh issue view <n>
+   ./scripts/issue-context.sh <n>
+   ```
+2. **Branch**: `issue-<n>-short-slug` from `main`.
+3. **Implement** with minimal diffs; follow `jade-court.mdc` conventions.
+4. **Commit**: reference the issue, e.g. `fix: room sync on reconnect (#42)`.
+5. **PR**: use the PR template; include `Closes #<n>` when the work completes the issue.
+
+If `gh` is unavailable, ask the user to paste the issue title and body, or install/auth `gh` per [.cursor/docs/github-workflow.md](../docs/github-workflow.md).
+
+Do **not** edit `.cursor/plans/` unless explicitly asked.
+
+See [AGENTS.md](../../AGENTS.md) and [.cursor/docs/github-workflow.md](../docs/github-workflow.md) for full workflow.
