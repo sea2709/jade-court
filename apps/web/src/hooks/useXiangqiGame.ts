@@ -82,6 +82,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.selected) {
         const t = state.targets.find((m) => m.to[0] === r && m.to[1] === c);
         if (t) return gameReducer(state, { type: 'APPLY_MOVE', move: t });
+        // Second click on the selected piece toggles off legal-move hints.
+        if (state.selected[0] === r && state.selected[1] === c) {
+          return { ...state, selected: null, targets: [], hintMove: null };
+        }
       }
       if (p && p.s === state.turn && humanCanMove(p.s)) {
         return {
