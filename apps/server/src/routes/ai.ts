@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { AI, LLM, X } from '@jade-court/xiangqi-engine';
 import type { AiMoveRequest, Board, Difficulty, Move, Side } from '@jade-court/xiangqi-engine';
 import { generateMoveJson } from '../gemini/client.js';
-import { isGemmaConfigured } from '../gemini/config.js';
+import { gemmaHistoryLimit, isGemmaConfigured } from '../gemini/config.js';
 import { checkRateLimit } from '../gemini/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
 
@@ -87,6 +87,7 @@ ai.post('/move', async (c) => {
       legalMoves: legal,
       lastMove: req.lastMove,
       history: req.history,
+      historyLimit: gemmaHistoryLimit(),
     });
     const raw = await generateMoveJson(system, user);
     const resolved = LLM.resolveModelMove(req.board, req.side, legal, raw);

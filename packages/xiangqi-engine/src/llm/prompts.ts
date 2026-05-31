@@ -13,6 +13,8 @@ export interface MoveSelectionContext {
   legalMoves: Move[];
   lastMove?: { from: [number, number]; to: [number, number] };
   history?: MoveHistoryEntry[];
+  /** Max plies in “Recent history”; default 150. */
+  historyLimit?: number;
 }
 
 const DIFFICULTY_HINT: Record<Difficulty, string> = {
@@ -52,7 +54,7 @@ export function moveSelectionUser(ctx: MoveSelectionContext): string {
     );
   }
   if (ctx.history?.length) {
-    lines.push('', 'Recent history:', formatHistory(ctx.history));
+    lines.push('', 'Recent history:', formatHistory(ctx.history, ctx.historyLimit ?? 150));
   }
   return lines.join('\n');
 }

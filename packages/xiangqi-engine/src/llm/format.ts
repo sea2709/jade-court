@@ -60,7 +60,7 @@ export function formatMoveList(board: Board, side: Side, moves: Move[]): string 
   return moves.map((m, i) => formatMoveLine(board, side, m, i + 1)).join('\n');
 }
 
-export function formatHistory(entries: MoveHistoryEntry[], limit = 12): string {
+export function formatHistory(entries: MoveHistoryEntry[], limit = 150): string {
   if (!entries.length) return '(no moves yet)';
   const slice = entries.slice(-limit);
   return slice
