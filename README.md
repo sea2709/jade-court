@@ -8,7 +8,7 @@ For the full roadmap and architecture notes, see [.cursor/plans/jade-court-imple
 
 | Mode | Route | What it does |
 |------|-------|-------------|
-| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — move grading, hints, and piece tips (template-based, not an LLM). |
+| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — move grading, hints, and piece tips (coach copy is template-based; opponent can use **Gemma 4** when configured). |
 | **Play vs Computer** | `/play` | Same engine and board, lighter UI; beginner / intermediate / advanced difficulty. |
 | **Lessons & Puzzles** | `/lessons` | Eight static piece lessons and three tactical puzzles. |
 | **Friends** | `/multiplayer` | Create or join a `JADE-XXXX` room over WebSocket, or **pass-and-play** on one device (no server). |
@@ -19,7 +19,7 @@ For the full roadmap and architecture notes, see [.cursor/plans/jade-court-imple
 |-------|------------|
 | **Web** | React 19, Vite, React Router, `vite-plugin-pwa` (installable PWA) |
 | **Server** | Hono REST + WebSocket (`ws`), guest sessions via `x-guest-id` |
-| **Game logic** | `packages/xiangqi-engine` — rules, negamax AI, coach heuristics; Vitest golden tests |
+| **Game logic** | `packages/xiangqi-engine` — rules, negamax AI, coach heuristics, LLM prompt helpers; Vitest golden tests |
 | **Rooms** | In-memory store (lost on restart); optional **MongoDB** for finished online games when `MONGODB_URI` is set |
 
 Local dev proxies `/api` and `/ws` from the web app to the server — no production env vars required.
@@ -76,6 +76,8 @@ pnpm dev:server
 - Web: http://localhost:5173  
 - Server health: http://localhost:3001/health  
 
+Optional: set `GEMINI_API_KEY` in `.env` (see [Environment variables](#environment-variables)) so Learn/Play use Gemma 4 for opponent moves instead of local negamax only.
+
 ### Tests & typecheck
 
 ```bash
@@ -108,6 +110,9 @@ Copy `.env.example` to `.env` in the repo root (or export vars before starting t
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | Hono server port |
+| `GEMINI_API_KEY` | _(unset)_ | Enables Gemma 4 opponent moves on Learn/Play (`POST /api/ai/move`); without it the app falls back to local negamax |
+| `GEMMA_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
+| `GEMMA_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
 | `VITE_WS_URL` | _(proxy)_ | Override WebSocket URL for production web builds |
@@ -124,5 +129,5 @@ Core work from [.cursor/plans/jade-court-implementation.md](.cursor/plans/jade-c
 - Rooms are **in-memory** — lost on server restart; no Redis yet.
 - **Guest sessions only** — Clerk auth is stubbed for later.
 - **No Playwright e2e** in this release.
-- AI depth is shallow (prototype negamax); advanced tier is beatable.
+- AI depth is shallow (negamax fallback); Gemma opponent needs `GEMINI_API_KEY` on the server.
 - MongoDB only persists **finished** online games when `MONGODB_URI` is set.

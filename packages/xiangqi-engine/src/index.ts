@@ -1,4 +1,6 @@
 export * from './types.js';
+export type { AiMoveRequest, AiMoveResponse, MoveHistoryEntry } from './llm/types.js';
 export * as X from './rules.js';
 export * as AI from './ai.js';
 export * as Coach from './coach.js';
+export * as LLM from './llm/index.js';
