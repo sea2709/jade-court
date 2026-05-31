@@ -45,6 +45,17 @@ Run from the repo root:
 
 Build the engine before first dev run if needed: `pnpm build`.
 
+## Environment (single `.env` at repo root)
+
+| File | Used by | Variables |
+|------|---------|-----------|
+| `.env` (repo root) | Vite / `apps/web` and Hono server | Copy from [`.env.example`](.env.example) |
+
+- **Web** reads `VITE_*` only (exposed in the browser if set).
+- **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `PORT`, `MONGODB_URI`, etc. **without** a `VITE_` prefix.
+- **Gemma opponent:** set `GEMINI_API_KEY` in `.env`; server log should show `Gemma opponent: enabled`.
+- Restart `pnpm dev` after editing `.env`.
+
 ## Conventions (summary)
 
 - **Game logic** lives only in `packages/xiangqi-engine`. The server re-validates online moves with that package — do not duplicate rules on the server.

@@ -22,3 +22,5 @@ If `gh` is unavailable, ask the user to paste the issue title and body, or insta
 Do **not** edit `.cursor/plans/` unless explicitly asked.
 
 See [AGENTS.md](../../AGENTS.md) and [.cursor/docs/github-workflow.md](../docs/github-workflow.md) for full workflow.
+
+**Local env:** single repo-root `.env` (`VITE_*` for web; server keys without `VITE_`). Restart `pnpm dev` after changes.

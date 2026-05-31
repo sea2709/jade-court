@@ -1,8 +1,16 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/** Repo-root `.env` — web uses `VITE_*` only; server loads the same file via `loadEnv.ts`. */
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
 export default defineConfig({
+  envDir: repoRoot,
+  /** Only `VITE_*` from `.env` are exposed to `import.meta.env` (server secrets stay unprefixed). */
+  envPrefix: 'VITE_',
   plugins: [
     react(),
     VitePWA({

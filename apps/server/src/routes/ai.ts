@@ -89,19 +89,11 @@ ai.post('/move', async (c) => {
       history: req.history,
     });
     const raw = await generateMoveJson(system, user);
-    const parsed = LLM.parseMoveJson(raw);
-    const move = parsed ? LLM.findLegalMove(req.board, req.side, parsed) : null;
+    const resolved = LLM.resolveModelMove(req.board, req.side, legal, raw);
+    const move = resolved?.move ?? null;
 
     if (move) {
-      let comment: string | undefined;
-      try {
-        const payload = JSON.parse(raw) as { comment?: string };
-        if (typeof payload.comment === 'string' && payload.comment.trim())
-          comment = payload.comment.trim();
-      } catch {
-        /* optional */
-      }
-      return c.json({ move, source: 'gemma', comment });
+      return c.json({ move, source: 'gemma', comment: resolved?.comment });
     }
 
     console.warn('[gemma] invalid move from model, using negamax fallback');

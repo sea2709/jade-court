@@ -76,7 +76,7 @@ pnpm dev:server
 - Web: http://localhost:5173  
 - Server health: http://localhost:3001/health  
 
-Optional: set `GEMINI_API_KEY` in `.env` (see [Environment variables](#environment-variables)) so Learn/Play use Gemma 4 for opponent moves instead of local negamax only.
+Copy [`.env.example`](.env.example) → `.env` at the repo root; set `GEMINI_API_KEY` there for Gemma opponent moves (see [Environment variables](#environment-variables)).
 
 ### Tests & typecheck
 
@@ -105,7 +105,9 @@ pnpm build        # engine + web + server
 
 ## Environment variables
 
-Copy `.env.example` to `.env` in the repo root (or export vars before starting the server).
+One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.example)). Vite and the Hono server both load it; only `VITE_*` keys are exposed to the browser.
+
+**Server** (no `VITE_` prefix — never exposed to the client)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -115,6 +117,11 @@ Copy `.env.example` to `.env` in the repo root (or export vars before starting t
 | `GEMMA_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
+
+**Web** (`VITE_*` only)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `VITE_WS_URL` | _(proxy)_ | Override WebSocket URL for production web builds |
 | `VITE_API_URL` | _(same origin)_ | Override REST API base URL for production |
 
@@ -129,5 +136,5 @@ Core work from [.cursor/plans/jade-court-implementation.md](.cursor/plans/jade-c
 - Rooms are **in-memory** — lost on server restart; no Redis yet.
 - **Guest sessions only** — Clerk auth is stubbed for later.
 - **No Playwright e2e** in this release.
-- AI depth is shallow (negamax fallback); Gemma opponent needs `GEMINI_API_KEY` on the server.
+- AI depth is shallow (negamax fallback); Gemma opponent needs `GEMINI_API_KEY` in repo-root `.env`.
 - MongoDB only persists **finished** online games when `MONGODB_URI` is set.

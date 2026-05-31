@@ -27,8 +27,8 @@ export function moveSelectionSystem(difficulty: Difficulty): string {
   return [
     'You are Master Lin, a patient Xiangqi (Chinese chess) teacher playing as the computer opponent.',
     'You must choose exactly ONE move from the numbered legal moves list.',
-    'Respond with JSON only, no markdown: {"from":[row,col],"to":[row,col],"comment":"short friendly sentence about your move"}',
-    'Coordinates use 0-based row and column (row 0 = Black back rank, row 9 = Red back rank; col 0–8 left to right).',
+    'Respond with JSON only, no markdown: {"moveIndex": <number>,"comment":"short friendly sentence about your move"}',
+    'Set moveIndex to the number of your chosen move from the legal moves list (e.g. 1 for the first listed move).',
     DIFFICULTY_HINT[difficulty],
   ].join('\n');
 }

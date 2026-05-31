@@ -20,25 +20,59 @@ function isCoordPair(v: unknown): v is [number, number] {
   );
 }
 
-/** Extract move coordinates from model text (raw JSON or fenced block). */
-export function parseMoveJson(text: string): ParsedMoveCoords | null {
+function jsonCandidates(text: string): string[] {
   const trimmed = text.trim();
   const candidates: string[] = [trimmed];
   const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) candidates.unshift(fence[1].trim());
   const brace = trimmed.match(/\{[\s\S]*\}/);
   if (brace) candidates.push(brace[0]);
+  return candidates;
+}
 
-  for (const raw of candidates) {
+function parsePayload(text: string): GemmaMovePayload | null {
+  for (const raw of jsonCandidates(text)) {
     try {
-      const obj = JSON.parse(raw) as GemmaMovePayload;
-      if (!isCoordPair(obj.from) || !isCoordPair(obj.to)) continue;
-      if (!X.inBounds(obj.from[0], obj.from[1]) || !X.inBounds(obj.to[0], obj.to[1])) continue;
-      return { from: obj.from, to: obj.to };
+      return JSON.parse(raw) as GemmaMovePayload;
     } catch {
       /* try next candidate */
     }
   }
+  return null;
+}
+
+/** Extract move coordinates from model text (raw JSON or fenced block). */
+export function parseMoveJson(text: string): ParsedMoveCoords | null {
+  const obj = parsePayload(text);
+  if (!obj || !isCoordPair(obj.from) || !isCoordPair(obj.to)) return null;
+  if (!X.inBounds(obj.from[0], obj.from[1]) || !X.inBounds(obj.to[0], obj.to[1])) return null;
+  return { from: obj.from, to: obj.to };
+}
+
+/** Resolve a model response to a legal move (moveIndex preferred, then from/to). */
+export function resolveModelMove(
+  board: Board,
+  side: Side,
+  legal: Move[],
+  text: string,
+): { move: Move; comment?: string } | null {
+  const obj = parsePayload(text);
+  if (!obj) return null;
+
+  let comment: string | undefined;
+  if (typeof obj.comment === 'string' && obj.comment.trim()) comment = obj.comment.trim();
+
+  if (typeof obj.moveIndex === 'number' && Number.isFinite(obj.moveIndex)) {
+    const i = Math.floor(obj.moveIndex) - 1;
+    if (i >= 0 && i < legal.length) return { move: legal[i]!, comment };
+  }
+
+  const parsed = parseMoveJson(text);
+  if (parsed) {
+    const move = findLegalMove(board, side, parsed);
+    if (move) return { move, comment };
+  }
+
   return null;
 }
 

@@ -29,7 +29,9 @@ export interface ParsedMoveCoords {
 }
 
 export interface GemmaMovePayload {
-  from: [number, number];
-  to: [number, number];
+  /** 1-based index into the numbered legal-moves list in the prompt. */
+  moveIndex?: number;
+  from?: [number, number];
+  to?: [number, number];
   comment?: string;
 }

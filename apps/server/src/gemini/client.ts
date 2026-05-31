@@ -16,21 +16,10 @@ function getClient(): GoogleGenAI {
 const MOVE_SCHEMA = {
   type: 'object',
   properties: {
-    from: {
-      type: 'array',
-      items: { type: 'integer' },
-      minItems: 2,
-      maxItems: 2,
-    },
-    to: {
-      type: 'array',
-      items: { type: 'integer' },
-      minItems: 2,
-      maxItems: 2,
-    },
+    moveIndex: { type: 'integer' },
     comment: { type: 'string' },
   },
-  required: ['from', 'to'],
+  required: ['moveIndex'],
 } as const;
 
 export async function generateMoveJson(

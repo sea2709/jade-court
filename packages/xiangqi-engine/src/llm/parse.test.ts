@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as X from '../rules.js';
-import { findLegalMove, parseMoveJson } from './parse.js';
+import { findLegalMove, parseMoveJson, resolveModelMove } from './parse.js';
 
 describe('llm parse', () => {
   it('parses raw JSON move', () => {
@@ -28,5 +28,14 @@ describe('llm parse', () => {
   it('findLegalMove returns null for illegal suggestion', () => {
     const b = X.initialBoard();
     expect(findLegalMove(b, 'r', { from: [9, 0], to: [0, 0] })).toBeNull();
+  });
+
+  it('resolveModelMove uses 1-based moveIndex', () => {
+    const b = X.initialBoard();
+    const legal = X.legalMoves(b, 'b');
+    const third = legal[2]!;
+    const resolved = resolveModelMove(b, 'b', legal, '{"moveIndex":3,"comment":"develop"}');
+    expect(resolved?.move).toEqual(third);
+    expect(resolved?.comment).toBe('develop');
   });
 });

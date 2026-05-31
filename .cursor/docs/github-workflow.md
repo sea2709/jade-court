@@ -84,10 +84,13 @@ Naming: `issue-<number>-<short-slug>`.
 ### 4. Implement and verify
 
 ```bash
+cp .env.example .env   # add GEMINI_API_KEY for Gemma opponent
 pnpm build
 pnpm test
 pnpm dev    # manual check when UI or multiplayer changes
 ```
+
+Restart `pnpm dev` after env changes. Server log: `Gemma opponent: enabled` when `GEMINI_API_KEY` is in repo-root `.env`.
 
 Follow [AGENTS.md](../../AGENTS.md) and `.cursor/rules/` for monorepo conventions.
 
