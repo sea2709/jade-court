@@ -27,6 +27,10 @@ export interface GameConfig {
   difficulty?: Difficulty;
   /** Gemma via server when available; falls back to local negamax on 503/errors. */
   aiProvider?: AiProvider;
+  /** Minimum delay before the AI plays (ms). Default ~900–1400 random. */
+  aiThinkDelayMs?: number;
+  /** Pause after an AI ply so the move is easier to notice (ms). Default 1200; 0 = off. */
+  revealOpponentMoveMs?: number;
   locked?: boolean;
   onMove?: (move: Move, boardBefore: Board, side: Side, meta: MoveMeta) => void;
   onSelect?: (piece: Piece, count: number, pos: Coord) => void;
@@ -163,14 +167,55 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
+function lastAiMoveText(history: HistoryEntry[], aiSide: Side): string | null {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const h = history[i];
+    if (h.side === aiSide) {
+      return Coach.describeMove(h.boardBefore, h.move);
+    }
+  }
+  return null;
+}
+
 export function useXiangqiGame(config: GameConfig = {}) {
   const cfgRef = useRef(config);
   cfgRef.current = config;
 
   const [state, dispatch] = useReducer(gameReducer, undefined, () => initialGameState());
   const [aiThinking, setAiThinking] = useState(false);
+  const [revealingOpponentMove, setRevealingOpponentMove] = useState(false);
+  const [lastOpponentMoveText, setLastOpponentMoveText] = useState<string | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardRef = useRef(state.board);
   boardRef.current = state.board;
+  const revealingRef = useRef(revealingOpponentMove);
+  revealingRef.current = revealingOpponentMove;
+
+  const clearReveal = useCallback(() => {
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+    setRevealingOpponentMove(false);
+  }, []);
+
+  const startOpponentReveal = useCallback(
+    (boardBefore: Board, move: Move) => {
+      const cfg = cfgRef.current;
+      if (!cfg.aiSide) return;
+      const revealMs = cfg.revealOpponentMoveMs ?? 1200;
+      const text = Coach.describeMove(boardBefore, move);
+      setLastOpponentMoveText(text);
+      clearReveal();
+      if (revealMs <= 0) return;
+      setRevealingOpponentMove(true);
+      revealTimerRef.current = setTimeout(() => {
+        revealTimerRef.current = null;
+        setRevealingOpponentMove(false);
+      }, revealMs);
+    },
+    [clearReveal],
+  );
 
   const { board, turn, selected, targets, lastMove, history, status, hintMove } = state;
 
@@ -202,13 +247,18 @@ export function useXiangqiGame(config: GameConfig = {}) {
     });
 
     dispatch({ type: 'APPLY_MOVE', move });
-  }, []);
+
+    if (cfg.aiSide && side === cfg.aiSide) {
+      startOpponentReveal(prevBoard, move);
+    }
+  }, [startOpponentReveal]);
 
   const onPoint = useCallback(
     (r: number, c: number) => {
       const cfg = cfgRef.current;
       if (status) return;
       if (cfg.locked) return;
+      if (revealingRef.current) return;
 
       if (r >= 0) {
         const p = board[r][c];
@@ -255,7 +305,9 @@ export function useXiangqiGame(config: GameConfig = {}) {
     setAiThinking(true);
     cfg.onAIThinking?.(true);
 
-    const minDelay = new Promise<void>((r) => setTimeout(r, 380 + Math.random() * 520));
+    const thinkMs =
+      cfg.aiThinkDelayMs ?? Math.round(900 + Math.random() * 500);
+    const minDelay = new Promise<void>((r) => setTimeout(r, thinkMs));
 
     (async () => {
       if (provider === 'local') {
@@ -308,15 +360,30 @@ export function useXiangqiGame(config: GameConfig = {}) {
     };
   }, [turn, board, status, lastMove, history, applyAndAdvance]);
 
-  const reset = useCallback((startBoard?: Board) => {
-    dispatch({ type: 'RESET', startBoard });
-    setAiThinking(false);
-  }, []);
+  const reset = useCallback(
+    (startBoard?: Board) => {
+      dispatch({ type: 'RESET', startBoard });
+      setAiThinking(false);
+      clearReveal();
+      setLastOpponentMoveText(null);
+    },
+    [clearReveal],
+  );
 
-  const undoLast = useCallback((count = 1) => {
-    dispatch({ type: 'UNDO', count });
-    setAiThinking(false);
-  }, []);
+  const undoLast = useCallback(
+    (count = 1) => {
+      dispatch({ type: 'UNDO', count });
+      setAiThinking(false);
+      clearReveal();
+      const cfg = cfgRef.current;
+      const keep = Math.max(0, state.history.length - count);
+      const trimmed = state.history.slice(0, keep);
+      setLastOpponentMoveText(
+        cfg.aiSide ? lastAiMoveText(trimmed, cfg.aiSide) : null,
+      );
+    },
+    [clearReveal, state.history],
+  );
 
   const showHint = useCallback(
     (depth = 2) => {
@@ -329,6 +396,14 @@ export function useXiangqiGame(config: GameConfig = {}) {
 
   const clearHint = useCallback(() => dispatch({ type: 'SET_HINT', move: null }), []);
 
+  const aiSide = config.aiSide;
+  const opponentLastMove =
+    !!aiSide &&
+    history.length > 0 &&
+    history[history.length - 1].side === aiSide;
+
+  useEffect(() => () => clearReveal(), [clearReveal]);
+
   return {
     board,
     turn,
@@ -338,6 +413,9 @@ export function useXiangqiGame(config: GameConfig = {}) {
     history,
     status,
     aiThinking,
+    revealingOpponentMove,
+    lastOpponentMoveText,
+    opponentLastMove,
     hint: hintMove,
     checkPos,
     checkSide,

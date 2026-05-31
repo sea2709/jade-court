@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { X, type Difficulty, type Side } from '@jade-court/xiangqi-engine';
 import { CapturedTray } from '../components/CapturedTray';
 import { GameOverCard } from '../components/GameOverCard';
@@ -123,21 +123,32 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
   );
 }
 
+type GameCfg = { level: Difficulty; side: Side };
+
 function Game({
-  level,
-  humanSide,
-  onMenu,
+  cfg,
+  setCfg,
 }: {
-  level: Difficulty;
-  humanSide: Side;
-  onMenu: () => void;
+  cfg: GameCfg;
+  setCfg: Dispatch<SetStateAction<GameCfg | null>>;
 }) {
+  const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
   const game = useXiangqiGame({ aiSide, difficulty: level });
   const flip = humanSide === 'b';
-  const yourTurn = game.turn === humanSide && !game.status;
+  const yourTurn = game.turn === humanSide && !game.status && !game.revealingOpponentMove;
   const won = game.status && game.turn === aiSide;
   const levelMeta = LEVELS.find((l) => l.id === level)!;
+
+  const statusLine = game.status
+    ? 'Game over'
+    : game.aiThinking
+      ? 'Computer is thinking…'
+      : game.revealingOpponentMove && game.lastOpponentMoveText
+        ? `Computer played: ${game.lastOpponentMoveText}`
+        : yourTurn
+          ? 'Your move'
+          : 'Waiting…';
 
   const PlayerStrip = ({
     side,
@@ -201,20 +212,24 @@ function Game({
       }}
     >
       <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
           <span className="pill pill-red">
             {levelMeta.name} · {levelMeta.zh}
           </span>
-          <span style={{ fontWeight: 800, color: 'var(--ink-soft)', fontSize: 14 }}>
-            {game.status
-              ? 'Game over'
-              : game.aiThinking
-                ? 'Computer is thinking…'
-                : yourTurn
-                  ? 'Your move'
-                  : 'Waiting…'}
+          <span
+            style={{
+              fontWeight: 800,
+              color: game.revealingOpponentMove ? 'var(--gold-deep)' : 'var(--ink-soft)',
+              fontSize: 14,
+              maxWidth: 520,
+              lineHeight: 1.35,
+            }}
+          >
+            {statusLine}
           </span>
-          {game.checkSide && !game.status && <span className="pill pill-gold">Check!</span>}
+          {game.checkSide && !game.status && !game.revealingOpponentMove && (
+            <span className="pill pill-gold">Check!</span>
+          )}
         </div>
         <XQBoard
           board={game.board}
@@ -223,6 +238,8 @@ function Game({
           targets={game.targets}
           lastMove={game.lastMove}
           checkPos={game.checkPos}
+          opponentLastMove={game.opponentLastMove}
+          opponentMoveRevealing={game.revealingOpponentMove}
           flip={flip}
           onPoint={game.onPoint}
           interactive={yourTurn}
@@ -232,7 +249,7 @@ function Game({
             status={game.status}
             won={!!won}
             onRematch={() => game.reset()}
-            onMenu={onMenu}
+            onMenu={() => setCfg(null)}
           />
         )}
       </div>
@@ -240,6 +257,40 @@ function Game({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <PlayerStrip side={aiSide} label={`Computer · ${levelMeta.name}`} sub="Captured pieces" />
         <PlayerStrip side={humanSide} label="You" sub="Captured pieces" />
+        {game.lastOpponentMoveText && (
+          <div
+            className="card"
+            style={{
+              padding: '12px 14px',
+              fontSize: 13.5,
+              fontWeight: 600,
+              lineHeight: 1.45,
+              color: 'var(--ink-soft)',
+            }}
+          >
+            <div style={{ fontWeight: 800, fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+              Computer&apos;s last move
+            </div>
+            {game.lastOpponentMoveText}
+          </div>
+        )}
+        <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--muted)', marginBottom: 2 }}>
+            Difficulty
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {LEVELS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                className={`btn btn-sm ${level === l.id ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setCfg((c) => c && { ...c, level: l.id })}
+              >
+                {l.name} {l.zh}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
           <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--ink-soft)', marginBottom: 2 }}>
             Moves played: {game.history.length}
@@ -255,8 +306,8 @@ function Game({
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => game.reset()}>
             ↻ Restart
           </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onMenu}>
-            ← Change level
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCfg(null)}>
+            New game
           </button>
         </div>
       </div>
@@ -265,7 +316,7 @@ function Game({
 }
 
 export function PlayScreen() {
-  const [cfg, setCfg] = useState<{ level: Difficulty; side: Side } | null>(null);
+  const [cfg, setCfg] = useState<GameCfg | null>(null);
   if (!cfg) return <Setup onStart={(level, side) => setCfg({ level, side })} />;
-  return <Game level={cfg.level} humanSide={cfg.side} onMenu={() => setCfg(null)} />;
+  return <Game cfg={cfg} setCfg={setCfg} />;
 }
