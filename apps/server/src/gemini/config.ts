@@ -11,6 +11,12 @@ export function gemmaTimeoutMs(): number {
   return Number.isFinite(n) && n > 0 ? n : 25000;
 }
 
+/** Max plies in Gemma “Recent history” prompt section (see GEMMA_HISTORY_LIMIT). */
+export function gemmaHistoryLimit(): number {
+  const n = Number(process.env.GEMMA_HISTORY_LIMIT ?? 150);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 150;
+}
+
 export function isGemmaConfigured(): boolean {
   return Boolean(geminiApiKey());
 }

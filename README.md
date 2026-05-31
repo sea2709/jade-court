@@ -115,6 +115,7 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | `GEMINI_API_KEY` | _(unset)_ | Enables Gemma 4 opponent moves on Learn/Play (`POST /api/ai/move`); without it the app falls back to local negamax |
 | `GEMMA_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
 | `GEMMA_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
+| `GEMMA_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
 
