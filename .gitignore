@@ -4,6 +4,7 @@ node_modules/
 # Build outputs (regenerate with pnpm build)
 dist/
 **/dist/
+*.tsbuildinfo
 
 # Environment & secrets
 .env
