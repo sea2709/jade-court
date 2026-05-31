@@ -1,4 +1,5 @@
 import { AI, Coach, X } from '@jade-court/xiangqi-engine';
+import { fetchAiMove, GemmaApiError, isGemmaUnconfigured } from '../lib/gemmaApi';
 import type {
   Board,
   Coord,
@@ -15,11 +16,17 @@ export interface MoveMeta {
   captured: PieceType | null;
   gaveCheck: boolean;
   status: GameStatus;
+  /** Set when the AI move came from Gemma with commentary. */
+  aiComment?: string;
 }
+
+export type AiProvider = 'gemma' | 'local';
 
 export interface GameConfig {
   aiSide?: Side;
   difficulty?: Difficulty;
+  /** Gemma via server when available; falls back to local negamax on 503/errors. */
+  aiProvider?: AiProvider;
   locked?: boolean;
   onMove?: (move: Move, boardBefore: Board, side: Side, meta: MoveMeta) => void;
   onSelect?: (piece: Piece, count: number, pos: Coord) => void;
@@ -175,7 +182,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
     if (h.capturedType) captured[h.side].push(h.capturedType);
   });
 
-  const applyAndAdvance = useCallback((move: Move) => {
+  const applyAndAdvance = useCallback((move: Move, extras?: { aiComment?: string }) => {
     const cfg = cfgRef.current;
     const prevBoard = boardRef.current;
     const mover = prevBoard[move.from[0]][move.from[1]];
@@ -191,6 +198,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
       captured: capturedPiece ? capturedPiece.t : null,
       gaveCheck: X.inCheck(nb, next),
       status: st,
+      aiComment: extras?.aiComment,
     });
 
     dispatch({ type: 'APPLY_MOVE', move });
@@ -226,23 +234,79 @@ export function useXiangqiGame(config: GameConfig = {}) {
   useEffect(() => {
     const cfg = cfgRef.current;
     if (!cfg.aiSide || status || turn !== cfg.aiSide) return;
+
     let cancelled = false;
+    const difficulty = cfg.difficulty ?? 'intermediate';
+    const provider = cfg.aiProvider ?? 'gemma';
+    const aiSide = cfg.aiSide;
+
+    const runLocal = () => {
+      const move = AI.chooseMove(board, aiSide, difficulty);
+      if (move) applyAndAdvance(move);
+    };
+
+    const finishThinking = () => {
+      if (!cancelled) {
+        setAiThinking(false);
+        cfg.onAIThinking?.(false);
+      }
+    };
+
     setAiThinking(true);
     cfg.onAIThinking?.(true);
-    const delay = 380 + Math.random() * 520;
-    const id = setTimeout(() => {
-      if (cancelled) return;
-      const move = AI.chooseMove(board, cfg.aiSide!, cfg.difficulty ?? 'intermediate');
-      setAiThinking(false);
-      cfg.onAIThinking?.(false);
-      if (move) applyAndAdvance(move);
-    }, delay);
+
+    const minDelay = new Promise<void>((r) => setTimeout(r, 380 + Math.random() * 520));
+
+    (async () => {
+      if (provider === 'local') {
+        await minDelay;
+        if (cancelled) return;
+        finishThinking();
+        runLocal();
+        return;
+      }
+
+      try {
+        const historyPayload = history.map((h) => ({
+          side: h.side,
+          from: h.move.from,
+          to: h.move.to,
+        }));
+        const [result] = await Promise.all([
+          fetchAiMove({
+            board,
+            side: aiSide,
+            difficulty,
+            lastMove: lastMove ?? undefined,
+            history: historyPayload,
+          }),
+          minDelay,
+        ]);
+        if (cancelled) return;
+        finishThinking();
+        if (result.move) {
+          applyAndAdvance(result.move, {
+            aiComment: result.comment,
+          });
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (!(err instanceof GemmaApiError) || !isGemmaUnconfigured(err)) {
+          console.warn('[gemma] fetchAiMove failed, using local AI:', err);
+        }
+        await minDelay;
+        if (cancelled) return;
+        finishThinking();
+        runLocal();
+      }
+    })();
+
     return () => {
       cancelled = true;
-      clearTimeout(id);
       setAiThinking(false);
+      cfg.onAIThinking?.(false);
     };
-  }, [turn, board, status, applyAndAdvance]);
+  }, [turn, board, status, lastMove, history, applyAndAdvance]);
 
   const reset = useCallback((startBoard?: Board) => {
     dispatch({ type: 'RESET', startBoard });

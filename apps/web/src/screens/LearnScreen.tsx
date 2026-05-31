@@ -138,8 +138,9 @@ export function LearnScreen() {
           sub: fb.body,
         });
       } else {
-        const desc = Coach.describeMove(boardBefore, move);
-        push({ text: `I'll play ${desc}`, tone: 'info' });
+        const text =
+          meta.aiComment ?? `I'll play ${Coach.describeMove(boardBefore, move)}`;
+        push({ text, tone: 'info' });
         if (meta.gaveCheck) push({ text: Coach.checkAlert('r'), tone: 'bad' });
       }
       if (meta.status === 'checkmate') {
