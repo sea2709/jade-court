@@ -11,6 +11,10 @@ interface Props {
   lastMove?: { from: Coord; to: Coord } | null;
   checkPos?: Coord | null;
   hint?: { from: Coord; to: Coord } | null;
+  /** Stronger last-move styling when the opponent (e.g. AI) played the ply. */
+  opponentLastMove?: boolean;
+  /** Pulse the opponent last-move highlight during the post-move reveal. */
+  opponentMoveRevealing?: boolean;
   flip?: boolean;
   interactive?: boolean;
 }
@@ -24,6 +28,8 @@ export function XQBoard({
   lastMove = null,
   checkPos = null,
   hint = null,
+  opponentLastMove = false,
+  opponentMoveRevealing = false,
   flip = false,
   interactive = true,
 }: Props) {
@@ -126,17 +132,25 @@ export function XQBoard({
       const cls = ['piece', p.s === 'r' ? 'red' : 'black'];
       if (sel) cls.push('selected');
       else if (chk) cls.push('incheck');
-      else if (last) cls.push('lastmove');
+      else if (last) {
+        cls.push('lastmove');
+        if (opponentLastMove) cls.push('opponent-lastmove');
+        if (opponentMoveRevealing) cls.push('opponent-lastmove-pulse');
+      }
       if (interactive) cls.push('clickable');
       pieces.push(
         <div key={`pc${r}-${c}`} className="point" style={{ left: x, top: y }}>
           <div
             className={cls.join(' ')}
             style={{ width: disc, height: disc, fontSize: disc * 0.56, position: 'relative' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onPoint(r, c);
-            }}
+            onClick={
+              interactive
+                ? (e) => {
+                    e.stopPropagation();
+                    onPoint(r, c);
+                  }
+                : undefined
+            }
           >
             {X.CHAR[p.s][p.t]}
           </div>
@@ -183,7 +197,7 @@ export function XQBoard({
       lastDots.push(
         <div
           key={`ld${i}`}
-          className="last-dot"
+          className={`last-dot${opponentLastMove ? ' opponent' : ''}`}
           style={{ left: x, top: y, width: cell * 0.9, height: cell * 0.9 }}
         />,
       );
