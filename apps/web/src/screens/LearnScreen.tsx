@@ -19,83 +19,46 @@ interface ChatMessage {
   think?: boolean;
 }
 
+const TONE_CLASS: Record<string, string> = {
+  great: 'text-good',
+  good: 'text-good',
+  ok: 'text-ink-soft',
+  warn: 'text-warn',
+  bad: 'text-bad',
+  info: 'text-jade-deep',
+  sys: 'text-muted',
+};
+
 function ChatBubble({ m }: { m: ChatMessage }) {
-  const toneColor =
-    {
-      great: 'var(--good)',
-      good: 'var(--good)',
-      ok: 'var(--ink-soft)',
-      warn: 'var(--warn)',
-      bad: 'var(--bad)',
-      info: 'var(--jade-deep)',
-      sys: 'var(--muted)',
-    }[m.tone ?? 'info'] ?? 'var(--jade-deep)';
+  const toneClass = TONE_CLASS[m.tone ?? 'info'] ?? 'text-jade-deep';
 
   if (m.from === 'system') {
     return (
-      <div
-        className="pop"
-        style={{
-          alignSelf: 'center',
-          color: 'var(--muted)',
-          fontSize: 13,
-          fontWeight: 700,
-          textAlign: 'center',
-          padding: '2px 0',
-        }}
-      >
+      <div className="pop self-center text-muted text-[13px] font-bold text-center py-0.5">
         {m.text}
       </div>
     );
   }
 
   return (
-    <div className="pop" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+    <div className="pop flex gap-2.5 items-start">
       <CoachAvatar size={34} mood={m.think ? 'think' : 'happy'} />
-      <div
-        style={{
-          background: '#fff',
-          border: '1px solid var(--line-soft)',
-          borderRadius: '4px 16px 16px 16px',
-          padding: '11px 14px',
-          boxShadow: 'var(--shadow-sm)',
-          maxWidth: 320,
-        }}
-      >
+      <div className="chat-bubble">
         {m.verdict && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-            <span
-              style={{
-                fontWeight: 800,
-                fontSize: 13,
-                color: toneColor,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
+          <div className="flex items-center gap-[7px] mb-1">
+            <span className={`font-extrabold text-[13px] inline-flex items-center gap-[5px] ${toneClass}`}>
               {m.emoji} {m.label}
             </span>
             {typeof m.lossCp === 'number' && m.lossCp > 60 && (
-              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>
+              <span className="text-[11px] text-muted font-bold">
                 −{(m.lossCp / 100).toFixed(1)}
               </span>
             )}
           </div>
         )}
-        <div style={{ fontSize: 14.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--ink)' }}>
-          {m.text}
-        </div>
+        <div className="text-[14.5px] leading-normal font-semibold text-ink">{m.text}</div>
         {m.sub && (
-          <div
-            style={{
-              fontSize: 13,
-              lineHeight: 1.45,
-              color: 'var(--ink-soft)',
-              fontWeight: 600,
-              marginTop: 5,
-            }}
-          >
+          <div className="text-[13px] leading-snug text-ink-soft font-semibold mt-[5px]">
             {m.sub}
           </div>
         )}
@@ -176,22 +139,11 @@ export function LearnScreen() {
   const yourTurn = game.turn === 'r' && !game.status;
 
   return (
-    <div
-      style={{
-        maxWidth: 1180,
-        margin: '0 auto',
-        padding: '26px 30px 50px',
-        display: 'grid',
-        gridTemplateColumns: 'auto 380px',
-        gap: 30,
-        alignItems: 'start',
-        justifyContent: 'center',
-      }}
-    >
+    <div className="max-w-[1180px] mx-auto px-[30px] pt-[26px] pb-[50px] grid gap-[30px] items-start justify-center grid-cols-[auto_380px]">
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        <div className="flex items-center gap-3 mb-3.5">
           <span className="pill pill-jade">Learn mode</span>
-          <span style={{ fontWeight: 800, color: 'var(--ink-soft)', fontSize: 14 }}>
+          <span className="font-extrabold text-ink-soft text-sm">
             {game.status
               ? 'Game over'
               : game.aiThinking
@@ -215,41 +167,19 @@ export function LearnScreen() {
         />
       </div>
 
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', height: 642, overflow: 'hidden' }}>
-        <div
-          style={{
-            padding: '16px 18px',
-            borderBottom: '1px solid var(--line-soft)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
+      <div className="card flex flex-col h-[642px] overflow-hidden">
+        <div className="px-[18px] py-4 border-b border-line-soft flex items-center gap-3">
           <CoachAvatar size={44} mood={game.aiThinking ? 'think' : 'happy'} />
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17 }}>
-              Master Lin
-            </div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 700 }}>
-              Your Xiangqi coach
-            </div>
+            <div className="font-display font-extrabold text-[17px]">Master Lin</div>
+            <div className="text-[12.5px] text-muted font-bold">Your Xiangqi coach</div>
           </div>
           <select
             value={difficulty}
             onChange={(e) =>
               setDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')
             }
-            style={{
-              marginLeft: 'auto',
-              fontFamily: 'var(--font-body)',
-              fontWeight: 700,
-              fontSize: 13,
-              border: '1px solid var(--line-soft)',
-              borderRadius: 999,
-              padding: '6px 10px',
-              background: '#fff',
-              color: 'var(--ink)',
-            }}
+            className="chat-select"
           >
             <option value="beginner">Gentle</option>
             <option value="intermediate">Firm</option>
@@ -259,36 +189,18 @@ export function LearnScreen() {
 
         <div
           ref={chatRef}
-          className="scroll-area"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: 16,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
+          className="scroll-area flex-1 overflow-y-auto p-4 flex flex-col gap-3"
         >
           {messages.map((m) => (
             <ChatBubble key={m.id} m={m} />
           ))}
         </div>
 
-        <div
-          style={{
-            padding: 14,
-            borderTop: '1px solid var(--line-soft)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 9,
-            background: 'var(--cream)',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 9 }}>
+        <div className="p-3.5 border-t border-line-soft flex flex-col gap-2 bg-cream">
+          <div className="flex gap-2">
             <button
               type="button"
-              className="btn btn-primary btn-sm"
-              style={{ flex: 1 }}
+              className="btn btn-primary btn-sm flex-1"
               disabled={!yourTurn}
               onClick={onHint}
             >
@@ -296,25 +208,23 @@ export function LearnScreen() {
             </button>
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
-              style={{ flex: 1 }}
+              className="btn btn-ghost btn-sm flex-1"
               disabled={!yourTurn}
               onClick={onExplain}
             >
               What should I look for?
             </button>
           </div>
-          <div style={{ display: 'flex', gap: 9 }}>
+          <div className="flex gap-2">
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
-              style={{ flex: 1 }}
+              className="btn btn-ghost btn-sm flex-1"
               disabled={game.history.length === 0}
               onClick={() => game.undoLast(game.turn === 'r' ? 2 : 1)}
             >
               ↶ Take back
             </button>
-            <button type="button" className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={newGame}>
+            <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={newGame}>
               ↻ New game
             </button>
           </div>

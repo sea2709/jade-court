@@ -17,7 +17,7 @@ For the full roadmap and architecture notes, see [.cursor/plans/jade-court-imple
 
 | Layer | Technology |
 |-------|------------|
-| **Web** | React 19, Vite, React Router, `vite-plugin-pwa` (installable PWA) |
+| **Web** | React 19, Vite, Tailwind CSS v4, React Router, `vite-plugin-pwa` (installable PWA) |
 | **Server** | Hono REST + WebSocket (`ws`), guest sessions via `x-guest-id` |
 | **Game logic** | `packages/xiangqi-engine` — rules, negamax AI, coach heuristics, LLM prompt helpers; Vitest golden tests |
 | **Rooms** | In-memory store (lost on restart); optional **MongoDB** for finished online games when `MONGODB_URI` is set |
@@ -26,7 +26,7 @@ Local dev proxies `/api` and `/ws` from the web app to the server — no product
 
 ## Visual design
 
-The app uses a **fixed** Jade Court look (no Tweaks panel): bamboo board tones, **flat** piece style (`pcs-flat`), jade accent (`#1F9E81`), and a warm cream background. Theme tokens are applied at startup in `apps/web/src/lib/theme.ts`.
+The app uses a **fixed** Jade Court look (no Tweaks panel): bamboo board tones, **flat** piece style (`pcs-flat`), jade accent (`#1F9E81`), and a warm cream background. Design tokens and component classes live in `apps/web/src/index.css` (Tailwind v4); `applyTheme()` in `apps/web/src/lib/theme.ts` only applies the flat piece style at startup.
 
 ## Requirements
 
