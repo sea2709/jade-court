@@ -1,7 +1,7 @@
 /**
  * Shared DTOs for Gemma / Gemini API routes (opponent moves in #4; coach in #5).
  */
-import type { Board, Coord, Difficulty, Move, Side } from '../types.js';
+import type { Board, Coord, Difficulty, Move, Side, Verdict } from '../types.js';
 
 export interface MoveHistoryEntry {
   side: Side;
@@ -34,4 +34,61 @@ export interface GemmaMovePayload {
   from?: [number, number];
   to?: [number, number];
   comment?: string;
+}
+
+export interface CoachFeedbackRequest {
+  boardBefore: Board;
+  move: Move;
+  side: Side;
+  depth?: number;
+  difficulty?: Difficulty;
+  history?: MoveHistoryEntry[];
+}
+
+export interface CoachFeedbackResponse {
+  verdict: Verdict;
+  label: string;
+  emoji: string;
+  tone: string;
+  lossCp: number;
+  desc: string;
+  body: string;
+  source: 'gemma' | 'template';
+}
+
+export interface CoachHintRequest {
+  board: Board;
+  side: Side;
+  depth?: number;
+  difficulty?: Difficulty;
+}
+
+export interface CoachHintResponse {
+  move: Move;
+  text: string;
+  tip: string;
+  source: 'gemma' | 'template';
+}
+
+export interface CoachOpeningRequest {
+  difficulty?: Difficulty;
+}
+
+export interface CoachOpeningResponse {
+  text: string;
+  source: 'gemma' | 'template';
+}
+
+export interface CoachFeedbackPayload {
+  desc?: string;
+  body?: string;
+}
+
+export interface CoachHintPayload {
+  text?: string;
+  tip?: string;
+}
+
+export interface CoachOpeningPayload {
+  text?: string;
 }

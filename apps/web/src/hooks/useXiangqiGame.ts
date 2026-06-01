@@ -18,6 +18,8 @@ export interface MoveMeta {
   status: GameStatus;
   /** Set when the AI move came from Gemma with commentary. */
   aiComment?: string;
+  /** Plies before this move (for coach / Gemma context). */
+  history?: { side: Side; from: Coord; to: Coord }[];
 }
 
 export type AiProvider = 'gemma' | 'local';
@@ -188,6 +190,8 @@ export function useXiangqiGame(config: GameConfig = {}) {
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardRef = useRef(state.board);
   boardRef.current = state.board;
+  const historyRef = useRef(state.history);
+  historyRef.current = state.history;
   const revealingRef = useRef(revealingOpponentMove);
   revealingRef.current = revealingOpponentMove;
 
@@ -244,6 +248,11 @@ export function useXiangqiGame(config: GameConfig = {}) {
       gaveCheck: X.inCheck(nb, next),
       status: st,
       aiComment: extras?.aiComment,
+      history: historyRef.current.map((h) => ({
+        side: h.side,
+        from: h.move.from,
+        to: h.move.to,
+      })),
     });
 
     dispatch({ type: 'APPLY_MOVE', move });
@@ -394,6 +403,10 @@ export function useXiangqiGame(config: GameConfig = {}) {
     [board, turn],
   );
 
+  const revealHint = useCallback((move: Move) => {
+    dispatch({ type: 'SET_HINT', move: { from: move.from, to: move.to } });
+  }, []);
+
   const clearHint = useCallback(() => dispatch({ type: 'SET_HINT', move: null }), []);
 
   const aiSide = config.aiSide;
@@ -425,6 +438,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
     reset,
     undoLast,
     showHint,
+    revealHint,
     clearHint,
     setBoard: (b: Board) => dispatch({ type: 'RESET', startBoard: b }),
     setTurn: () => {},
