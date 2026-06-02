@@ -116,9 +116,9 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax) |
 | `PIKAFISH_PATH` | _(unset)_ | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing |
 | `ENGINE_MOVE_TIMEOUT_MS` | `30000` | Max wait for a Pikafish move |
-| `GEMMA_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
-| `GEMMA_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
-| `GEMMA_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
+| `GEMINI_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
+| `GEMINI_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
+| `GEMINI_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
 | `GEMMA_LOG_TOKENS` | _(dev default)_ | `1` = log token usage to server console; `0` = suppress; unset follows `NODE_ENV` (`development` logs via `pnpm dev:server`) |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |

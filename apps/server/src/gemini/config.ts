@@ -3,17 +3,17 @@ export function geminiApiKey(): string | undefined {
 }
 
 export function gemmaModel(): string {
-  return process.env.GEMMA_MODEL?.trim() || 'gemma-4-26b-a4b-it';
+  return process.env.GEMINI_MODEL?.trim() || 'gemma-4-26b-a4b-it';
 }
 
 export function gemmaTimeoutMs(): number {
-  const n = Number(process.env.GEMMA_TIMEOUT_MS ?? 25000);
+  const n = Number(process.env.GEMINI_TIMEOUT_MS ?? 25000);
   return Number.isFinite(n) && n > 0 ? n : 25000;
 }
 
-/** Max plies in Gemma “Recent history” prompt section (see GEMMA_HISTORY_LIMIT). */
+/** Max plies in Gemma “Recent history” prompt section (see GEMINI_HISTORY_LIMIT). */
 export function gemmaHistoryLimit(): number {
-  const n = Number(process.env.GEMMA_HISTORY_LIMIT ?? 150);
+  const n = Number(process.env.GEMINI_HISTORY_LIMIT ?? 150);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 150;
 }
 
