@@ -165,6 +165,7 @@ export function LearnScreen() {
   const game = useXiangqiGame({
     aiSide: 'b',
     difficulty,
+    aiProvider: 'gemma',
     onSelect: (piece, count) => {
       push({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
     },

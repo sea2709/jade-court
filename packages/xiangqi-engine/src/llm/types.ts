@@ -19,7 +19,7 @@ export interface AiMoveRequest {
 
 export interface AiMoveResponse {
   move: Move;
-  source: 'gemma' | 'negamax';
+  source: 'gemma' | 'engine' | 'negamax';
   comment?: string;
 }
 

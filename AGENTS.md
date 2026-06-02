@@ -47,6 +47,13 @@ Run from the repo root:
 
 Build the engine before first dev run if needed: `pnpm build`.
 
+## Play vs Computer opponent
+
+- **Default:** Pikafish UCI via `POST /api/engine/move` (`PLAY_OPPONENT_PROVIDER=engine`, `PIKAFISH_PATH` to the binary).
+- **Learn:** `aiProvider: 'gemma'` — coach and opponent use Gemma, not Pikafish.
+- **Fallback:** negamax in `packages/xiangqi-engine` when Pikafish or Gemma fails.
+- Install Pikafish from [official-pikafish/Pikafish](https://github.com/official-pikafish/Pikafish/releases) and set `PIKAFISH_PATH` in repo-root `.env`.
+
 ## Server debugging (Cursor / VS Code)
 
 Use **Run and Debug** → **Debug Server** (`.vscode/launch.json`). It runs `apps/server` with `tsx`, loads repo-root `.env` via `loadEnv.ts`, and builds `xiangqi-engine` first.

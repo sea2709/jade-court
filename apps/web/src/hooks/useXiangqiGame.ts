@@ -1,5 +1,11 @@
 import { AI, Coach, X } from '@jade-court/xiangqi-engine';
-import { fetchAiMove, GemmaApiError, isGemmaUnconfigured } from '../lib/gemmaApi';
+import {
+  fetchAiMove,
+  fetchEngineMove,
+  GemmaApiError,
+  isGemmaUnconfigured,
+  isPikafishUnconfigured,
+} from '../lib/gemmaApi';
 import type {
   Board,
   Coord,
@@ -22,12 +28,12 @@ export interface MoveMeta {
   history?: { side: Side; from: Coord; to: Coord }[];
 }
 
-export type AiProvider = 'gemma' | 'local';
+export type AiProvider = 'gemma' | 'engine' | 'local';
 
 export interface GameConfig {
   aiSide?: Side;
   difficulty?: Difficulty;
-  /** Gemma via server when available; falls back to local negamax on 503/errors. */
+  /** Opponent backend: Pikafish UCI, Gemma, or local negamax (falls back to local on errors). */
   aiProvider?: AiProvider;
   /** Minimum delay before the AI plays (ms). Default ~900–1400 random. */
   aiThinkDelayMs?: number;
@@ -296,7 +302,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
 
     let cancelled = false;
     const difficulty = cfg.difficulty ?? 'intermediate';
-    const provider = cfg.aiProvider ?? 'gemma';
+    const provider = cfg.aiProvider ?? 'engine';
     const aiSide = cfg.aiSide;
 
     const runLocal = () => {
@@ -327,22 +333,25 @@ export function useXiangqiGame(config: GameConfig = {}) {
         return;
       }
 
+      const historyPayload = history.map((h) => ({
+        side: h.side,
+        from: h.move.from,
+        to: h.move.to,
+      }));
+      const moveParams = {
+        board,
+        side: aiSide,
+        difficulty,
+        lastMove: lastMove ?? undefined,
+        history: historyPayload,
+      };
+
       try {
-        const historyPayload = history.map((h) => ({
-          side: h.side,
-          from: h.move.from,
-          to: h.move.to,
-        }));
-        const [result] = await Promise.all([
-          fetchAiMove({
-            board,
-            side: aiSide,
-            difficulty,
-            lastMove: lastMove ?? undefined,
-            history: historyPayload,
-          }),
-          minDelay,
-        ]);
+        const fetchMove =
+          provider === 'engine'
+            ? () => fetchEngineMove(moveParams)
+            : () => fetchAiMove(moveParams);
+        const [result] = await Promise.all([fetchMove(), minDelay]);
         if (cancelled) return;
         finishThinking();
         if (result.move) {
@@ -352,8 +361,11 @@ export function useXiangqiGame(config: GameConfig = {}) {
         }
       } catch (err) {
         if (cancelled) return;
-        if (!(err instanceof GemmaApiError) || !isGemmaUnconfigured(err)) {
-          console.warn('[gemma] fetchAiMove failed, using local AI:', err);
+        const quiet =
+          (err instanceof GemmaApiError && isGemmaUnconfigured(err)) ||
+          (err instanceof GemmaApiError && isPikafishUnconfigured(err));
+        if (!quiet) {
+          console.warn(`[${provider}] opponent move failed, using local AI:`, err);
         }
         await minDelay;
         if (cancelled) return;
