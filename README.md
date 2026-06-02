@@ -8,7 +8,7 @@ For the full roadmap and architecture notes, see [.cursor/plans/jade-court-imple
 
 | Mode | Route | What it does |
 |------|-------|-------------|
-| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — move grading, hints, and piece tips (coach copy is template-based; opponent can use **Gemma 4** when configured). |
+| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — move grading, hints, and piece tips. With `GEMINI_API_KEY`, coach feedback and hints use **Gemma 4** via the server (`POST /api/coach/*`); piece tips stay instant and local. Falls back to template copy when Gemma is off or unavailable. |
 | **Play vs Computer** | `/play` | Same engine and board, lighter UI; beginner / intermediate / advanced difficulty. |
 | **Lessons & Puzzles** | `/lessons` | Eight static piece lessons and three tactical puzzles. |
 | **Friends** | `/multiplayer` | Create or join a `JADE-XXXX` room over WebSocket, or **pass-and-play** on one device (no server). |
@@ -76,7 +76,7 @@ pnpm dev:server
 - Web: http://localhost:5173  
 - Server health: http://localhost:3001/health  
 
-Copy [`.env.example`](.env.example) → `.env` at the repo root; set `GEMINI_API_KEY` there for Gemma opponent moves (see [Environment variables](#environment-variables)).
+Copy [`.env.example`](.env.example) → `.env` at the repo root; set `GEMINI_API_KEY` there for Gemma opponent moves and Master Lin coach copy (see [Environment variables](#environment-variables)).
 
 ### Tests & typecheck
 
@@ -112,7 +112,7 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | Hono server port |
-| `GEMINI_API_KEY` | _(unset)_ | Enables Gemma 4 opponent moves on Learn/Play (`POST /api/ai/move`); without it the app falls back to local negamax |
+| `GEMINI_API_KEY` | _(unset)_ | Enables Gemma 4 on Learn/Play: opponent moves (`POST /api/ai/move`) and Master Lin coach (`POST /api/coach/feedback`, `/hint`, `/opening`). Without it the app uses local negamax and template coach copy |
 | `GEMMA_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
 | `GEMMA_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
 | `GEMMA_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
@@ -138,5 +138,5 @@ Core work from [.cursor/plans/jade-court-implementation.md](.cursor/plans/jade-c
 - Rooms are **in-memory** — lost on server restart; no Redis yet.
 - **Guest sessions only** — Clerk auth is stubbed for later.
 - **No Playwright e2e** in this release.
-- AI depth is shallow (negamax fallback); Gemma opponent needs `GEMINI_API_KEY` in repo-root `.env`.
+- AI depth is shallow (negamax fallback); Gemma opponent and natural-language coach need `GEMINI_API_KEY` in repo-root `.env`.
 - MongoDB only persists **finished** online games when `MONGODB_URI` is set.

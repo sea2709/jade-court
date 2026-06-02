@@ -1,5 +1,5 @@
 /**
- * Gemini API client for Gemma 4 structured move responses.
+ * Gemini API client for Gemma 4 structured JSON responses.
  */
 import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
 import { geminiApiKey, gemmaModel, gemmaTimeoutMs, shouldLogGemmaTokenUsage } from './config.js';
@@ -22,23 +22,30 @@ const MOVE_SCHEMA = {
   required: ['moveIndex'],
 } as const;
 
-function logGemmaTokenUsage(response: GenerateContentResponse): void {
-  const meta = response.usageMetadata;
-  if (!meta) {
-    console.warn('[gemma] tokens: usageMetadata missing from API response');
-    return;
-  }
-  const prompt = meta.promptTokenCount ?? 0;
-  const output = meta.candidatesTokenCount ?? 0;
-  const total = meta.totalTokenCount ?? 0;
-  console.log(
-    `[gemma] tokens prompt=${prompt} output=${output} total=${total} model=${gemmaModel()}`,
-  );
-}
+const COACH_HINT_SCHEMA = {
+  type: 'object',
+  properties: {
+    text: { type: 'string' },
+    tip: { type: 'string' },
+  },
+  required: ['text', 'tip'],
+} as const;
 
-export async function generateMoveJson(
+const COACH_OPENING_SCHEMA = {
+  type: 'object',
+  properties: {
+    text: { type: 'string' },
+  },
+  required: ['text'],
+} as const;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GemmaJsonSchema = Record<string, any>;
+
+async function generateJson(
   systemInstruction: string,
   userPrompt: string,
+  responseSchema: GemmaJsonSchema,
 ): Promise<string> {
   const ai = getClient();
   const controller = new AbortController();
@@ -51,7 +58,7 @@ export async function generateMoveJson(
       config: {
         systemInstruction,
         responseMimeType: 'application/json',
-        responseSchema: MOVE_SCHEMA,
+        responseSchema,
         abortSignal: controller.signal,
       },
     });
@@ -60,4 +67,29 @@ export async function generateMoveJson(
   } finally {
     clearTimeout(timer);
   }
+}
+
+export function generateMoveJson(systemInstruction: string, userPrompt: string): Promise<string> {
+  return generateJson(systemInstruction, userPrompt, MOVE_SCHEMA as GemmaJsonSchema);
+}
+
+export function generateCoachFeedbackJson(
+  systemInstruction: string,
+  userPrompt: string,
+): Promise<string> {
+  return generateJson(systemInstruction, userPrompt, COACH_FEEDBACK_SCHEMA as GemmaJsonSchema);
+}
+
+export function generateCoachHintJson(
+  systemInstruction: string,
+  userPrompt: string,
+): Promise<string> {
+  return generateJson(systemInstruction, userPrompt, COACH_HINT_SCHEMA as GemmaJsonSchema);
+}
+
+export function generateCoachOpeningJson(
+  systemInstruction: string,
+  userPrompt: string,
+): Promise<string> {
+  return generateJson(systemInstruction, userPrompt, COACH_OPENING_SCHEMA as GemmaJsonSchema);
 }
