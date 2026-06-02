@@ -1,8 +1,8 @@
 /**
  * Gemini API client for Gemma 4 structured JSON responses.
  */
-import { GoogleGenAI } from '@google/genai';
-import { geminiApiKey, gemmaModel, gemmaTimeoutMs } from './config.js';
+import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
+import { geminiApiKey, gemmaModel, gemmaTimeoutMs, shouldLogGemmaTokenUsage } from './config.js';
 
 let client: GoogleGenAI | null = null;
 
@@ -20,15 +20,6 @@ const MOVE_SCHEMA = {
     comment: { type: 'string' },
   },
   required: ['moveIndex'],
-} as const;
-
-const COACH_FEEDBACK_SCHEMA = {
-  type: 'object',
-  properties: {
-    desc: { type: 'string' },
-    body: { type: 'string' },
-  },
-  required: ['desc', 'body'],
 } as const;
 
 const COACH_HINT_SCHEMA = {
@@ -71,6 +62,7 @@ async function generateJson(
         abortSignal: controller.signal,
       },
     });
+    if (shouldLogGemmaTokenUsage()) logGemmaTokenUsage(response);
     return response.text ?? '';
   } finally {
     clearTimeout(timer);

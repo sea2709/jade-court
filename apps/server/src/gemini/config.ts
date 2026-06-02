@@ -20,3 +20,15 @@ export function gemmaHistoryLimit(): number {
 export function isGemmaConfigured(): boolean {
   return Boolean(geminiApiKey());
 }
+
+/**
+ * Log Gemini `usageMetadata` to the server console after each successful `generateContent`.
+ * Enabled when `NODE_ENV=development` (set by the server `dev` script) or `GEMMA_LOG_TOKENS=1`.
+ * Set `GEMMA_LOG_TOKENS=0` to suppress in development.
+ */
+export function shouldLogGemmaTokenUsage(): boolean {
+  const flag = process.env.GEMMA_LOG_TOKENS?.trim();
+  if (flag === '0') return false;
+  if (flag === '1') return true;
+  return process.env.NODE_ENV === 'development';
+}

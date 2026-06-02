@@ -18,7 +18,7 @@ import {
 } from './rooms.js';
 import aiRoutes from './routes/ai.js';
 import coachRoutes from './routes/coach.js';
-import { isGemmaConfigured } from './gemini/config.js';
+import { isGemmaConfigured, shouldLogGemmaTokenUsage } from './gemini/config.js';
 
 const app = new Hono();
 
@@ -149,9 +149,12 @@ wss.on('connection', (ws) => {
 httpServer.listen(port, () => {
   console.log(`Jade Court server listening on http://localhost:${port}`);
   if (isGemmaConfigured()) {
-    console.log('Gemma: enabled (GEMINI_API_KEY set) — opponent /api/ai/move, coach /api/coach/*');
+    console.log('Gemma opponent: enabled (GEMINI_API_KEY set) — opponent /api/ai/move, coach /api/coach/*');
+    if (shouldLogGemmaTokenUsage()) {
+      console.log('Gemma token usage: logging enabled (development)');
+    }
   } else {
-    console.log('Gemma: disabled (set GEMINI_API_KEY for /api/ai/move and /api/coach/*)');
+    console.log('Gemma opponent: disabled (set GEMINI_API_KEY for /api/ai/move)');
   }
 });
 
