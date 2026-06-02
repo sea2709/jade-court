@@ -54,14 +54,14 @@ type GemmaJsonSchema = Record<string, any>;
 function logGemmaTokenUsage(response: GenerateContentResponse): void {
   const meta = response.usageMetadata;
   if (!meta) {
-    console.warn('[gemma] tokens: usageMetadata missing from API response');
+    console.warn('[llm] tokens: usageMetadata missing from API response');
     return;
   }
   const prompt = meta.promptTokenCount ?? 0;
   const output = meta.candidatesTokenCount ?? 0;
   const total = meta.totalTokenCount ?? 0;
   console.log(
-    `[gemma] tokens prompt=${prompt} output=${output} total=${total} model=${gemmaModel()}`,
+    `[llm] tokens prompt=${prompt} output=${output} total=${total} model=${gemmaModel()}`,
   );
 }
 

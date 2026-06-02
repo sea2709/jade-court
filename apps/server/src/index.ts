@@ -163,12 +163,12 @@ httpServer.listen(port, () => {
     }
   }
   if (isGemmaConfigured()) {
-    console.log('Gemma: enabled (GEMINI_API_KEY) — /api/ai/move, coach /api/coach/*');
+    console.log('LLM: enabled (GEMINI_API_KEY) — /api/ai/move, coach /api/coach/*');
     if (shouldLogGemmaTokenUsage()) {
-      console.log('Gemma token usage: logging enabled (development)');
+      console.log('LLM token usage: logging enabled (development)');
     }
   } else {
-    console.log('Gemma: disabled (set GEMINI_API_KEY for Learn coach and LLM opponent)');
+    console.log('LLM: disabled (set GEMINI_API_KEY for Learn coach and PLAY_OPPONENT_PROVIDER=llm)');
   }
 });
 
