@@ -14,7 +14,7 @@ import {
   fetchCoachFeedback,
   fetchCoachHint,
   fetchCoachOpening,
-  isGemmaUnconfigured,
+  isLlmUnconfigured,
 } from '../lib/gemmaApi';
 
 let msgId = 0;
@@ -142,7 +142,7 @@ export function LearnScreen() {
         });
         replaceMessage(pendingId, feedbackToMessage(fb));
       } catch (err) {
-        if (!isGemmaUnconfigured(err)) {
+        if (!isLlmUnconfigured(err)) {
           console.warn('[coach] fetchCoachFeedback failed, using template:', err);
         }
         const fb = Coach.feedbackFor(boardBefore, move, 'r', 2);
@@ -165,7 +165,7 @@ export function LearnScreen() {
   const game = useXiangqiGame({
     aiSide: 'b',
     difficulty,
-    aiProvider: 'gemma',
+    aiProvider: 'llm',
     onSelect: (piece, count) => {
       push({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
     },
@@ -198,7 +198,7 @@ export function LearnScreen() {
           });
         }
       } catch (err) {
-        if (!isGemmaUnconfigured(err)) {
+        if (!isLlmUnconfigured(err)) {
           console.warn('[coach] fetchCoachOpening failed, keeping template welcome:', err);
         }
       }
@@ -229,7 +229,7 @@ export function LearnScreen() {
       game.revealHint(h.move);
       replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip });
     } catch (err) {
-      if (!isGemmaUnconfigured(err)) {
+      if (!isLlmUnconfigured(err)) {
         console.warn('[coach] fetchCoachHint failed, using template:', err);
       }
       const h = game.showHint(2);

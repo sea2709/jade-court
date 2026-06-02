@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 
-export type PlayOpponentProvider = 'engine' | 'gemma' | 'local';
+export type PlayOpponentProvider = 'engine' | 'llm' | 'local';
 
 export function pikafishPath(): string | undefined {
   const p = process.env.PIKAFISH_PATH?.trim();
@@ -14,7 +14,7 @@ export function isPikafishConfigured(): boolean {
 
 export function playOpponentProvider(): PlayOpponentProvider {
   const v = process.env.PLAY_OPPONENT_PROVIDER?.trim().toLowerCase();
-  if (v === 'gemma' || v === 'local' || v === 'engine') return v;
+  if (v === 'llm' || v === 'local' || v === 'engine') return v;
   return 'engine';
 }
 

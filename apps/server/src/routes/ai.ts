@@ -1,8 +1,8 @@
 /**
- * POST /api/ai/move — Gemma opponent (Learn mode).
+ * POST /api/ai/move — LLM opponent (Learn mode).
  */
 import { Hono } from 'hono';
-import { computeGemmaOpponentMove } from '../opponent/gemmaMove.js';
+import { computeLlmOpponentMove } from '../opponent/llmOpponentMove.js';
 import { parseOpponentMoveBody } from '../opponent/parseRequest.js';
 import { checkRateLimit } from '../gemini/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
@@ -25,7 +25,7 @@ ai.post('/move', async (c) => {
   const req = parseOpponentMoveBody(body);
   if (!req) return c.json({ error: 'invalid_request' }, 400);
 
-  const result = await computeGemmaOpponentMove(req);
+  const result = await computeLlmOpponentMove(req);
   if (!result.ok) return c.json({ error: result.error }, result.status as 503);
   return c.json(result.body);
 });

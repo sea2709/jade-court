@@ -168,7 +168,7 @@ httpServer.listen(port, () => {
       console.log('Gemma token usage: logging enabled (development)');
     }
   } else {
-    console.log('Gemma: disabled (set GEMINI_API_KEY for Learn coach and gemma opponent)');
+    console.log('Gemma: disabled (set GEMINI_API_KEY for Learn coach and LLM opponent)');
   }
 });
 

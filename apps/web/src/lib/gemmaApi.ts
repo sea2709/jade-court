@@ -121,6 +121,9 @@ export async function fetchCoachOpening(
   return postJson<CoachOpeningResponse>('/api/coach/opening', params);
 }
 
-export function isGemmaUnconfigured(err: unknown): boolean {
-  return err instanceof GemmaApiError && err.status === 503 && err.code === 'gemma_unconfigured';
+export function isLlmUnconfigured(err: unknown): boolean {
+  return err instanceof GemmaApiError && err.status === 503 && err.code === 'llm_unconfigured';
 }
+
+/** @deprecated Use isLlmUnconfigured */
+export const isGemmaUnconfigured = isLlmUnconfigured;

@@ -19,7 +19,7 @@ export interface AiMoveRequest {
 
 export interface AiMoveResponse {
   move: Move;
-  source: 'gemma' | 'engine' | 'negamax';
+  source: 'llm' | 'engine' | 'negamax';
   comment?: string;
 }
 
@@ -53,7 +53,7 @@ export interface CoachFeedbackResponse {
   lossCp: number;
   desc: string;
   body: string;
-  source: 'gemma' | 'template';
+  source: 'llm' | 'template';
 }
 
 export interface CoachHintRequest {
@@ -67,7 +67,7 @@ export interface CoachHintResponse {
   move: Move;
   text: string;
   tip: string;
-  source: 'gemma' | 'template';
+  source: 'llm' | 'template';
 }
 
 export interface CoachOpeningRequest {
@@ -76,7 +76,7 @@ export interface CoachOpeningRequest {
 
 export interface CoachOpeningResponse {
   text: string;
-  source: 'gemma' | 'template';
+  source: 'llm' | 'template';
 }
 
 export interface CoachFeedbackPayload {

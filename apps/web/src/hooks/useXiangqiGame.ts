@@ -1,5 +1,5 @@
 import { AI, Coach, X } from '@jade-court/xiangqi-engine';
-import { fetchAiMove, fetchOpponentMove, GemmaApiError, isGemmaUnconfigured } from '../lib/gemmaApi';
+import { fetchAiMove, fetchOpponentMove, GemmaApiError, isLlmUnconfigured } from '../lib/gemmaApi';
 import type {
   Board,
   Coord,
@@ -16,18 +16,18 @@ export interface MoveMeta {
   captured: PieceType | null;
   gaveCheck: boolean;
   status: GameStatus;
-  /** Set when the AI move came from Gemma with commentary. */
+  /** Set when the AI move came from the LLM with commentary. */
   aiComment?: string;
-  /** Plies before this move (for coach / Gemma context). */
+  /** Plies before this move (for coach / LLM context). */
   history?: { side: Side; from: Coord; to: Coord }[];
 }
 
-export type AiProvider = 'gemma' | 'server' | 'local';
+export type AiProvider = 'llm' | 'server' | 'local';
 
 export interface GameConfig {
   aiSide?: Side;
   difficulty?: Difficulty;
-  /** `gemma` = Learn (/api/ai/move); `server` = Play (/api/opponent/move, server env); `local` = in-browser negamax. */
+  /** `llm` = Learn (/api/ai/move); `server` = Play (/api/opponent/move, server env); `local` = in-browser negamax. */
   aiProvider?: AiProvider;
   /** Minimum delay before the AI plays (ms). Default ~900–1400 random. */
   aiThinkDelayMs?: number;
@@ -355,7 +355,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
         }
       } catch (err) {
         if (cancelled) return;
-        const quiet = err instanceof GemmaApiError && isGemmaUnconfigured(err);
+        const quiet = err instanceof GemmaApiError && isLlmUnconfigured(err);
         if (!quiet) {
           console.warn(`[${provider}] opponent move failed, using local AI:`, err);
         }

@@ -8,10 +8,10 @@ export type OpponentMoveResult =
   | { ok: true; body: AiMoveResponse }
   | { ok: false; status: number; error: string };
 
-/** Gemma opponent move with negamax fallback (Learn / PLAY_OPPONENT_PROVIDER=gemma). */
-export async function computeGemmaOpponentMove(req: AiMoveRequest): Promise<OpponentMoveResult> {
+/** LLM opponent move with negamax fallback (Learn / PLAY_OPPONENT_PROVIDER=llm). */
+export async function computeLlmOpponentMove(req: AiMoveRequest): Promise<OpponentMoveResult> {
   if (!isGemmaConfigured()) {
-    return { ok: false, status: 503, error: 'gemma_unconfigured' };
+    return { ok: false, status: 503, error: 'llm_unconfigured' };
   }
 
   const legal = X.legalMoves(req.board, req.side);
@@ -33,17 +33,17 @@ export async function computeGemmaOpponentMove(req: AiMoveRequest): Promise<Oppo
     const move = resolved?.move ?? null;
 
     if (move) {
-      return { ok: true, body: { move, source: 'gemma', comment: resolved?.comment } };
+      return { ok: true, body: { move, source: 'llm', comment: resolved?.comment } };
     }
 
-    console.warn('[gemma] invalid move from model, using negamax fallback');
+    console.warn('[llm] invalid move from model, using negamax fallback');
     return { ok: true, body: negamaxFallback(req.board, req.side, req.difficulty) };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'gemma_unconfigured') {
-      return { ok: false, status: 503, error: 'gemma_unconfigured' };
+    if (msg === 'llm_unconfigured') {
+      return { ok: false, status: 503, error: 'llm_unconfigured' };
     }
-    console.warn('[gemma] API error, negamax fallback:', msg);
+    console.warn('[llm] API error, negamax fallback:', msg);
     return { ok: true, body: negamaxFallback(req.board, req.side, req.difficulty) };
   }
 }

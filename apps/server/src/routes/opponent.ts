@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { X } from '@jade-court/xiangqi-engine';
 import { playOpponentProvider } from '../engine/config.js';
 import { getPikafishMove, negamaxFallback } from '../engine/move.js';
-import { computeGemmaOpponentMove } from '../opponent/gemmaMove.js';
+import { computeLlmOpponentMove } from '../opponent/llmOpponentMove.js';
 import { parseOpponentMoveBody } from '../opponent/parseRequest.js';
 import { checkRateLimit } from '../gemini/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
@@ -34,11 +34,11 @@ opponent.post('/move', async (c) => {
     return c.json(negamaxFallback(req.board, req.side, req.difficulty));
   }
 
-  if (provider === 'gemma') {
+  if (provider === 'llm') {
     if (!checkRateLimit(guestId)) {
       return c.json({ error: 'rate_limit_exceeded' }, 429);
     }
-    const result = await computeGemmaOpponentMove(req);
+    const result = await computeLlmOpponentMove(req);
     if (!result.ok) return c.json({ error: result.error }, result.status as 503);
     return c.json(result.body);
   }

@@ -8,7 +8,7 @@ let client: GoogleGenAI | null = null;
 
 function getClient(): GoogleGenAI {
   const key = geminiApiKey();
-  if (!key) throw new Error('gemma_unconfigured');
+  if (!key) throw new Error('llm_unconfigured');
   if (!client) client = new GoogleGenAI({ apiKey: key });
   return client;
 }
