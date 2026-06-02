@@ -1,2 +1,423 @@
-@import './styles/jade-court.css';
+@import "tailwindcss";
+
+/* ===== Jade Court design tokens ===== */
+:root {
+  /* Surfaces */
+  --cream: #FBF3E1;
+  --cream-2: #F4E8CE;
+  --paper: #FFFDF6;
+  --ink: #2B2622;
+  --ink-soft: #5C5347;
+  --muted: #94886F;
+  --line-soft: #E7DABc;
+
+  /* Board */
+  --board: #EBC987;
+  --board-2: #E3BC73;
+  --board-edge: #B07F44;
+  --grid: #97632F;
+  --grid-soft: #B58a52;
+
+  /* Sides */
+  --red: #D5452C;
+  --red-deep: #AE3119;
+  --red-soft: #F6D7CC;
+  --black: #38342F;
+  --black-deep: #211e1a;
+  --black-soft: #DCD6CB;
+
+  /* Accents */
+  --jade: #1F9E81;
+  --jade-deep: #157A63;
+  --jade-soft: #D6EFE7;
+  --gold: #E7AC3F;
+  --gold-deep: #C98C1F;
+
+  /* feedback tones */
+  --good: #1F9E81;
+  --warn: #E0902A;
+  --bad: #D5452C;
+
+  /* shape */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 34px;
+  --shadow-sm: 0 2px 6px rgba(80,55,20,.12);
+  --shadow-md: 0 10px 26px -8px rgba(80,55,20,.30);
+  --shadow-lg: 0 24px 60px -18px rgba(60,40,12,.45);
+
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+  --font-piece: 'Noto Serif SC', serif;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-2: var(--cream-2);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line-soft: var(--line-soft);
+
+  --color-board: var(--board);
+  --color-board-2: var(--board-2);
+  --color-board-edge: var(--board-edge);
+  --color-grid: var(--grid);
+  --color-grid-soft: var(--grid-soft);
+
+  --color-red: var(--red);
+  --color-red-deep: var(--red-deep);
+  --color-red-soft: var(--red-soft);
+  --color-black: var(--black);
+  --color-black-deep: var(--black-deep);
+  --color-black-soft: var(--black-soft);
+
+  --color-jade: var(--jade);
+  --color-jade-deep: var(--jade-deep);
+  --color-jade-soft: var(--jade-soft);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-piece: var(--font-piece);
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html,
+  body {
+    @apply m-0 p-0;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 700px at 80% -10%, #FCEFD2 0%, transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, #F3E6CA 0%, transparent 55%),
+      var(--cream);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    @apply min-h-screen;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .display {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight;
+  }
+
+  button {
+    font-family: var(--font-body);
+    @apply cursor-pointer border-none;
+  }
+
+  ::selection {
+    background: var(--jade-soft);
+  }
+
+  /* faint paper grain */
+  body::before {
+    content: "";
+    @apply fixed inset-0 pointer-events-none z-0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  #root {
+    @apply relative z-[1];
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen flex flex-col;
+  }
+
+  .topbar {
+    @apply flex items-center gap-4 px-[30px] py-4 sticky top-0 z-40;
+    background: rgba(251,243,225,.82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .brand {
+    @apply flex items-center gap-3 cursor-pointer;
+  }
+
+  .brand-mark {
+    @apply w-[42px] h-[42px] rounded-[13px] grid place-items-center font-piece font-black text-2xl text-white;
+    background: linear-gradient(150deg, var(--red), var(--red-deep));
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+
+  .brand-name {
+    font-family: var(--font-display);
+    @apply font-extrabold text-xl leading-none whitespace-nowrap;
+  }
+
+  .brand-sub {
+    @apply text-xs text-muted font-bold tracking-[0.14em] uppercase;
+  }
+
+  .nav {
+    @apply ml-auto flex items-center gap-1.5;
+  }
+
+  .nav-link {
+    @apply bg-transparent text-ink-soft font-bold text-[15px] px-4 py-[9px] rounded-full transition-[background,color] duration-150;
+  }
+
+  .nav-link:hover {
+    @apply bg-[#fff7e6] text-ink;
+  }
+
+  .nav-link.active {
+    @apply bg-ink text-cream;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-extrabold text-base rounded-full px-[26px] py-[13px] whitespace-nowrap;
+    transition: transform .12s, box-shadow .16s, background .16s;
+  }
+
+  .btn:active {
+    @apply translate-y-px scale-[0.99];
+  }
+
+  .btn-primary {
+    background: linear-gradient(160deg, var(--jade), var(--jade-deep));
+    @apply text-white shadow-md;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 16px 34px -10px rgba(21,122,99,.55);
+  }
+
+  .btn-red {
+    background: linear-gradient(160deg, var(--red), var(--red-deep));
+    @apply text-white shadow-md;
+  }
+
+  .btn-gold {
+    background: linear-gradient(160deg, var(--gold), var(--gold-deep));
+    @apply text-[#4a3208] shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply bg-white text-ink shadow-sm border border-line-soft;
+  }
+
+  .btn-ghost:hover {
+    @apply bg-[#fffdf6];
+  }
+
+  .btn-sm {
+    @apply px-4 py-[9px] text-sm;
+  }
+
+  .btn-lg {
+    @apply px-[34px] py-4 text-lg;
+  }
+
+  .btn:disabled {
+    @apply opacity-45 cursor-not-allowed;
+  }
+
+  .card {
+    @apply bg-paper rounded-lg shadow-md border border-line-soft;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-[7px] font-extrabold text-[13px] px-[13px] py-1.5 rounded-full;
+  }
+
+  .pill-jade {
+    @apply bg-jade-soft text-jade-deep;
+  }
+
+  .pill-red {
+    @apply bg-red-soft text-red-deep;
+  }
+
+  .pill-gold {
+    @apply bg-[#FBEAC4] text-gold-deep;
+  }
+
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(.94); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .rise {
+    animation: riseIn .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+
+  .pop {
+    animation: popIn .3s cubic-bezier(.2,.8,.2,1) both;
+  }
+
+  .scroll-area::-webkit-scrollbar {
+    @apply w-2.5;
+  }
+
+  .scroll-area::-webkit-scrollbar-thumb {
+    @apply rounded-full border-2 border-transparent;
+    background: #e3d4ad;
+    background-clip: padding-box;
+  }
+
+  .game-overlay {
+    @apply absolute inset-0 grid place-items-center rounded-[14px] z-20;
+    background: rgba(43,38,34,.45);
+  }
+
+  .game-layout {
+    @apply max-w-[1040px] mx-auto px-[30px] pt-6 pb-[50px] grid gap-[30px] items-start justify-center;
+    grid-template-columns: auto 300px;
+  }
+
+  .game-layout-wide {
+    @apply max-w-[1100px] mx-auto px-[30px] pt-6 pb-[50px] grid gap-[30px] items-start justify-center;
+    grid-template-columns: auto 320px;
+  }
+
+  .page-container {
+    @apply mx-auto px-[30px];
+  }
+
+  .page-container-sm {
+    @apply max-w-[920px] mx-auto px-[30px] py-[50px];
+  }
+
+  .page-container-md {
+    @apply max-w-[860px] mx-auto px-[30px] py-[50px];
+  }
+
+  .page-container-lg {
+    @apply max-w-[1180px] mx-auto px-[30px] pt-10 pb-[70px];
+  }
+
+  .page-container-xl {
+    @apply max-w-[1120px] mx-auto px-[30px] pt-[30px] pb-[60px];
+  }
+
+  .section-header {
+    @apply text-center mb-[34px];
+  }
+
+  .section-title {
+    @apply text-[40px] m-0 mb-2.5;
+  }
+
+  .section-subtitle {
+    @apply text-ink-soft text-[17px] font-semibold m-0;
+  }
+
+  .player-badge {
+    @apply w-10 h-10 rounded-xl grid place-items-center font-piece font-bold text-[22px] text-white;
+  }
+
+  .player-badge-red {
+    background: linear-gradient(150deg, var(--red), var(--red-deep));
+  }
+
+  .player-badge-black {
+    background: linear-gradient(150deg, #55504a, var(--black-deep));
+  }
+
+  .turn-indicator {
+    @apply w-2.5 h-2.5 rounded-full bg-jade;
+    box-shadow: 0 0 0 4px var(--jade-soft);
+  }
+
+  .mode-card-header {
+    @apply h-[92px] grid place-items-center;
+  }
+
+  .mode-card-glyph {
+    @apply font-piece font-bold text-[56px] text-white/95;
+  }
+
+  .lobby-card-header {
+    @apply h-[110px] grid place-items-center;
+  }
+
+  .lobby-card-glyph {
+    @apply font-piece text-[64px] text-white/95 font-bold;
+  }
+
+  .invite-code-char {
+    @apply w-[52px] h-[62px] rounded-[14px] grid place-items-center font-display font-extrabold text-[30px] bg-cream border-2 border-line-soft text-ink;
+  }
+
+  .room-input {
+    @apply w-full text-center font-display font-extrabold text-2xl tracking-[2px] p-3.5 rounded-[14px] border-2 border-line-soft bg-cream text-ink mb-[18px];
+  }
+
+  .room-link-input {
+    @apply flex-1 text-[13px] font-semibold px-[13px] py-[11px] rounded-[10px] border border-line-soft bg-cream text-ink-soft;
+  }
+
+  .chat-bubble {
+    @apply bg-white border border-line-soft rounded-[4px_16px_16px_16px] px-3.5 py-[11px] shadow-sm max-w-[320px];
+  }
+
+  .chat-select {
+    @apply ml-auto font-body font-bold text-[13px] border border-line-soft rounded-full px-2.5 py-1.5 bg-white text-ink;
+  }
+
+  .lesson-nav-btn {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-[background] duration-150 cursor-pointer;
+  }
+
+  .lesson-nav-btn-active {
+    @apply bg-jade-soft;
+  }
+
+  .lesson-nav-glyph {
+    @apply w-9 h-9 rounded-[10px] shrink-0 grid place-items-center font-piece font-bold text-[19px] bg-white border border-line-soft;
+  }
+
+  .tab-switcher {
+    @apply ml-auto flex gap-1.5 bg-white p-[5px] rounded-full shadow-sm border border-line-soft;
+  }
+
+  .puzzle-card-active {
+    outline: 3px solid var(--gold);
+  }
+
+  .level-card-active {
+    outline: 3px solid var(--jade);
+    @apply -translate-y-[3px];
+  }
+}
+
 @import './styles/board.css';

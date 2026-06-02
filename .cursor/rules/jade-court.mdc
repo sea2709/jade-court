@@ -19,7 +19,8 @@ alwaysApply: true
 ## UI and theme
 
 - Fixed Jade Court look: bamboo board tones, **flat** pieces (`pcs-flat`), jade accent (`#1F9E81`), warm cream background.
-- **No Tweaks panel** — theme is applied at startup (`apps/web/src/lib/theme.ts`), not user-configurable.
+- **Tailwind CSS v4** — app chrome uses utilities and `@layer components` in `apps/web/src/index.css`; board/piece DOM stays in `apps/web/src/styles/board.css`.
+- **No Tweaks panel** — `applyTheme()` in `apps/web/src/lib/theme.ts` only sets `pcs-flat` on `body` at startup.
 
 ## Code style
 

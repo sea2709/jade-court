@@ -42,53 +42,36 @@ export function App() {
   return (
     <div className="app-shell">
       <Topbar />
-      <div className="rise" style={{ flex: 1 }}>
+      <div className="rise flex-1">
         <Outlet />
       </div>
-      <footer
-        style={{
-          borderTop: '1px solid var(--line-soft)',
-          padding: '22px 30px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          flexWrap: 'wrap',
-          color: 'var(--muted)',
-          fontSize: 13.5,
-          fontWeight: 700,
-        }}
-      >
-        <span className="brand-mark" style={{ width: 30, height: 30, borderRadius: 9, fontSize: 17 }}>
-          象
-        </span>
-        <span style={{ color: 'var(--ink-soft)' }}>Jade Court · Learn &amp; play Xiangqi</span>
-        <nav style={{ marginLeft: 'auto', display: 'flex', gap: 20 }}>
+      <footer className="border-t border-line-soft px-[30px] py-[22px] flex items-center gap-3.5 flex-wrap text-muted text-[13.5px] font-bold">
+        <span className="brand-mark w-[30px] h-[30px] rounded-[9px] text-[17px]">象</span>
+        <span className="text-ink-soft">Jade Court · Learn &amp; play Xiangqi</span>
+        <nav className="ml-auto flex gap-5">
           <button
             type="button"
-            className="nav-link"
-            style={{ padding: 0, fontSize: 13.5, fontWeight: 700, background: 'none' }}
+            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
             onClick={() => navigate('/learn')}
           >
             Learn
           </button>
           <button
             type="button"
-            className="nav-link"
-            style={{ padding: 0, fontSize: 13.5, fontWeight: 700, background: 'none' }}
+            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
             onClick={() => navigate('/lessons')}
           >
             Lessons
           </button>
           <button
             type="button"
-            className="nav-link"
-            style={{ padding: 0, fontSize: 13.5, fontWeight: 700, background: 'none' }}
+            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
             onClick={() => navigate('/multiplayer')}
           >
             Friends
           </button>
         </nav>
-        <span style={{ width: '100%', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>
+        <span className="w-full text-left text-muted font-semibold">
           © 2026 Jade Court · A teaching prototype
         </span>
       </footer>

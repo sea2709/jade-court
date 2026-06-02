@@ -29,73 +29,29 @@ function ModeCard({
   return (
     <button
       type="button"
-      className="card rise"
+      className="card rise text-left p-0 overflow-hidden cursor-pointer flex flex-col bg-paper"
       onClick={onClick}
-      style={{
-        textAlign: 'left',
-        padding: 0,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--paper)',
-      }}
     >
       <div
-        style={{
-          height: 132,
-          position: 'relative',
-          display: 'grid',
-          placeItems: 'center',
-          background: accent,
-          overflow: 'hidden',
-        }}
+        className="h-[132px] relative grid place-items-center overflow-hidden"
+        style={{ background: accent }}
       >
-        <span
-          style={{
-            fontFamily: 'var(--font-piece)',
-            fontWeight: 700,
-            fontSize: 92,
-            color: 'rgba(255,255,255,.92)',
-            textShadow: '0 4px 10px rgba(0,0,0,.18)',
-          }}
-        >
+        <span className="font-piece font-bold text-[92px] text-white/92 drop-shadow-md">
           {glyph}
         </span>
       </div>
-      <div style={{ padding: '20px 22px 24px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-        <span className={`pill ${tagClass}`} style={{ alignSelf: 'flex-start' }}>
-          {tag}
-        </span>
+      <div className="px-[22px] pt-5 pb-6 flex flex-col gap-2.5 flex-1">
+        <span className={`pill ${tagClass} self-start`}>{tag}</span>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 23, lineHeight: 1.1 }}>
+          <div className="font-display font-extrabold text-[23px] leading-tight">
             {title}{' '}
-            <span
-              style={{
-                color: 'var(--muted)',
-                fontFamily: 'var(--font-piece)',
-                fontWeight: 700,
-                fontSize: 19,
-              }}
-            >
-              {zh}
-            </span>
+            <span className="text-muted font-piece font-bold text-[19px]">{zh}</span>
           </div>
-          <p
-            style={{
-              margin: '8px 0 0',
-              color: 'var(--ink-soft)',
-              fontSize: 15,
-              lineHeight: 1.5,
-              fontWeight: 600,
-            }}
-          >
+          <p className="mt-2 mb-0 text-ink-soft text-[15px] leading-normal font-semibold">
             {desc}
           </p>
         </div>
-        <span className={`btn ${ctaClass}`} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-          {cta}
-        </span>
+        <span className={`btn ${ctaClass} self-start mt-1.5`}>{cta}</span>
       </div>
     </button>
   );
@@ -109,38 +65,19 @@ export function HomeScreen() {
   };
 
   return (
-    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 30px 70px' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.05fr .95fr',
-          gap: 44,
-          alignItems: 'center',
-          marginBottom: 54,
-        }}
-      >
+    <div className="page-container-lg">
+      <div className="grid grid-cols-[1.05fr_0.95fr] gap-11 items-center mb-[54px]">
         <div className="rise">
-          <span className="pill pill-gold" style={{ marginBottom: 18 }}>
-            象棋 · Learn the game of generals
-          </span>
-          <h1 style={{ fontSize: 56, lineHeight: 1.02, margin: '0 0 18px', letterSpacing: '-.02em' }}>
-            Master <span style={{ color: 'var(--red-deep)' }}>Xiangqi</span>,<br />
+          <span className="pill pill-gold mb-[18px]">象棋 · Learn the game of generals</span>
+          <h1 className="text-[56px] leading-[1.02] m-0 mb-[18px] tracking-tight">
+            Master <span className="text-red-deep">Xiangqi</span>,<br />
             one friendly move at a time.
           </h1>
-          <p
-            style={{
-              fontSize: 19,
-              lineHeight: 1.55,
-              color: 'var(--ink-soft)',
-              fontWeight: 600,
-              maxWidth: 520,
-              margin: '0 0 28px',
-            }}
-          >
+          <p className="text-[19px] leading-snug text-ink-soft font-semibold max-w-[520px] m-0 mb-7">
             A patient coach who shows you every legal move, explains the why behind it, and plays at
             your level — from your very first game to beating a friend across the river.
           </p>
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <div className="flex gap-3.5 flex-wrap">
             <button type="button" className="btn btn-primary btn-lg" onClick={() => go('/learn')}>
               Start learning →
             </button>
@@ -148,42 +85,25 @@ export function HomeScreen() {
               Play vs computer
             </button>
           </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              marginTop: 26,
-              color: 'var(--ink-soft)',
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
+          <div className="flex items-center gap-3 mt-[26px] text-ink-soft font-bold text-sm">
             <CoachAvatar size={42} />
             <span>
               Guided by <b>Master Lin</b> — your in-game tutor.
             </span>
           </div>
         </div>
-        <div className="pop" style={{ display: 'grid', placeItems: 'center' }}>
+        <div className="pop grid place-items-center">
           <XQBoard board={X.initialBoard()} cell={42} interactive={false} />
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          marginBottom: 18,
-        }}
-      >
-        <h2 style={{ fontSize: 26, margin: 0 }}>Choose how you want to play</h2>
-        <button type="button" className="nav-link" onClick={() => go('/lessons')} style={{ fontSize: 15 }}>
+      <div className="flex items-baseline justify-between mb-[18px]">
+        <h2 className="text-[26px] m-0">Choose how you want to play</h2>
+        <button type="button" className="nav-link text-[15px]" onClick={() => go('/lessons')}>
           Browse lessons →
         </button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 22 }}>
+      <div className="grid grid-cols-3 gap-[22px]">
         <ModeCard
           tag="Guided"
           tagClass="pill-jade"
@@ -222,44 +142,17 @@ export function HomeScreen() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginTop: 40 }}>
+      <div className="grid grid-cols-4 gap-[18px] mt-10">
         {[
           ['Legal moves, lit up', 'Green dots and gold rings show exactly where a piece may go.'],
           ['The why, in plain words', 'Every move comes with a one-line explanation you can actually learn from.'],
           ['Move grading', 'Great, inaccuracy, blunder — instant feedback after each move.'],
           ['Lessons & puzzles', 'Bite-size lessons on every piece, plus checkmate puzzles.'],
         ].map(([t, d], i) => (
-          <div key={i} style={{ padding: '4px 4px' }}>
-            <div
-              style={{
-                width: 34,
-                height: 4,
-                borderRadius: 9,
-                background: 'var(--gold)',
-                marginBottom: 12,
-              }}
-            />
-            <div
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 16,
-                marginBottom: 6,
-              }}
-            >
-              {t}
-            </div>
-            <p
-              style={{
-                margin: 0,
-                color: 'var(--ink-soft)',
-                fontSize: 14,
-                lineHeight: 1.5,
-                fontWeight: 600,
-              }}
-            >
-              {d}
-            </p>
+          <div key={i} className="p-1">
+            <div className="w-[34px] h-1 rounded-[9px] bg-gold mb-3" />
+            <div className="font-display font-extrabold text-base mb-1.5">{t}</div>
+            <p className="m-0 text-ink-soft text-sm leading-normal font-semibold">{d}</p>
           </div>
         ))}
       </div>

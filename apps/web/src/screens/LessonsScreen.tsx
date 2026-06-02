@@ -31,113 +31,48 @@ function LessonsView() {
   const lesson = LESSONS.find((l) => l.key === active)!;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 28, alignItems: 'start' }}>
-      <div className="card" style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <div className="grid grid-cols-[280px_1fr] gap-7 items-start">
+      <div className="card p-2.5 flex flex-col gap-0.5">
         {LESSONS.map((l) => (
           <button
             key={l.key}
             type="button"
             onClick={() => setActive(l.key)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 12px',
-              borderRadius: 12,
-              background: active === l.key ? 'var(--jade-soft)' : 'transparent',
-              textAlign: 'left',
-              transition: '.14s',
-              cursor: 'pointer',
-            }}
+            className={`lesson-nav-btn ${active === l.key ? 'lesson-nav-btn-active' : ''}`}
           >
             <span
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                flex: '0 0 auto',
-                display: 'grid',
-                placeItems: 'center',
-                fontFamily: 'var(--font-piece)',
-                fontWeight: 700,
-                fontSize: 19,
-                background: '#fff',
-                color: active === l.key ? 'var(--jade-deep)' : 'var(--ink-soft)',
-                border: '1px solid var(--line-soft)',
-              }}
+              className={`lesson-nav-glyph ${
+                active === l.key ? 'text-jade-deep' : 'text-ink-soft'
+              }`}
             >
               {l.glyph}
             </span>
             <span>
               <span
-                style={{
-                  display: 'block',
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: 15,
-                  color: active === l.key ? 'var(--jade-deep)' : 'var(--ink)',
-                }}
+                className={`block font-display font-extrabold text-[15px] ${
+                  active === l.key ? 'text-jade-deep' : 'text-ink'
+                }`}
               >
                 {l.title}
               </span>
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: 12,
-                  color: 'var(--muted)',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-piece)',
-                }}
-              >
-                {l.zh}
-              </span>
+              <span className="block text-xs text-muted font-bold font-piece">{l.zh}</span>
             </span>
           </button>
         ))}
       </div>
-      <div
-        className="card"
-        style={{
-          padding: 28,
-          display: 'grid',
-          gridTemplateColumns: '1fr auto',
-          gap: 30,
-          alignItems: 'center',
-        }}
-      >
+      <div className="card p-7 grid grid-cols-[1fr_auto] gap-[30px] items-center">
         <div>
-          <span className="pill pill-jade" style={{ marginBottom: 14 }}>
-            Lesson · {lesson.zh}
-          </span>
-          <h2 style={{ fontSize: 30, margin: '0 0 14px' }}>{lesson.title}</h2>
-          <p
-            style={{
-              fontSize: 16.5,
-              lineHeight: 1.6,
-              color: 'var(--ink-soft)',
-              fontWeight: 600,
-              margin: '0 0 18px',
-            }}
-          >
+          <span className="pill pill-jade mb-3.5">Lesson · {lesson.zh}</span>
+          <h2 className="text-[30px] m-0 mb-3.5">{lesson.title}</h2>
+          <p className="text-[16.5px] leading-relaxed text-ink-soft font-semibold m-0 mb-[18px]">
             {lesson.rule}
           </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: 11,
-              alignItems: 'flex-start',
-              background: 'var(--cream)',
-              padding: '13px 15px',
-              borderRadius: 14,
-            }}
-          >
+          <div className="flex gap-[11px] items-start bg-cream px-[15px] py-[13px] rounded-[14px]">
             <CoachAvatar size={32} />
-            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, fontWeight: 700, color: 'var(--ink)' }}>
-              {lesson.tip}
-            </p>
+            <p className="m-0 text-[14.5px] leading-normal font-bold text-ink">{lesson.tip}</p>
           </div>
           {lesson.focus && (
-            <p style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 700, marginTop: 16 }}>
+            <p className="text-[13px] text-muted font-bold mt-4">
               Tap any piece on the board to light up its legal moves.
             </p>
           )}
@@ -191,65 +126,32 @@ function PuzzleView() {
   const yourTurn = !result || result === 'miss';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 28, alignItems: 'start' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="grid grid-cols-[300px_1fr] gap-7 items-start">
+      <div className="flex flex-col gap-3">
         {PUZZLES.map((p, i) => (
           <button
             key={p.key}
             type="button"
-            className="card"
+            className={`card p-3.5 text-left cursor-pointer outline-[3px] outline-transparent transition-[outline] duration-150 ${
+              i === idx ? 'puzzle-card-active' : ''
+            }`}
             onClick={() => {
               setIdx(i);
               setNonce((n) => n + 1);
               setResult(null);
             }}
-            style={{
-              padding: 14,
-              textAlign: 'left',
-              cursor: 'pointer',
-              outline: i === idx ? '3px solid var(--gold)' : '3px solid transparent',
-              transition: '.14s',
-            }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 4,
-              }}
-            >
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16 }}>
+            <div className="flex justify-between items-center mb-1">
+              <span className="font-display font-extrabold text-base">
                 {i + 1}. {p.title}
               </span>
-              <span className="pill pill-gold" style={{ fontSize: 11, padding: '3px 9px' }}>
-                {p.diff}
-              </span>
+              <span className="pill pill-gold text-[11px] px-[9px] py-[3px]">{p.diff}</span>
             </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13,
-                color: 'var(--ink-soft)',
-                fontWeight: 600,
-                lineHeight: 1.4,
-              }}
-            >
-              {p.brief}
-            </p>
+            <p className="m-0 text-[13px] text-ink-soft font-semibold leading-snug">{p.brief}</p>
           </button>
         ))}
       </div>
-      <div
-        className="card"
-        style={{
-          padding: 26,
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
-          gap: 28,
-          alignItems: 'center',
-        }}
-      >
+      <div className="card p-[26px] grid grid-cols-[auto_1fr] gap-7 items-center">
         <XQBoard
           board={game.board}
           cell={44}
@@ -261,64 +163,34 @@ function PuzzleView() {
           interactive={yourTurn}
         />
         <div>
-          <span className="pill pill-gold" style={{ marginBottom: 12 }}>
-            Puzzle {idx + 1} · {puzzle.diff}
-          </span>
-          <h2 style={{ fontSize: 26, margin: '0 0 10px' }}>{puzzle.title}</h2>
-          <p
-            style={{
-              fontSize: 16,
-              lineHeight: 1.55,
-              color: 'var(--ink-soft)',
-              fontWeight: 600,
-              margin: '0 0 18px',
-            }}
-          >
+          <span className="pill pill-gold mb-3">Puzzle {idx + 1} · {puzzle.diff}</span>
+          <h2 className="text-[26px] m-0 mb-2.5">{puzzle.title}</h2>
+          <p className="text-base leading-snug text-ink-soft font-semibold m-0 mb-[18px]">
             {puzzle.brief}
           </p>
           {result === 'win' && (
-            <div
-              className="pop"
-              style={{
-                background: 'var(--jade-soft)',
-                borderRadius: 14,
-                padding: '14px 16px',
-                display: 'flex',
-                gap: 11,
-                alignItems: 'center',
-              }}
-            >
+            <div className="pop bg-jade-soft rounded-[14px] px-4 py-3.5 flex gap-[11px] items-center">
               <CoachAvatar size={34} />
               <div>
-                <b style={{ color: 'var(--jade-deep)' }}>Solved! ★</b>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+                <b className="text-jade-deep">Solved! ★</b>
+                <div className="text-sm font-semibold text-ink">
                   Beautiful — that's the winning move.
                 </div>
               </div>
             </div>
           )}
           {result === 'miss' && (
-            <div
-              className="pop"
-              style={{
-                background: 'var(--red-soft)',
-                borderRadius: 14,
-                padding: '14px 16px',
-                display: 'flex',
-                gap: 11,
-                alignItems: 'center',
-              }}
-            >
+            <div className="pop bg-red-soft rounded-[14px] px-4 py-3.5 flex gap-[11px] items-center">
               <CoachAvatar size={34} />
               <div>
-                <b style={{ color: 'var(--red-deep)' }}>Not quite.</b>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+                <b className="text-red-deep">Not quite.</b>
+                <div className="text-sm font-semibold text-ink">
                   Resetting — look again for the key move.
                 </div>
               </div>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+          <div className="flex gap-2.5 mt-[18px]">
             <button
               type="button"
               className="btn btn-ghost btn-sm"
@@ -353,33 +225,20 @@ export function LessonsScreen() {
   const [tab, setTab] = useState<'lessons' | 'puzzles'>('lessons');
 
   return (
-    <div style={{ maxWidth: 1120, margin: '0 auto', padding: '30px 30px 60px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-        <h1 style={{ fontSize: 34, margin: 0 }}>Learn & Practice</h1>
-        <div
-          style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            gap: 6,
-            background: '#fff',
-            padding: 5,
-            borderRadius: 999,
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--line-soft)',
-          }}
-        >
+    <div className="page-container-xl">
+      <div className="flex items-center gap-3.5 mb-6">
+        <h1 className="text-[34px] m-0">Learn & Practice</h1>
+        <div className="tab-switcher">
           <button
             type="button"
-            className={`btn btn-sm ${tab === 'lessons' ? 'btn-primary' : ''}`}
-            style={tab !== 'lessons' ? { background: 'transparent', color: 'var(--ink-soft)' } : {}}
+            className={`btn btn-sm ${tab === 'lessons' ? 'btn-primary' : 'bg-transparent text-ink-soft'}`}
             onClick={() => setTab('lessons')}
           >
             Lessons
           </button>
           <button
             type="button"
-            className={`btn btn-sm ${tab === 'puzzles' ? 'btn-gold' : ''}`}
-            style={tab !== 'puzzles' ? { background: 'transparent', color: 'var(--ink-soft)' } : {}}
+            className={`btn btn-sm ${tab === 'puzzles' ? 'btn-gold' : 'bg-transparent text-ink-soft'}`}
             onClick={() => setTab('puzzles')}
           >
             Puzzles
