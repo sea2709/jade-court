@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Coach, X } from '@jade-court/xiangqi-engine';
+import { Coach } from '@jade-court/xiangqi-engine';
+import type {
+  Board,
+  CoachFeedbackResponse,
+  Difficulty,
+  Move,
+  Side,
+} from '@jade-court/xiangqi-engine';
 import { CoachAvatar } from '../components/CoachAvatar';
 import { XQBoard } from '../components/XQBoard';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
+import {
+  fetchCoachFeedback,
+  fetchCoachHint,
+  fetchCoachOpening,
+  isGemmaUnconfigured,
+} from '../lib/gemmaApi';
 
 let msgId = 0;
 
@@ -44,7 +57,7 @@ function ChatBubble({ m }: { m: ChatMessage }) {
     <div className="pop flex gap-2.5 items-start">
       <CoachAvatar size={34} mood={m.think ? 'think' : 'happy'} />
       <div className="chat-bubble">
-        {m.verdict && (
+        {m.verdict && !m.think && (
           <div className="flex items-center gap-[7px] mb-1">
             <span className={`font-extrabold text-[13px] inline-flex items-center gap-[5px] ${toneClass}`}>
               {m.emoji} {m.label}
@@ -56,8 +69,21 @@ function ChatBubble({ m }: { m: ChatMessage }) {
             )}
           </div>
         )}
+        <div style={{ fontSize: 14.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--ink)' }}>
+          {m.text}
+        </div>
+        {m.sub && !m.think && (
+          <div
+            style={{
+              fontSize: 13,
+              lineHeight: 1.45,
+              color: 'var(--ink-soft)',
+              fontWeight: 600,
+              marginTop: 5,
+            }}
+          >
         <div className="text-[14.5px] leading-normal font-semibold text-ink">{m.text}</div>
-        {m.sub && (
+        {m.sub && !m.think && (
           <div className="text-[13px] leading-snug text-ink-soft font-semibold mt-[5px]">
             {m.sub}
           </div>
@@ -67,12 +93,31 @@ function ChatBubble({ m }: { m: ChatMessage }) {
   );
 }
 
+function feedbackToMessage(fb: CoachFeedbackResponse): Omit<ChatMessage, 'id' | 'from'> {
+  return {
+    verdict: fb.verdict,
+    label: fb.label,
+    emoji: fb.emoji,
+    tone: fb.tone,
+    lossCp: fb.lossCp,
+    text: fb.desc,
+    sub: fb.body,
+  };
+}
+
 export function LearnScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     { id: ++msgId, from: 'coach', text: Coach.opening() },
   ]);
-  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
+  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
+  const [coachBusy, setCoachBusy] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const difficultyRef = useRef(difficulty);
+  difficultyRef.current = difficulty;
+
+  const replaceMessage = useCallback((id: number, patch: Partial<ChatMessage>) => {
+    setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch, think: false } : m)));
+  }, []);
 
   const push = useCallback((m: Omit<ChatMessage, 'id' | 'from'>) => {
     setMessages((ms) => [...ms, { id: ++msgId, from: 'coach', ...m }]);
@@ -82,16 +127,39 @@ export function LearnScreen() {
     setMessages((ms) => [...ms, { id: ++msgId, from: 'system', text }]);
   }, []);
 
-  const game = useXiangqiGame({
-    aiSide: 'b',
-    difficulty,
-    onSelect: (piece, count) => {
-      push({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
-    },
-    onMove: (move, boardBefore, side, meta) => {
-      if (side === 'r') {
+  const requestCoachFeedback = useCallback(
+    async (
+      boardBefore: Board,
+      move: Move,
+      history: { side: Side; from: [number, number]; to: [number, number] }[],
+    ) => {
+      const pendingId = ++msgId;
+      setMessages((ms) => [
+        ...ms,
+        {
+          id: pendingId,
+          from: 'coach',
+          think: true,
+          text: 'Let me see how that move plays out…',
+        },
+      ]);
+      setCoachBusy(true);
+      try {
+        const fb = await fetchCoachFeedback({
+          boardBefore,
+          move,
+          side: 'r',
+          depth: 2,
+          difficulty: difficultyRef.current,
+          history,
+        });
+        replaceMessage(pendingId, feedbackToMessage(fb));
+      } catch (err) {
+        if (!isGemmaUnconfigured(err)) {
+          console.warn('[coach] fetchCoachFeedback failed, using template:', err);
+        }
         const fb = Coach.feedbackFor(boardBefore, move, 'r', 2);
-        push({
+        replaceMessage(pendingId, {
           verdict: fb.verdict,
           label: fb.label,
           emoji: fb.emoji,
@@ -100,6 +168,22 @@ export function LearnScreen() {
           text: fb.desc,
           sub: fb.body,
         });
+      } finally {
+        setCoachBusy(false);
+      }
+    },
+    [replaceMessage],
+  );
+
+  const game = useXiangqiGame({
+    aiSide: 'b',
+    difficulty,
+    onSelect: (piece, count) => {
+      push({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
+    },
+    onMove: (move, boardBefore, side, meta) => {
+      if (side === 'r') {
+        void requestCoachFeedback(boardBefore, move, meta.history ?? []);
       } else {
         const text =
           meta.aiComment ?? `I'll play ${Coach.describeMove(boardBefore, move)}`;
@@ -115,12 +199,56 @@ export function LearnScreen() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { text } = await fetchCoachOpening({ difficulty: difficultyRef.current });
+        if (!cancelled) {
+          setMessages((ms) => {
+            if (!ms.length || ms[0].from !== 'coach') return ms;
+            return [{ ...ms[0], text }, ...ms.slice(1)];
+          });
+        }
+      } catch (err) {
+        if (!isGemmaUnconfigured(err)) {
+          console.warn('[coach] fetchCoachOpening failed, keeping template welcome:', err);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
-  const onHint = () => {
-    const h = game.showHint(2);
-    push({ text: h.text, tone: 'info', sub: h.tip });
+  const onHint = async () => {
+    const pendingId = ++msgId;
+    setMessages((ms) => [
+      ...ms,
+      { id: pendingId, from: 'coach', think: true, text: 'Looking for the strongest idea…' },
+    ]);
+    setCoachBusy(true);
+    try {
+      const h = await fetchCoachHint({
+        board: game.board,
+        side: game.turn,
+        depth: 2,
+        difficulty,
+      });
+      game.revealHint(h.move);
+      replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip });
+    } catch (err) {
+      if (!isGemmaUnconfigured(err)) {
+        console.warn('[coach] fetchCoachHint failed, using template:', err);
+      }
+      const h = game.showHint(2);
+      replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip || undefined });
+    } finally {
+      setCoachBusy(false);
+    }
   };
 
   const onExplain = () => {
@@ -167,6 +295,17 @@ export function LearnScreen() {
         />
       </div>
 
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', height: 642, overflow: 'hidden' }}>
+        <div
+          style={{
+            padding: '16px 18px',
+            borderBottom: '1px solid var(--line-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <CoachAvatar size={44} mood={game.aiThinking || coachBusy ? 'think' : 'happy'} />
       <div className="card flex flex-col h-[642px] overflow-hidden">
         <div className="px-[18px] py-4 border-b border-line-soft flex items-center gap-3">
           <CoachAvatar size={44} mood={game.aiThinking ? 'think' : 'happy'} />
@@ -176,6 +315,18 @@ export function LearnScreen() {
           </div>
           <select
             value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+            style={{
+              marginLeft: 'auto',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 700,
+              fontSize: 13,
+              border: '1px solid var(--line-soft)',
+              borderRadius: 999,
+              padding: '6px 10px',
+              background: '#fff',
+              color: 'var(--ink)',
+            }}
             onChange={(e) =>
               setDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')
             }
@@ -200,6 +351,10 @@ export function LearnScreen() {
           <div className="flex gap-2">
             <button
               type="button"
+              className="btn btn-primary btn-sm"
+              style={{ flex: 1 }}
+              disabled={!yourTurn || coachBusy}
+              onClick={() => void onHint()}
               className="btn btn-primary btn-sm flex-1"
               disabled={!yourTurn}
               onClick={onHint}
@@ -208,6 +363,9 @@ export function LearnScreen() {
             </button>
             <button
               type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ flex: 1 }}
+              disabled={!yourTurn || coachBusy}
               className="btn btn-ghost btn-sm flex-1"
               disabled={!yourTurn}
               onClick={onExplain}

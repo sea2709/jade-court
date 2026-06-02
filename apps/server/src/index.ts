@@ -17,6 +17,7 @@ import {
   type RoomState,
 } from './rooms.js';
 import aiRoutes from './routes/ai.js';
+import coachRoutes from './routes/coach.js';
 import { isGemmaConfigured } from './gemini/config.js';
 
 const app = new Hono();
@@ -55,6 +56,7 @@ app.get('/api/rooms/:code', (c) => {
 app.get('/health', (c) => c.json({ ok: true }));
 
 app.route('/api/ai', aiRoutes);
+app.route('/api/coach', coachRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 
@@ -146,8 +148,11 @@ wss.on('connection', (ws) => {
 
 httpServer.listen(port, () => {
   console.log(`Jade Court server listening on http://localhost:${port}`);
-  if (isGemmaConfigured()) console.log('Gemma opponent: enabled (GEMINI_API_KEY set)');
-  else console.log('Gemma opponent: disabled (set GEMINI_API_KEY for /api/ai/move)');
+  if (isGemmaConfigured()) {
+    console.log('Gemma: enabled (GEMINI_API_KEY set) — opponent /api/ai/move, coach /api/coach/*');
+  } else {
+    console.log('Gemma: disabled (set GEMINI_API_KEY for /api/ai/move and /api/coach/*)');
+  }
 });
 
 getDb()
