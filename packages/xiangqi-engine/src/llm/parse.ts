@@ -3,7 +3,13 @@
  */
 import * as X from '../rules.js';
 import type { Board, Move, Side } from '../types.js';
-import type { GemmaMovePayload, ParsedMoveCoords } from './types.js';
+import type {
+  CoachFeedbackPayload,
+  CoachHintPayload,
+  CoachOpeningPayload,
+  GemmaMovePayload,
+  ParsedMoveCoords,
+} from './types.js';
 
 function coordEqual(a: [number, number], b: [number, number]): boolean {
   return a[0] === b[0] && a[1] === b[1];
@@ -83,4 +89,34 @@ export function findLegalMove(board: Board, side: Side, parsed: ParsedMoveCoords
       (m) => coordEqual(m.from, parsed.from) && coordEqual(m.to, parsed.to),
     ) ?? null
   );
+}
+
+function nonEmptyString(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
+
+export function parseCoachFeedbackJson(text: string): { desc: string; body: string } | null {
+  const obj = parsePayload(text) as CoachFeedbackPayload | null;
+  if (!obj) return null;
+  const desc = nonEmptyString(obj.desc);
+  const body = nonEmptyString(obj.body);
+  if (!desc || !body) return null;
+  return { desc, body };
+}
+
+export function parseCoachHintJson(text: string): { text: string; tip: string } | null {
+  const obj = parsePayload(text) as CoachHintPayload | null;
+  if (!obj) return null;
+  const hintText = nonEmptyString(obj.text);
+  const tip = nonEmptyString(obj.tip);
+  if (!hintText || !tip) return null;
+  return { text: hintText, tip };
+}
+
+export function parseCoachOpeningJson(text: string): { text: string } | null {
+  const obj = parsePayload(text) as CoachOpeningPayload | null;
+  if (!obj) return null;
+  const openingText = nonEmptyString(obj.text);
+  if (!openingText) return null;
+  return { text: openingText };
 }
