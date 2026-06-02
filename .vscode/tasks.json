@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:engine",
+      "type": "shell",
+      "command": "pnpm --filter @jade-court/xiangqi-engine build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

@@ -45,6 +45,18 @@ Run from the repo root:
 
 Build the engine before first dev run if needed: `pnpm build`.
 
+## Server debugging (Cursor / VS Code)
+
+Use **Run and Debug** → **Debug Server** (`.vscode/launch.json`). It runs `apps/server` with `tsx`, loads repo-root `.env` via `loadEnv.ts`, and builds `xiangqi-engine` first.
+
+To debug a server already running in a terminal:
+
+```bash
+pnpm --filter @jade-court/server dev:debug
+```
+
+Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
+
 ## Environment (single `.env` at repo root)
 
 | File | Used by | Variables |
