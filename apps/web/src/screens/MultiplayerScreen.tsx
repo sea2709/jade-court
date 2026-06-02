@@ -14,27 +14,14 @@ function PassPlay({ onExit }: { onExit: () => void }) {
   const turnName = game.turn === 'r' ? 'Red 帥' : 'Black 將';
 
   return (
-    <div
-      style={{
-        maxWidth: 1040,
-        margin: '0 auto',
-        padding: '24px 30px 50px',
-        display: 'grid',
-        gridTemplateColumns: 'auto 300px',
-        gap: 30,
-        alignItems: 'start',
-        justifyContent: 'center',
-      }}
-    >
-      <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+    <div className="game-layout">
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-3.5">
           <span className="pill pill-gold">Pass & play · 友</span>
           <span
-            style={{
-              fontWeight: 800,
-              color: game.turn === 'r' ? 'var(--red-deep)' : 'var(--black-deep)',
-              fontSize: 15,
-            }}
+            className={`font-extrabold text-[15px] ${
+              game.turn === 'r' ? 'text-red-deep' : 'text-black-deep'
+            }`}
           >
             {game.status ? 'Game over' : `${turnName} to move`}
           </span>
@@ -52,22 +39,11 @@ function PassPlay({ onExit }: { onExit: () => void }) {
           interactive={!game.status}
         />
         {game.status && (
-          <div
-            className="pop"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'grid',
-              placeItems: 'center',
-              background: 'rgba(43,38,34,.45)',
-              borderRadius: 14,
-              zIndex: 20,
-            }}
-          >
-            <div className="card" style={{ padding: '28px 32px', textAlign: 'center' }}>
-              <div style={{ fontSize: 42 }}>🏆</div>
-              <h2 style={{ margin: '6px 0 4px', fontSize: 26 }}>{youWin ? 'Red wins!' : 'Black wins!'}</h2>
-              <p style={{ color: 'var(--ink-soft)', fontWeight: 600, margin: '0 0 16px' }}>
+          <div className="pop game-overlay">
+            <div className="card px-8 py-7 text-center">
+              <div className="text-[42px]">🏆</div>
+              <h2 className="my-1.5 mb-1 text-[26px]">{youWin ? 'Red wins!' : 'Black wins!'}</h2>
+              <p className="text-ink-soft font-semibold m-0 mb-4">
                 {game.status === 'stalemate'
                   ? 'Stalemate — no legal moves.'
                   : 'Checkmate!'}
@@ -79,42 +55,25 @@ function PassPlay({ onExit }: { onExit: () => void }) {
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10 }}>Room</div>
-          <div
-            style={{
-              fontSize: 13,
-              color: 'var(--ink-soft)',
-              fontWeight: 600,
-              lineHeight: 1.5,
-              marginBottom: 14,
-            }}
-          >
+      <div className="flex flex-col gap-3.5">
+        <div className="card p-4">
+          <div className="font-extrabold text-[15px] mb-2.5">Room</div>
+          <div className="text-[13px] text-ink-soft font-semibold leading-normal mb-3.5">
             You and your friend share this device. The board rotates so the player to move always
             sees their side at the bottom.
           </div>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
+          <label className="flex items-center gap-2.5 cursor-pointer font-bold text-sm">
             <input
               type="checkbox"
               checked={autoFlip}
               onChange={(e) => setAutoFlip(e.target.checked)}
-              style={{ width: 18, height: 18, accentColor: 'var(--jade)' }}
+              className="w-[18px] h-[18px] accent-jade"
             />
             Rotate board each turn
           </label>
         </div>
-        <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
-          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--ink-soft)' }}>
+        <div className="card p-4 flex flex-col gap-2">
+          <div className="font-extrabold text-sm text-ink-soft">
             Moves: {game.history.length}
           </div>
           <button
@@ -153,27 +112,14 @@ function OnlineGame({
   const turnName = game.turn === 'r' ? 'Red 帥' : 'Black 將';
 
   return (
-    <div
-      style={{
-        maxWidth: 1040,
-        margin: '0 auto',
-        padding: '24px 30px 50px',
-        display: 'grid',
-        gridTemplateColumns: 'auto 300px',
-        gap: 30,
-        alignItems: 'start',
-        justifyContent: 'center',
-      }}
-    >
-      <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+    <div className="game-layout">
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-3.5">
           <span className="pill pill-gold">Online · {code}</span>
           <span
-            style={{
-              fontWeight: 800,
-              color: game.turn === 'r' ? 'var(--red-deep)' : 'var(--black-deep)',
-              fontSize: 15,
-            }}
+            className={`font-extrabold text-[15px] ${
+              game.turn === 'r' ? 'text-red-deep' : 'text-black-deep'
+            }`}
           >
             {game.status ? 'Game over' : yourTurn ? 'Your move' : `${turnName} to move`}
           </span>
@@ -192,45 +138,34 @@ function OnlineGame({
           interactive={yourTurn}
         />
         {game.status && (
-          <div
-            className="pop"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'grid',
-              placeItems: 'center',
-              background: 'rgba(43,38,34,.45)',
-              borderRadius: 14,
-              zIndex: 20,
-            }}
-          >
-            <div className="card" style={{ padding: '28px 32px', textAlign: 'center' }}>
-              <div style={{ fontSize: 42 }}>🏆</div>
-              <h2 style={{ margin: '6px 0 4px', fontSize: 26 }}>{won ? 'You win!' : 'You lose'}</h2>
-              <p style={{ color: 'var(--ink-soft)', fontWeight: 600, margin: '0 0 16px' }}>
+          <div className="pop game-overlay">
+            <div className="card px-8 py-7 text-center">
+              <div className="text-[42px]">🏆</div>
+              <h2 className="my-1.5 mb-1 text-[26px]">{won ? 'You win!' : 'You lose'}</h2>
+              <p className="text-ink-soft font-semibold m-0 mb-4">
                 {game.status === 'stalemate' ? 'Stalemate.' : 'Checkmate!'}
               </p>
             </div>
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10 }}>Room {code}</div>
-          <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600, lineHeight: 1.5 }}>
+      <div className="flex flex-col gap-3.5">
+        <div className="card p-4">
+          <div className="font-extrabold text-[15px] mb-2.5">Room {code}</div>
+          <div className="text-[13px] text-ink-soft font-semibold leading-normal">
             You are playing as {side === 'r' ? 'Red 帥' : 'Black 將'}.
             {!game.opponentJoined && (
-              <div style={{ marginTop: 8, color: 'var(--muted)' }}>Waiting for opponent…</div>
+              <div className="mt-2 text-muted">Waiting for opponent…</div>
             )}
             {game.opponentJoined && (
-              <div style={{ marginTop: 8, color: 'var(--jade-deep)' }}>Opponent connected ✓</div>
+              <div className="mt-2 text-jade-deep">Opponent connected ✓</div>
             )}
             {game.error && (
-              <div style={{ marginTop: 8, color: 'var(--red-deep)' }}>{game.error}</div>
+              <div className="mt-2 text-red-deep">{game.error}</div>
             )}
           </div>
         </div>
-        <div className="card" style={{ padding: 16 }}>
+        <div className="card p-4">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onExit}>
             ← Leave room
           </button>
@@ -330,112 +265,54 @@ function Lobby({
 
   if (!mode) {
     return (
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '50px 30px' }}>
-        <div className="rise" style={{ textAlign: 'center', marginBottom: 36 }}>
-          <span className="pill pill-gold" style={{ marginBottom: 14 }}>
-            2 players · 友
-          </span>
-          <h1 style={{ fontSize: 40, margin: '0 0 10px' }}>Play with a Friend</h1>
-          <p style={{ color: 'var(--ink-soft)', fontSize: 17, fontWeight: 600, margin: 0 }}>
+      <div className="page-container-md">
+        <div className="rise section-header mb-9">
+          <span className="pill pill-gold mb-3.5">2 players · 友</span>
+          <h1 className="section-title">Play with a Friend</h1>
+          <p className="section-subtitle">
             Create a private room and share the link, or jump straight into pass-and-play.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div className="grid grid-cols-2 gap-5">
           <button
             type="button"
-            className="card"
+            className="card p-0 overflow-hidden text-left cursor-pointer"
             onClick={handleCreate}
             disabled={loading}
-            style={{ padding: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer' }}
           >
-            <div
-              style={{
-                height: 110,
-                background: 'linear-gradient(150deg,#EBB24B,#C98C1F)',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-piece)',
-                  fontSize: 64,
-                  color: 'rgba(255,255,255,.95)',
-                  fontWeight: 700,
-                }}
-              >
-                友
-              </span>
+            <div className="lobby-card-header bg-gradient-to-br from-[#EBB24B] to-[#C98C1F]">
+              <span className="lobby-card-glyph">友</span>
             </div>
-            <div style={{ padding: '18px 20px 22px' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 21, marginBottom: 6 }}>
-                Create a room
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  color: 'var(--ink-soft)',
-                  fontSize: 14.5,
-                  fontWeight: 600,
-                  lineHeight: 1.5,
-                }}
-              >
+            <div className="px-5 pt-[18px] pb-[22px]">
+              <div className="font-display font-extrabold text-[21px] mb-1.5">Create a room</div>
+              <p className="m-0 text-ink-soft text-[14.5px] font-semibold leading-normal">
                 Get a shareable link and invite code to send to your friend.
               </p>
             </div>
           </button>
           <button
             type="button"
-            className="card"
+            className="card p-0 overflow-hidden text-left cursor-pointer"
             onClick={() => setMode('join')}
-            style={{ padding: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer' }}
           >
-            <div
-              style={{
-                height: 110,
-                background: 'linear-gradient(150deg,#2BB495,#157A63)',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-piece)',
-                  fontSize: 64,
-                  color: 'rgba(255,255,255,.95)',
-                  fontWeight: 700,
-                }}
-              >
-                入
-              </span>
+            <div className="lobby-card-header bg-gradient-to-br from-[#2BB495] to-[#157A63]">
+              <span className="lobby-card-glyph">入</span>
             </div>
-            <div style={{ padding: '18px 20px 22px' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 21, marginBottom: 6 }}>
-                Join with a code
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  color: 'var(--ink-soft)',
-                  fontSize: 14.5,
-                  fontWeight: 600,
-                  lineHeight: 1.5,
-                }}
-              >
+            <div className="px-5 pt-[18px] pb-[22px]">
+              <div className="font-display font-extrabold text-[21px] mb-1.5">Join with a code</div>
+              <p className="m-0 text-ink-soft text-[14.5px] font-semibold leading-normal">
                 Got an invite code from a friend? Enter it to sit down at their board.
               </p>
             </div>
           </button>
         </div>
-        <div style={{ textAlign: 'center', marginTop: 26 }}>
+        <div className="text-center mt-[26px]">
           <button type="button" className="btn btn-ghost" onClick={onPassPlay}>
             Pass-and-play on this device →
           </button>
         </div>
         {error && (
-          <p style={{ textAlign: 'center', color: 'var(--red-deep)', fontWeight: 700, marginTop: 16 }}>
-            {error}
-          </p>
+          <p className="text-center text-red-deep font-bold mt-4">{error}</p>
         )}
       </div>
     );
@@ -443,44 +320,30 @@ function Lobby({
 
   if (mode === 'join') {
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '60px 30px' }}>
-        <div className="card" style={{ padding: 30, textAlign: 'center' }}>
-          <h2 style={{ fontSize: 26, margin: '0 0 8px' }}>Join a room</h2>
-          <p style={{ color: 'var(--ink-soft)', fontWeight: 600, margin: '0 0 20px' }}>
+      <div className="max-w-[480px] mx-auto px-[30px] py-[60px]">
+        <div className="card p-[30px] text-center">
+          <h2 className="text-[26px] m-0 mb-2">Join a room</h2>
+          <p className="text-ink-soft font-semibold m-0 mb-5">
             Enter the invite code your friend shared.
           </p>
           <input
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             placeholder="JADE-XXXX"
-            style={{
-              width: '100%',
-              textAlign: 'center',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: 24,
-              letterSpacing: 2,
-              padding: '14px',
-              borderRadius: 14,
-              border: '2px solid var(--line-soft)',
-              background: 'var(--cream)',
-              color: 'var(--ink)',
-              marginBottom: 18,
-            }}
+            className="room-input"
           />
           <button
             type="button"
-            className="btn btn-primary btn-lg"
-            style={{ width: '100%' }}
+            className="btn btn-primary btn-lg w-full"
             disabled={joinCode.length < 4 || loading}
             onClick={handleJoin}
           >
             {loading ? 'Joining…' : 'Join game →'}
           </button>
           {error && (
-            <p style={{ color: 'var(--red-deep)', fontWeight: 700, marginTop: 12 }}>{error}</p>
+            <p className="text-red-deep font-bold mt-3">{error}</p>
           )}
-          <button type="button" className="nav-link" style={{ marginTop: 14 }} onClick={() => setMode(null)}>
+          <button type="button" className="nav-link mt-3.5" onClick={() => setMode(null)}>
             ← Back
           </button>
         </div>
@@ -491,88 +354,41 @@ function Lobby({
   const codeSuffix = code.replace('JADE-', '');
 
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto', padding: '50px 30px' }}>
-      <div className="card" style={{ padding: 32, textAlign: 'center' }}>
-        <span className="pill pill-gold" style={{ marginBottom: 16 }}>
-          Room ready
-        </span>
-        <h2 style={{ fontSize: 28, margin: '0 0 6px' }}>Invite your friend</h2>
-        <p style={{ color: 'var(--ink-soft)', fontWeight: 600, margin: '0 0 22px' }}>
+    <div className="max-w-[560px] mx-auto px-[30px] py-[50px]">
+      <div className="card p-8 text-center">
+        <span className="pill pill-gold mb-4">Room ready</span>
+        <h2 className="text-[28px] m-0 mb-1.5">Invite your friend</h2>
+        <p className="text-ink-soft font-semibold m-0 mb-[22px]">
           Share this code or link. They join, you play.
         </p>
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 18 }}>
+        <div className="flex justify-center gap-2.5 mb-[18px]">
           {codeSuffix.split('').map((ch, i) => (
-            <span
-              key={i}
-              style={{
-                width: 52,
-                height: 62,
-                borderRadius: 14,
-                display: 'grid',
-                placeItems: 'center',
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 30,
-                background: 'var(--cream)',
-                border: '2px solid var(--line-soft)',
-                color: 'var(--ink)',
-              }}
-            >
+            <span key={i} className="invite-code-char">
               {ch}
             </span>
           ))}
         </div>
-        <div
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            color: 'var(--muted)',
-            letterSpacing: 3,
-            marginBottom: 20,
-          }}
-        >
+        <div className="font-display font-extrabold text-muted tracking-[3px] mb-5">
           {code}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
-          <input
-            readOnly
-            value={link}
-            style={{
-              flex: 1,
-              fontSize: 13,
-              fontWeight: 600,
-              padding: '11px 13px',
-              borderRadius: 10,
-              border: '1px solid var(--line-soft)',
-              background: 'var(--cream)',
-              color: 'var(--ink-soft)',
-            }}
-          />
+        <div className="flex gap-2 mb-[22px]">
+          <input readOnly value={link} className="room-link-input" />
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => copy(link)}>
             {copied ? '✓ Copied' : 'Copy link'}
           </button>
         </div>
 
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            padding: '12px',
-            borderRadius: 14,
-            background: opponentJoined ? 'var(--jade-soft)' : 'var(--cream)',
-            marginBottom: 20,
-          }}
+          className={`flex items-center justify-center gap-2.5 p-3 rounded-[14px] mb-5 ${
+            opponentJoined ? 'bg-jade-soft' : 'bg-cream'
+          }`}
         >
           {!opponentJoined ? (
-            <span style={{ fontWeight: 700, color: 'var(--muted)', fontSize: 14 }}>
-              Waiting for opponent to join…
-            </span>
+            <span className="font-bold text-muted text-sm">Waiting for opponent to join…</span>
           ) : (
-            <span style={{ fontWeight: 800, color: 'var(--jade-deep)', fontSize: 15 }}>
+            <span className="font-extrabold text-jade-deep text-[15px]">
               ✓ Opponent joined the room!
             </span>
           )}
@@ -580,13 +396,12 @@ function Lobby({
 
         <button
           type="button"
-          className="btn btn-gold btn-lg"
-          style={{ width: '100%' }}
+          className="btn btn-gold btn-lg w-full"
           onClick={() => onOnline(code, 'r')}
         >
           {opponentJoined ? 'Start game →' : 'Start game (waiting for opponent)'}
         </button>
-        <button type="button" className="nav-link" style={{ marginTop: 14 }} onClick={() => setMode(null)}>
+        <button type="button" className="nav-link mt-3.5" onClick={() => setMode(null)}>
           ← Back
         </button>
       </div>
