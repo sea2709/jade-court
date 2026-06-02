@@ -69,19 +69,6 @@ function ChatBubble({ m }: { m: ChatMessage }) {
             )}
           </div>
         )}
-        <div style={{ fontSize: 14.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--ink)' }}>
-          {m.text}
-        </div>
-        {m.sub && !m.think && (
-          <div
-            style={{
-              fontSize: 13,
-              lineHeight: 1.45,
-              color: 'var(--ink-soft)',
-              fontWeight: 600,
-              marginTop: 5,
-            }}
-          >
         <div className="text-[14.5px] leading-normal font-semibold text-ink">{m.text}</div>
         {m.sub && !m.think && (
           <div className="text-[13px] leading-snug text-ink-soft font-semibold mt-[5px]">
@@ -295,20 +282,9 @@ export function LearnScreen() {
         />
       </div>
 
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', height: 642, overflow: 'hidden' }}>
-        <div
-          style={{
-            padding: '16px 18px',
-            borderBottom: '1px solid var(--line-soft)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <CoachAvatar size={44} mood={game.aiThinking || coachBusy ? 'think' : 'happy'} />
       <div className="card flex flex-col h-[642px] overflow-hidden">
         <div className="px-[18px] py-4 border-b border-line-soft flex items-center gap-3">
-          <CoachAvatar size={44} mood={game.aiThinking ? 'think' : 'happy'} />
+          <CoachAvatar size={44} mood={game.aiThinking || coachBusy ? 'think' : 'happy'} />
           <div>
             <div className="font-display font-extrabold text-[17px]">Master Lin</div>
             <div className="text-[12.5px] text-muted font-bold">Your Xiangqi coach</div>
@@ -316,21 +292,7 @@ export function LearnScreen() {
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-            style={{
-              marginLeft: 'auto',
-              fontFamily: 'var(--font-body)',
-              fontWeight: 700,
-              fontSize: 13,
-              border: '1px solid var(--line-soft)',
-              borderRadius: 999,
-              padding: '6px 10px',
-              background: '#fff',
-              color: 'var(--ink)',
-            }}
-            onChange={(e) =>
-              setDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')
-            }
-            className="chat-select"
+            className="chat-select ml-auto"
           >
             <option value="beginner">Gentle</option>
             <option value="intermediate">Firm</option>
@@ -351,23 +313,16 @@ export function LearnScreen() {
           <div className="flex gap-2">
             <button
               type="button"
-              className="btn btn-primary btn-sm"
-              style={{ flex: 1 }}
+              className="btn btn-primary btn-sm flex-1"
               disabled={!yourTurn || coachBusy}
               onClick={() => void onHint()}
-              className="btn btn-primary btn-sm flex-1"
-              disabled={!yourTurn}
-              onClick={onHint}
             >
               💡 Show me a hint
             </button>
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
-              style={{ flex: 1 }}
-              disabled={!yourTurn || coachBusy}
               className="btn btn-ghost btn-sm flex-1"
-              disabled={!yourTurn}
+              disabled={!yourTurn || coachBusy}
               onClick={onExplain}
             >
               What should I look for?

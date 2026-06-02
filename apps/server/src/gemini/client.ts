@@ -22,6 +22,15 @@ const MOVE_SCHEMA = {
   required: ['moveIndex'],
 } as const;
 
+const COACH_FEEDBACK_SCHEMA = {
+  type: 'object',
+  properties: {
+    desc: { type: 'string' },
+    body: { type: 'string' },
+  },
+  required: ['desc', 'body'],
+} as const;
+
 const COACH_HINT_SCHEMA = {
   type: 'object',
   properties: {
@@ -41,6 +50,20 @@ const COACH_OPENING_SCHEMA = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GemmaJsonSchema = Record<string, any>;
+
+function logGemmaTokenUsage(response: GenerateContentResponse): void {
+  const meta = response.usageMetadata;
+  if (!meta) {
+    console.warn('[gemma] tokens: usageMetadata missing from API response');
+    return;
+  }
+  const prompt = meta.promptTokenCount ?? 0;
+  const output = meta.candidatesTokenCount ?? 0;
+  const total = meta.totalTokenCount ?? 0;
+  console.log(
+    `[gemma] tokens prompt=${prompt} output=${output} total=${total} model=${gemmaModel()}`,
+  );
+}
 
 async function generateJson(
   systemInstruction: string,
