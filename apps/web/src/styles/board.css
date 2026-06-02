@@ -25,6 +25,7 @@
 
 /* points / pieces */
 .point { position: absolute; transform: translate(-50%, -50%); }
+.point.capture-point { z-index: 2; }
 .piece {
   border-radius: 50%;
   display: grid; place-items: center;
@@ -48,6 +49,20 @@
 .piece.selected {
   transform: scale(1.08);
   box-shadow: 0 0 0 4px var(--jade), 0 8px 16px rgba(90,60,20,.4);
+}
+.piece.capture-target {
+  transform: scale(1.06);
+  border-color: var(--gold-deep);
+  box-shadow: 0 0 0 4px var(--gold), 0 0 0 7px rgba(231,172,63,.35), 0 8px 14px rgba(90,60,20,.42);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .piece.capture-target {
+    animation: capturePulse 1.2s ease-in-out infinite;
+  }
+}
+@keyframes capturePulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--gold), 0 0 0 7px rgba(231,172,63,.35), 0 8px 14px rgba(90,60,20,.42); }
+  50% { box-shadow: 0 0 0 5px var(--gold-deep), 0 0 0 11px rgba(231,172,63,.22), 0 8px 14px rgba(90,60,20,.42); }
 }
 .piece.lastmove { box-shadow: 0 0 0 4px var(--gold), 0 6px 12px rgba(90,60,20,.4); }
 .piece.opponent-lastmove.lastmove {
@@ -107,5 +122,9 @@ body.pcs-bold .piece::after { border-color: rgba(255,255,255,.6); opacity: .45; 
 /* flat: minimal ivory, thin ring, no inner circle */
 body.pcs-flat .piece {
   background: #FCF6E8; box-shadow: 0 2px 4px rgba(90,60,20,.22); border-width: 1.5px;
+}
+body.pcs-flat .piece.capture-target {
+  border-width: 2.5px;
+  box-shadow: 0 0 0 3px var(--gold), 0 0 0 6px rgba(231,172,63,.4), 0 4px 8px rgba(90,60,20,.28);
 }
 body.pcs-flat .piece::after { display: none; }
