@@ -63,7 +63,8 @@ export async function fetchAiMove(params: FetchAiMoveParams): Promise<AiMoveResp
   return postJson<AiMoveResponse>('/api/ai/move', body);
 }
 
-export async function fetchEngineMove(params: FetchAiMoveParams): Promise<AiMoveResponse> {
+/** Play vs Computer — server picks backend from PLAY_OPPONENT_PROVIDER. */
+export async function fetchOpponentMove(params: FetchAiMoveParams): Promise<AiMoveResponse> {
   const body: AiMoveRequest = {
     board: params.board,
     side: params.side,
@@ -71,11 +72,7 @@ export async function fetchEngineMove(params: FetchAiMoveParams): Promise<AiMove
     ...(params.lastMove ? { lastMove: params.lastMove } : {}),
     ...(params.history?.length ? { history: params.history } : {}),
   };
-  return postJson<AiMoveResponse>('/api/engine/move', body);
-}
-
-export function isPikafishUnconfigured(err: unknown): boolean {
-  return err instanceof GemmaApiError && err.status === 503 && err.code === 'pikafish_unconfigured';
+  return postJson<AiMoveResponse>('/api/opponent/move', body);
 }
 
 export interface FetchCoachFeedbackParams {

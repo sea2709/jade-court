@@ -5,7 +5,6 @@ import { GameOverCard } from '../components/GameOverCard';
 import { XQBoard } from '../components/XQBoard';
 import { LEVELS } from '../content/levels';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
-import { playOpponentProvider } from '../lib/playOpponent';
 
 function Stars({ n }: { n: number }) {
   return (
@@ -98,11 +97,7 @@ function Game({
 }) {
   const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
-  const game = useXiangqiGame({
-    aiSide,
-    difficulty: level,
-    aiProvider: playOpponentProvider(),
-  });
+  const game = useXiangqiGame({ aiSide, difficulty: level, aiProvider: 'server' });
   const flip = humanSide === 'b';
   const yourTurn = game.turn === humanSide && !game.status && !game.revealingOpponentMove;
   const won = game.status && game.turn === aiSide;

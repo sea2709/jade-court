@@ -1,11 +1,5 @@
 import { AI, Coach, X } from '@jade-court/xiangqi-engine';
-import {
-  fetchAiMove,
-  fetchEngineMove,
-  GemmaApiError,
-  isGemmaUnconfigured,
-  isPikafishUnconfigured,
-} from '../lib/gemmaApi';
+import { fetchAiMove, fetchOpponentMove, GemmaApiError, isGemmaUnconfigured } from '../lib/gemmaApi';
 import type {
   Board,
   Coord,
@@ -28,12 +22,12 @@ export interface MoveMeta {
   history?: { side: Side; from: Coord; to: Coord }[];
 }
 
-export type AiProvider = 'gemma' | 'engine' | 'local';
+export type AiProvider = 'gemma' | 'server' | 'local';
 
 export interface GameConfig {
   aiSide?: Side;
   difficulty?: Difficulty;
-  /** Opponent backend: Pikafish UCI, Gemma, or local negamax (falls back to local on errors). */
+  /** `gemma` = Learn (/api/ai/move); `server` = Play (/api/opponent/move, server env); `local` = in-browser negamax. */
   aiProvider?: AiProvider;
   /** Minimum delay before the AI plays (ms). Default ~900–1400 random. */
   aiThinkDelayMs?: number;
@@ -302,7 +296,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
 
     let cancelled = false;
     const difficulty = cfg.difficulty ?? 'intermediate';
-    const provider = cfg.aiProvider ?? 'engine';
+    const provider = cfg.aiProvider ?? 'server';
     const aiSide = cfg.aiSide;
 
     const runLocal = () => {
@@ -348,8 +342,8 @@ export function useXiangqiGame(config: GameConfig = {}) {
 
       try {
         const fetchMove =
-          provider === 'engine'
-            ? () => fetchEngineMove(moveParams)
+          provider === 'server'
+            ? () => fetchOpponentMove(moveParams)
             : () => fetchAiMove(moveParams);
         const [result] = await Promise.all([fetchMove(), minDelay]);
         if (cancelled) return;
@@ -361,9 +355,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
         }
       } catch (err) {
         if (cancelled) return;
-        const quiet =
-          (err instanceof GemmaApiError && isGemmaUnconfigured(err)) ||
-          (err instanceof GemmaApiError && isPikafishUnconfigured(err));
+        const quiet = err instanceof GemmaApiError && isGemmaUnconfigured(err);
         if (!quiet) {
           console.warn(`[${provider}] opponent move failed, using local AI:`, err);
         }

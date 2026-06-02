@@ -113,7 +113,7 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 |----------|---------|-------------|
 | `PORT` | `3001` | Hono server port |
 | `GEMINI_API_KEY` | _(unset)_ | Learn coach + opponent (`/api/coach/*`, `/api/ai/move`). Without it, coach uses templates and Gemma opponent is unavailable |
-| `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer: `engine` (Pikafish), `gemma`, or `local` (built-in negamax) |
+| `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `gemma`, or `local` (server negamax) |
 | `PIKAFISH_PATH` | _(unset)_ | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing |
 | `ENGINE_MOVE_TIMEOUT_MS` | `30000` | Max wait for a Pikafish move |
 | `GEMMA_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
@@ -129,7 +129,6 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 |----------|---------|-------------|
 | `VITE_WS_URL` | _(proxy)_ | Override WebSocket URL for production web builds |
 | `VITE_API_URL` | _(same origin)_ | Override REST API base URL for production |
-| `VITE_PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer opponent: `engine`, `gemma`, or `local` |
 
 ## Implementation status
 
