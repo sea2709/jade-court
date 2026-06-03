@@ -110,6 +110,17 @@ git push -u origin issue-42-fix-room-sync
 gh pr create --fill
 ```
 
+**If `git push` fails** with `could not read Username for 'https://github.com'` (common in headless/agent setups while `gh` still works):
+
+```bash
+gh auth status
+GH_TOKEN=$(gh auth token)
+git push "https://x-access-token:${GH_TOKEN}@github.com/sea2709/jade-court.git" HEAD:issue-42-fix-room-sync
+gh pr create --head issue-42-fix-room-sync --base main
+```
+
+On your machine, avoid this by running `gh auth setup-git` once, or by using an SSH remote (`git@github.com:sea2709/jade-court.git`). Agents follow `.cursor/rules/git-gh-auth.mdc`.
+
 Fill in [.github/pull_request_template.md](../../.github/pull_request_template.md). Link the issue:
 
 ```markdown
@@ -129,6 +140,7 @@ After CI passes, merge on GitHub. Delete the branch when done.
 | Issue context for agents | `./scripts/issue-context.sh <n>` |
 | Create PR | `gh pr create` |
 | Check PR CI | `gh pr checks` |
+| Push when HTTPS auth fails | See [git-gh-auth.mdc](../rules/git-gh-auth.mdc) |
 
 ## Agent entry points
 

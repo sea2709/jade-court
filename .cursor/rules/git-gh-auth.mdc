@@ -1,0 +1,49 @@
+---
+description: Git push and gh auth when HTTPS remotes fail in agent environments
+alwaysApply: true
+---
+
+# Git push and GitHub CLI auth
+
+## Symptom
+
+Bare `git push` to an `https://github.com/...` remote often fails in agent/sandbox sessions:
+
+```text
+fatal: could not read Username for 'https://github.com': No such device or address
+```
+
+`gh` may still work if the user has run `gh auth login` on the machine.
+
+## Before push or PR
+
+1. `gh auth status` — if not logged in, ask the user to run `gh auth login` (see [.cursor/docs/github-workflow.md](../docs/github-workflow.md)).
+2. Prefer **`gh`** for issues and PRs: `gh issue view`, `gh pr create`, `gh pr checks`.
+
+## Push when `git push` fails
+
+Use the token from `gh` (do not print or commit the token):
+
+```bash
+GH_TOKEN=$(gh auth token)
+git push "https://x-access-token:${GH_TOKEN}@github.com/sea2709/jade-court.git" HEAD:your-branch-name
+```
+
+Replace `your-branch-name` with the branch being published. For first push, same URL with `-u` is not required if tracking already exists locally.
+
+Then create the PR:
+
+```bash
+gh pr create --head your-branch-name --base main --title "..." --body "..."
+```
+
+If the branch is **already** on `origin`, `gh pr create` alone is enough.
+
+## Permissions
+
+Request `required_permissions: ["all"]` (or at least network + git) for `git push` and `gh` when the sandbox blocks them.
+
+## Local fix (human)
+
+- `gh auth setup-git` — configure Git to use `gh` as credential helper for HTTPS.
+- Or use SSH: `git@github.com:sea2709/jade-court.git` instead of HTTPS.

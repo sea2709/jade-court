@@ -31,6 +31,8 @@ Work from GitHub issues when the user or task references one.
 
 Full human + agent steps: [.cursor/docs/github-workflow.md](.cursor/docs/github-workflow.md).
 
+**Git push in agents:** bare `git push` over HTTPS often fails without a TTY; use `gh auth token` for push or `gh auth setup-git` locally — see [.cursor/rules/git-gh-auth.mdc](.cursor/rules/git-gh-auth.mdc).
+
 ## Monorepo commands
 
 Run from the repo root:
