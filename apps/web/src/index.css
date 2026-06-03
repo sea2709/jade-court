@@ -414,9 +414,31 @@
     outline: 3px solid var(--gold);
   }
 
+  .level-card {
+    @apply transition-[outline,transform,box-shadow] duration-150;
+  }
+
+  .level-card:focus-visible {
+    outline: 2px solid var(--jade);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .level-card:hover:not(.level-card-active) {
+      outline: 2px solid var(--jade-soft);
+      @apply -translate-y-0.5;
+      box-shadow: 0 8px 20px rgba(21, 122, 99, 0.12);
+    }
+  }
+
   .level-card-active {
     outline: 3px solid var(--jade);
     @apply -translate-y-[3px];
+    box-shadow: 0 12px 28px rgba(21, 122, 99, 0.18);
+  }
+
+  .level-card-active .level-card-body {
+    @apply bg-jade-soft/30;
   }
 }
 
