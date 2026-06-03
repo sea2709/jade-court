@@ -415,7 +415,7 @@
   }
 
   .level-card {
-    @apply transition-[outline,transform,box-shadow] duration-150;
+    @apply relative transition-[outline,transform,box-shadow,border-color] duration-150;
   }
 
   .level-card:focus-visible {
@@ -431,14 +431,39 @@
     }
   }
 
+  .level-card-selected-badge {
+    @apply absolute top-2.5 right-2.5 z-[1] shadow-sm;
+  }
+
   .level-card-active {
-    outline: 3px solid var(--jade);
-    @apply -translate-y-[3px];
-    box-shadow: 0 12px 28px rgba(21, 122, 99, 0.18);
+    outline: 4px solid var(--jade-deep);
+    border-color: var(--jade);
+    @apply -translate-y-1 z-[1];
+    box-shadow:
+      0 0 0 3px var(--jade-soft),
+      0 18px 40px rgba(21, 122, 99, 0.32);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .level-card-active {
+      transform: translateY(-4px) scale(1.03);
+    }
   }
 
   .level-card-active .level-card-body {
-    @apply bg-jade-soft/30;
+    @apply bg-jade-soft;
+  }
+
+  .level-card-active .mode-card-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(21, 122, 99, 0.22), transparent 55%);
+    pointer-events: none;
+  }
+
+  .level-card-active .mode-card-header {
+    @apply relative;
   }
 }
 
