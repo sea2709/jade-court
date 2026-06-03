@@ -447,21 +447,6 @@
     }
   }
 
-  .level-card-active .level-card-body {
-    @apply bg-jade-soft;
-  }
-
-  .level-card-active .mode-card-header::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(21, 122, 99, 0.22), transparent 55%);
-    pointer-events: none;
-  }
-
-  .level-card-active .mode-card-header {
-    @apply relative;
-  }
 }
 
 @import './styles/board.css';
