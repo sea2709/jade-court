@@ -29,30 +29,36 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
         </p>
       </div>
       <div className="grid grid-cols-3 gap-[18px] mb-[30px]">
-        {LEVELS.map((l) => (
-          <button
-            key={l.id}
-            type="button"
-            aria-pressed={level === l.id}
-            className={`level-card card p-0 overflow-hidden text-left cursor-pointer outline-[3px] outline-transparent ${
-              level === l.id ? 'level-card-active' : ''
-            }`}
-            onClick={() => setLevel(l.id)}
-          >
-            <div className="mode-card-header" style={{ background: l.accent }}>
-              <span className="mode-card-glyph">{l.glyph}</span>
-            </div>
-            <div className="level-card-body px-4 pt-3.5 pb-[18px]">
-              <div className="flex justify-between items-center">
-                <span className="font-display font-extrabold text-[19px]">{l.name}</span>
-                <Stars n={l.stars} />
+        {LEVELS.map((l) => {
+          const selected = level === l.id;
+          return (
+            <button
+              key={l.id}
+              type="button"
+              aria-pressed={selected}
+              className={`level-card card p-0 overflow-hidden text-left cursor-pointer outline-[4px] outline-transparent ${
+                selected ? 'level-card-active' : ''
+              }`}
+              onClick={() => setLevel(l.id)}
+            >
+              {selected && (
+                <span className="level-card-selected-badge pill pill-jade">Selected</span>
+              )}
+              <div className="mode-card-header" style={{ background: l.accent }}>
+                <span className="mode-card-glyph">{l.glyph}</span>
               </div>
-              <p className="mt-1.5 mb-0 text-ink-soft text-[13.5px] font-semibold leading-snug">
-                {l.desc}
-              </p>
-            </div>
-          </button>
-        ))}
+              <div className="level-card-body px-4 pt-3.5 pb-[18px]">
+                <div className="flex justify-between items-center">
+                  <span className="font-display font-extrabold text-[19px]">{l.name}</span>
+                  <Stars n={l.stars} />
+                </div>
+                <p className="mt-1.5 mb-0 text-ink-soft text-[13.5px] font-semibold leading-snug">
+                  {l.desc}
+                </p>
+              </div>
+            </button>
+          );
+        })}
       </div>
       <div className="card p-5 flex items-center gap-[18px] justify-center flex-wrap">
         <span className="font-extrabold text-[15px]">Play as</span>
