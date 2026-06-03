@@ -124,10 +124,17 @@
   border: 3px dashed var(--jade-deep); pointer-events: none;
   animation: popIn .25s both;
 }
-.last-dot { position: absolute; transform: translate(-50%,-50%); border-radius:50%; background: rgba(231,172,63,.28); pointer-events:none; }
+.last-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(231, 172, 63, 0.45);
+  box-shadow: 0 0 0 3px var(--gold), 0 0 0 6px rgba(231, 172, 63, 0.35);
+  pointer-events: none;
+}
 .last-dot.computer {
-  background: rgba(31,158,129,.28);
-  box-shadow: 0 0 0 3px rgba(31,158,129,.35);
+  background: rgba(31, 158, 129, 0.4);
+  box-shadow: 0 0 0 4px var(--jade-deep), 0 0 0 7px rgba(31, 158, 129, 0.32);
 }
 
 /* ===== piece-style variants (set via body class) ===== */
