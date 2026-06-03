@@ -33,7 +33,8 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
           <button
             key={l.id}
             type="button"
-            className={`card p-0 overflow-hidden text-left cursor-pointer outline-[3px] outline-transparent transition-[outline,transform] duration-150 ${
+            aria-pressed={level === l.id}
+            className={`level-card card p-0 overflow-hidden text-left cursor-pointer outline-[3px] outline-transparent ${
               level === l.id ? 'level-card-active' : ''
             }`}
             onClick={() => setLevel(l.id)}
@@ -41,7 +42,7 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
             <div className="mode-card-header" style={{ background: l.accent }}>
               <span className="mode-card-glyph">{l.glyph}</span>
             </div>
-            <div className="px-4 pt-3.5 pb-[18px]">
+            <div className="level-card-body px-4 pt-3.5 pb-[18px]">
               <div className="flex justify-between items-center">
                 <span className="font-display font-extrabold text-[19px]">{l.name}</span>
                 <Stars n={l.stars} />
