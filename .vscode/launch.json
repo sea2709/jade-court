@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Server",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/server",
+      "program": "${workspaceFolder}/apps/server/src/index.ts",
+      "runtimeExecutable": "${workspaceFolder}/apps/server/node_modules/.bin/tsx",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "preLaunchTask": "build:engine",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Attach to Server (9229)",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
