@@ -158,8 +158,8 @@ function Game({
           selected={game.selected}
           targets={game.targets}
           lastMove={game.lastMove}
+          computerLastMove={game.computerLastMove}
           checkPos={game.checkPos}
-          opponentLastMove={game.opponentLastMove}
           opponentMoveRevealing={game.revealingOpponentMove}
           flip={flip}
           onPoint={game.onPoint}
