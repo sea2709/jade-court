@@ -410,10 +410,19 @@ export function useXiangqiGame(config: GameConfig = {}) {
   const clearHint = useCallback(() => dispatch({ type: 'SET_HINT', move: null }), []);
 
   const aiSide = config.aiSide;
-  const opponentLastMove =
-    !!aiSide &&
-    history.length > 0 &&
-    history[history.length - 1].side === aiSide;
+  let computerLastMove: { from: Coord; to: Coord } | null = null;
+  if (aiSide) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      const h = history[i];
+      if (h.side === aiSide) {
+        computerLastMove = {
+          from: [...h.move.from],
+          to: [...h.move.to],
+        };
+        break;
+      }
+    }
+  }
 
   useEffect(() => () => clearReveal(), [clearReveal]);
 
@@ -423,12 +432,12 @@ export function useXiangqiGame(config: GameConfig = {}) {
     selected,
     targets,
     lastMove,
+    computerLastMove,
     history,
     status,
     aiThinking,
     revealingOpponentMove,
     lastOpponentMoveText,
-    opponentLastMove,
     hint: hintMove,
     checkPos,
     checkSide,

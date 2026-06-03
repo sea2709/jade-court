@@ -9,11 +9,11 @@ interface Props {
   targets?: Move[];
   onPoint?: (r: number, c: number) => void;
   lastMove?: { from: Coord; to: Coord } | null;
+  /** Last ply played by the computer (persists after human moves). */
+  computerLastMove?: { from: Coord; to: Coord } | null;
   checkPos?: Coord | null;
   hint?: { from: Coord; to: Coord } | null;
-  /** Stronger last-move styling when the opponent (e.g. AI) played the ply. */
-  opponentLastMove?: boolean;
-  /** Pulse the opponent last-move highlight during the post-move reveal. */
+  /** Pulse the computer last-move highlight during the post-move reveal. */
   opponentMoveRevealing?: boolean;
   flip?: boolean;
   interactive?: boolean;
@@ -26,9 +26,9 @@ export function XQBoard({
   targets = [],
   onPoint = () => {},
   lastMove = null,
+  computerLastMove = null,
   checkPos = null,
   hint = null,
-  opponentLastMove = false,
   opponentMoveRevealing = false,
   flip = false,
   interactive = true,
@@ -121,6 +121,10 @@ export function XQBoard({
     selected ? targets.filter((t) => t.capture).map((t) => `${t.to[0]},${t.to[1]}`) : [],
   );
 
+  const onMove = (move: { from: Coord; to: Coord } | null, r: number, c: number) =>
+    !!move &&
+    ((move.from[0] === r && move.from[1] === c) || (move.to[0] === r && move.to[1] === c));
+
   const pieces: ReactNode[] = [];
   for (let r = 0; r < 10; r++)
     for (let c = 0; c < 9; c++) {
@@ -128,19 +132,19 @@ export function XQBoard({
       if (!p) continue;
       const { x, y } = px(r, c);
       const sel = selected?.[0] === r && selected[1] === c;
-      const last =
-        lastMove &&
-        ((lastMove.from[0] === r && lastMove.from[1] === c) ||
-          (lastMove.to[0] === r && lastMove.to[1] === c));
+      const last = onMove(lastMove, r, c);
+      const computer = onMove(computerLastMove, r, c);
       const chk = checkPos?.[0] === r && checkPos[1] === c;
       const cap = captureTargets.has(`${r},${c}`);
       const cls = ['piece', p.s === 'r' ? 'red' : 'black'];
       if (sel) cls.push('selected');
       else if (chk) cls.push('incheck');
-      else if (last) {
-        cls.push('lastmove');
-        if (opponentLastMove) cls.push('opponent-lastmove');
-        if (opponentMoveRevealing) cls.push('opponent-lastmove-pulse');
+      else if (last || computer) {
+        if (last) cls.push('lastmove');
+        if (computer) {
+          cls.push('computer-lastmove');
+          if (opponentMoveRevealing) cls.push('computer-lastmove-pulse');
+        }
       } else if (cap) cls.push('capture-target');
       if (interactive) cls.push('clickable');
       const pointCls = cap ? 'point capture-point' : 'point';
@@ -196,6 +200,14 @@ export function XQBoard({
     }
   });
 
+  const sameMove =
+    lastMove &&
+    computerLastMove &&
+    lastMove.from[0] === computerLastMove.from[0] &&
+    lastMove.from[1] === computerLastMove.from[1] &&
+    lastMove.to[0] === computerLastMove.to[0] &&
+    lastMove.to[1] === computerLastMove.to[1];
+
   const lastDots: ReactNode[] = [];
   if (lastMove) {
     [lastMove.from, lastMove.to].forEach((pt, i) => {
@@ -203,7 +215,20 @@ export function XQBoard({
       lastDots.push(
         <div
           key={`ld${i}`}
-          className={`last-dot${opponentLastMove ? ' opponent' : ''}`}
+          className="last-dot"
+          style={{ left: x, top: y, width: cell * 0.9, height: cell * 0.9 }}
+        />,
+      );
+    });
+  }
+  if (computerLastMove && !sameMove) {
+    [computerLastMove.from, computerLastMove.to].forEach((pt, i) => {
+      if (onMove(lastMove, pt[0], pt[1])) return;
+      const { x, y } = px(pt[0], pt[1]);
+      lastDots.push(
+        <div
+          key={`cld${i}`}
+          className="last-dot computer"
           style={{ left: x, top: y, width: cell * 0.9, height: cell * 0.9 }}
         />,
       );

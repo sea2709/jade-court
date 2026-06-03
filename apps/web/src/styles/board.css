@@ -65,17 +65,40 @@
   50% { box-shadow: 0 0 0 5px var(--gold-deep), 0 0 0 11px rgba(231,172,63,.22), 0 8px 14px rgba(90,60,20,.42); }
 }
 .piece.lastmove { box-shadow: 0 0 0 4px var(--gold), 0 6px 12px rgba(90,60,20,.4); }
-.piece.opponent-lastmove.lastmove {
-  box-shadow: 0 0 0 5px var(--gold-deep), 0 8px 18px rgba(90,60,20,.45);
+.piece.computer-lastmove {
+  box-shadow: 0 0 0 5px var(--jade-deep), 0 8px 18px rgba(21,122,99,.35);
+}
+.piece.lastmove.computer-lastmove {
+  box-shadow:
+    0 0 0 4px var(--gold),
+    0 0 0 8px var(--jade-deep),
+    0 8px 18px rgba(90,60,20,.4);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .piece.opponent-lastmove-pulse.lastmove {
-    animation: opponentMovePulse 1.1s ease-in-out 2;
+  .piece.computer-lastmove-pulse.computer-lastmove:not(.lastmove) {
+    animation: computerMovePulse 1.1s ease-in-out 2;
+  }
+  .piece.computer-lastmove-pulse.computer-lastmove.lastmove {
+    animation: computerMovePulseOverlap 1.1s ease-in-out 2;
   }
 }
-@keyframes opponentMovePulse {
-  0%, 100% { box-shadow: 0 0 0 5px var(--gold-deep), 0 8px 18px rgba(90,60,20,.45); }
-  50% { box-shadow: 0 0 0 10px rgba(231,172,63,.28), 0 8px 18px rgba(90,60,20,.45); }
+@keyframes computerMovePulse {
+  0%, 100% { box-shadow: 0 0 0 5px var(--jade-deep), 0 8px 18px rgba(21,122,99,.35); }
+  50% { box-shadow: 0 0 0 10px rgba(31,158,129,.28), 0 8px 18px rgba(21,122,99,.35); }
+}
+@keyframes computerMovePulseOverlap {
+  0%, 100% {
+    box-shadow:
+      0 0 0 4px var(--gold),
+      0 0 0 8px var(--jade-deep),
+      0 8px 18px rgba(90,60,20,.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px var(--gold),
+      0 0 0 12px rgba(31,158,129,.28),
+      0 8px 18px rgba(90,60,20,.4);
+  }
 }
 .piece.incheck { animation: checkPulse 1s ease-in-out infinite; }
 @keyframes checkPulse {
@@ -102,9 +125,9 @@
   animation: popIn .25s both;
 }
 .last-dot { position: absolute; transform: translate(-50%,-50%); border-radius:50%; background: rgba(231,172,63,.28); pointer-events:none; }
-.last-dot.opponent {
-  background: rgba(231,172,63,.48);
-  box-shadow: 0 0 0 3px rgba(231,172,63,.35);
+.last-dot.computer {
+  background: rgba(31,158,129,.28);
+  box-shadow: 0 0 0 3px rgba(31,158,129,.35);
 }
 
 /* ===== piece-style variants (set via body class) ===== */
