@@ -432,16 +432,13 @@
   }
 
   .level-card-selected-badge {
-    @apply absolute top-2.5 right-2.5 z-[1] shadow-sm;
+    @apply absolute top-2.5 right-2.5 z-[1];
   }
 
   .level-card-active {
     outline: 4px solid var(--jade-deep);
     border-color: var(--jade);
-    @apply -translate-y-1 z-[1];
-    box-shadow:
-      0 0 0 3px var(--jade-soft),
-      0 18px 40px rgba(21, 122, 99, 0.32);
+    @apply -translate-y-1 z-[1] shadow-none;
   }
 
   @media (prefers-reduced-motion: no-preference) {
