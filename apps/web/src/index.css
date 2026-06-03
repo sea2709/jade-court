@@ -447,6 +447,10 @@
     }
   }
 
+  .level-card-active .level-card-body {
+    box-shadow: inset 4px 0 0 var(--jade-deep);
+  }
+
 }
 
 @import './styles/board.css';
