@@ -103,21 +103,27 @@ function Game({
 }) {
   const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
-  const game = useXiangqiGame({ aiSide, difficulty: level, aiProvider: 'server' });
+  const game = useXiangqiGame({
+    aiSide,
+    difficulty: level,
+    aiProvider: 'server',
+    revealOpponentMoveMs: 0,
+  });
   const flip = humanSide === 'b';
-  const yourTurn = game.turn === humanSide && !game.status && !game.revealingOpponentMove;
+  const yourTurn = game.turn === humanSide && !game.status;
   const won = game.status && game.turn === aiSide;
   const levelMeta = LEVELS.find((l) => l.id === level)!;
+  const lastPly = game.history.length > 0 ? game.history[game.history.length - 1] : null;
+  const humanLastMove =
+    lastPly?.side === humanSide && game.lastMove ? game.lastMove : null;
 
   const statusLine = game.status
     ? 'Game over'
     : game.aiThinking
       ? 'Computer is thinking…'
-      : game.revealingOpponentMove && game.lastOpponentMoveText
-        ? `Computer played: ${game.lastOpponentMoveText}`
-        : yourTurn
-          ? 'Your move'
-          : 'Waiting…';
+      : yourTurn
+        ? 'Your move'
+        : 'Waiting…';
 
   const PlayerStrip = ({
     side,
@@ -148,14 +154,10 @@ function Game({
           <span className="pill pill-red">
             {levelMeta.name} · {levelMeta.zh}
           </span>
-          <span
-            className={`font-extrabold text-sm max-w-[520px] leading-snug ${
-              game.revealingOpponentMove ? 'text-gold-deep' : 'text-ink-soft'
-            }`}
-          >
+          <span className="font-extrabold text-sm max-w-[520px] leading-snug text-ink-soft">
             {statusLine}
           </span>
-          {game.checkSide && !game.status && !game.revealingOpponentMove && (
+          {game.checkSide && !game.status && (
             <span className="pill pill-gold">Check!</span>
           )}
         </div>
@@ -164,10 +166,9 @@ function Game({
           cell={54}
           selected={game.selected}
           targets={game.targets}
-          lastMove={game.lastMove}
+          lastMove={humanLastMove}
           computerLastMove={game.computerLastMove}
           checkPos={game.checkPos}
-          opponentMoveRevealing={game.revealingOpponentMove}
           flip={flip}
           onPoint={game.onPoint}
           interactive={yourTurn}
