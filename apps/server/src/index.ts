@@ -18,6 +18,9 @@ import {
 } from './rooms.js';
 import aiRoutes from './routes/ai.js';
 import coachRoutes from './routes/coach.js';
+import engineRoutes from './routes/engine.js';
+import opponentRoutes from './routes/opponent.js';
+import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engine/config.js';
 import { isGemmaConfigured, shouldLogGemmaTokenUsage } from './gemini/config.js';
 
 const app = new Hono();
@@ -57,6 +60,8 @@ app.get('/health', (c) => c.json({ ok: true }));
 
 app.route('/api/ai', aiRoutes);
 app.route('/api/coach', coachRoutes);
+app.route('/api/engine', engineRoutes);
+app.route('/api/opponent', opponentRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 
@@ -148,13 +153,22 @@ wss.on('connection', (ws) => {
 
 httpServer.listen(port, () => {
   console.log(`Jade Court server listening on http://localhost:${port}`);
+  const playProvider = playOpponentProvider();
+  console.log(`Play opponent: ${playProvider} — POST /api/opponent/move (PLAY_OPPONENT_PROVIDER)`);
+  if (playProvider === 'engine') {
+    if (isPikafishConfigured()) {
+      console.log(`Pikafish: ${pikafishPath()}`);
+    } else {
+      console.log('Pikafish: PIKAFISH_PATH missing — Play will use negamax fallback');
+    }
+  }
   if (isGemmaConfigured()) {
-    console.log('Gemma opponent: enabled (GEMINI_API_KEY set) — opponent /api/ai/move, coach /api/coach/*');
+    console.log('LLM: enabled (GEMINI_API_KEY) — /api/ai/move, coach /api/coach/*');
     if (shouldLogGemmaTokenUsage()) {
-      console.log('Gemma token usage: logging enabled (development)');
+      console.log('LLM token usage: logging enabled (development)');
     }
   } else {
-    console.log('Gemma opponent: disabled (set GEMINI_API_KEY for /api/ai/move)');
+    console.log('LLM: disabled (set GEMINI_API_KEY for Learn coach and PLAY_OPPONENT_PROVIDER=llm)');
   }
 });
 

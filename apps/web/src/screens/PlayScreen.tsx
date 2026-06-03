@@ -97,7 +97,7 @@ function Game({
 }) {
   const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
-  const game = useXiangqiGame({ aiSide, difficulty: level });
+  const game = useXiangqiGame({ aiSide, difficulty: level, aiProvider: 'server' });
   const flip = humanSide === 'b';
   const yourTurn = game.turn === humanSide && !game.status && !game.revealingOpponentMove;
   const won = game.status && game.turn === aiSide;

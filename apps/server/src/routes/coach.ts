@@ -113,7 +113,7 @@ coach.post('/feedback', async (c) => {
   const moveDescription = Coach.describeMove(req.boardBefore, req.move);
 
   if (!isGemmaConfigured()) {
-    return c.json({ error: 'gemma_unconfigured' }, 503);
+    return c.json({ error: 'llm_unconfigured' }, 503);
   }
 
   try {
@@ -133,7 +133,7 @@ coach.post('/feedback', async (c) => {
     const raw = await generateCoachFeedbackJson(system, user);
     const copy = LLM.parseCoachFeedbackJson(raw);
     if (!copy) {
-      console.warn('[gemma] invalid coach feedback JSON, using template');
+      console.warn('[llm] invalid coach feedback JSON, using template');
       return c.json(templateFeedback(req));
     }
     const res: CoachFeedbackResponse = {
@@ -144,13 +144,13 @@ coach.post('/feedback', async (c) => {
       lossCp: grade.lossCp,
       desc: copy.desc,
       body: copy.body,
-      source: 'gemma',
+      source: 'llm',
     };
     return c.json(res);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'gemma_unconfigured') return c.json({ error: 'gemma_unconfigured' }, 503);
-    console.warn('[gemma] coach feedback error, template fallback:', msg);
+    if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
+    console.warn('[llm] coach feedback error, template fallback:', msg);
     return c.json(templateFeedback(req));
   }
 });
@@ -196,7 +196,7 @@ coach.post('/hint', async (c) => {
     : 'Best move';
 
   if (!isGemmaConfigured()) {
-    return c.json({ error: 'gemma_unconfigured' }, 503);
+    return c.json({ error: 'llm_unconfigured' }, 503);
   }
 
   try {
@@ -213,7 +213,7 @@ coach.post('/hint', async (c) => {
     const raw = await generateCoachHintJson(system, user);
     const copy = LLM.parseCoachHintJson(raw);
     if (!copy) {
-      console.warn('[gemma] invalid coach hint JSON, using template');
+      console.warn('[llm] invalid coach hint JSON, using template');
       const fallback = templateHint(req);
       return fallback ? c.json(fallback) : c.json({ error: 'no_legal_moves' }, 400);
     }
@@ -221,13 +221,13 @@ coach.post('/hint', async (c) => {
       move,
       text: copy.text,
       tip: copy.tip,
-      source: 'gemma',
+      source: 'llm',
     };
     return c.json(res);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'gemma_unconfigured') return c.json({ error: 'gemma_unconfigured' }, 503);
-    console.warn('[gemma] coach hint error, template fallback:', msg);
+    if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
+    console.warn('[llm] coach hint error, template fallback:', msg);
     const fallback = templateHint(req);
     return fallback ? c.json(fallback) : c.json({ error: 'no_legal_moves' }, 400);
   }
@@ -250,7 +250,7 @@ coach.post('/opening', async (c) => {
   }
 
   if (!isGemmaConfigured()) {
-    return c.json({ error: 'gemma_unconfigured' }, 503);
+    return c.json({ error: 'llm_unconfigured' }, 503);
   }
 
   try {
@@ -263,11 +263,11 @@ coach.post('/opening', async (c) => {
       const res: CoachOpeningResponse = { text: Coach.opening(), source: 'template' };
       return c.json(res);
     }
-    return c.json({ text: copy.text, source: 'gemma' } satisfies CoachOpeningResponse);
+    return c.json({ text: copy.text, source: 'llm' } satisfies CoachOpeningResponse);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'gemma_unconfigured') return c.json({ error: 'gemma_unconfigured' }, 503);
-    console.warn('[gemma] coach opening error, template fallback:', msg);
+    if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
+    console.warn('[llm] coach opening error, template fallback:', msg);
     return c.json({ text: Coach.opening(), source: 'template' } satisfies CoachOpeningResponse);
   }
 });

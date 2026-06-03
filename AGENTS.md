@@ -47,6 +47,14 @@ Run from the repo root:
 
 Build the engine before first dev run if needed: `pnpm build`.
 
+## Play vs Computer opponent
+
+- **Play:** `aiProvider: 'server'` → `POST /api/opponent/move` (backend from `PLAY_OPPONENT_PROVIDER`: `engine` | `llm` | `local`).
+- **Learn:** `aiProvider: 'llm'` → `POST /api/ai/move` for the opponent; coach uses `/api/coach/*`.
+- **Pikafish:** set `PIKAFISH_PATH` when `PLAY_OPPONENT_PROVIDER=engine`.
+- **Fallback:** negamax in `packages/xiangqi-engine` when Pikafish or the LLM fails.
+- Install Pikafish from [official-pikafish/Pikafish](https://github.com/official-pikafish/Pikafish/releases) and set `PIKAFISH_PATH` in repo-root `.env`.
+
 ## Server debugging (Cursor / VS Code)
 
 Use **Run and Debug** → **Debug Server** (`.vscode/launch.json`). It runs `apps/server` with `tsx`, loads repo-root `.env` via `loadEnv.ts`, and builds `xiangqi-engine` first.
@@ -67,7 +75,7 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 
 - **Web** reads `VITE_*` only (exposed in the browser if set).
 - **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `PORT`, `MONGODB_URI`, etc. **without** a `VITE_` prefix.
-- **Gemma opponent:** set `GEMINI_API_KEY` in `.env`; server log should show `Gemma opponent: enabled`. Optional `GEMMA_HISTORY_LIMIT` (default `150`) controls how many plies appear in the opponent prompt.
+- **LLM opponent:** set `GEMINI_API_KEY` in `.env`; server log should show `LLM: enabled`. Optional `GEMMA_HISTORY_LIMIT` (default `150`) controls how many plies in the opponent prompt. Use `PLAY_OPPONENT_PROVIDER=llm` for Play vs Computer with the same backend.
 - Restart `pnpm dev` after editing `.env`.
 
 ## Conventions (summary)

@@ -112,10 +112,13 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | Hono server port |
-| `GEMINI_API_KEY` | _(unset)_ | Enables Gemma 4 on Learn/Play: opponent moves (`POST /api/ai/move`) and Master Lin coach (`POST /api/coach/feedback`, `/hint`, `/opening`). Without it the app uses local negamax and template coach copy |
-| `GEMMA_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
-| `GEMMA_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
-| `GEMMA_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
+| `GEMINI_API_KEY` | _(unset)_ | Learn coach + LLM opponent (`/api/coach/*`, `/api/ai/move`). Without it, coach uses templates and LLM opponent is unavailable |
+| `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax) |
+| `PIKAFISH_PATH` | _(unset)_ | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing |
+| `ENGINE_MOVE_TIMEOUT_MS` | `30000` | Max wait for a Pikafish move |
+| `GEMINI_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
+| `GEMINI_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
+| `GEMINI_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
 | `GEMMA_LOG_TOKENS` | _(dev default)_ | `1` = log token usage to server console; `0` = suppress; unset follows `NODE_ENV` (`development` logs via `pnpm dev:server`) |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
@@ -138,5 +141,5 @@ Core work from [.cursor/plans/jade-court-implementation.md](.cursor/plans/jade-c
 - Rooms are **in-memory** — lost on server restart; no Redis yet.
 - **Guest sessions only** — Clerk auth is stubbed for later.
 - **No Playwright e2e** in this release.
-- AI depth is shallow (negamax fallback); Gemma opponent and natural-language coach need `GEMINI_API_KEY` in repo-root `.env`.
+- **Play vs Computer** defaults to Pikafish when `PIKAFISH_PATH` is set; falls back to built-in negamax. **Learn** uses the LLM coach when `GEMINI_API_KEY` is set.
 - MongoDB only persists **finished** online games when `MONGODB_URI` is set.

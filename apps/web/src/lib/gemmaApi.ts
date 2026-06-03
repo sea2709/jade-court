@@ -63,6 +63,18 @@ export async function fetchAiMove(params: FetchAiMoveParams): Promise<AiMoveResp
   return postJson<AiMoveResponse>('/api/ai/move', body);
 }
 
+/** Play vs Computer — server picks backend from PLAY_OPPONENT_PROVIDER. */
+export async function fetchOpponentMove(params: FetchAiMoveParams): Promise<AiMoveResponse> {
+  const body: AiMoveRequest = {
+    board: params.board,
+    side: params.side,
+    difficulty: params.difficulty,
+    ...(params.lastMove ? { lastMove: params.lastMove } : {}),
+    ...(params.history?.length ? { history: params.history } : {}),
+  };
+  return postJson<AiMoveResponse>('/api/opponent/move', body);
+}
+
 export interface FetchCoachFeedbackParams {
   boardBefore: Board;
   move: Move;
@@ -109,6 +121,9 @@ export async function fetchCoachOpening(
   return postJson<CoachOpeningResponse>('/api/coach/opening', params);
 }
 
-export function isGemmaUnconfigured(err: unknown): boolean {
-  return err instanceof GemmaApiError && err.status === 503 && err.code === 'gemma_unconfigured';
+export function isLlmUnconfigured(err: unknown): boolean {
+  return err instanceof GemmaApiError && err.status === 503 && err.code === 'llm_unconfigured';
 }
+
+/** @deprecated Use isLlmUnconfigured */
+export const isGemmaUnconfigured = isLlmUnconfigured;
