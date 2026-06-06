@@ -1,0 +1,39 @@
+---
+description: Use git worktree per GitHub issue to isolate parallel agent work
+alwaysApply: true
+---
+
+# Issue worktrees (parallel agents)
+
+When implementing or fixing a **GitHub issue**, use a **dedicated git worktree** so this session does not share a working tree with other agents or local work on `main`.
+
+## Required workflow
+
+1. Fetch issue context (`gh issue view`, `./scripts/issue-context.sh <n>`).
+2. **Create the worktree** (do not only `git checkout -b` in the main repo):
+   ```bash
+   ./scripts/issue-worktree.sh <n> [short-slug]
+   cd <printed-worktree-path>
+   ```
+3. Implement, commit, push, and open the PR **from inside the worktree**.
+4. Keep the **main repo worktree** on `main` (or unchanged); do not checkout the issue branch there.
+
+Branch naming is unchanged: `issue-<n>-short-slug` (created by the script).
+
+## Rules
+
+- **All** file edits, `git` commands, `pnpm install|build|test|dev` for the issue run in the worktree directory.
+- If the user already opened a Cursor workspace rooted at the worktree path, stay in that tree.
+- Copy `.env` is handled by the script from the main worktree when missing; restart `pnpm dev` after env edits.
+- For parallel dev servers, use the optional `PORT` / Vite `--port` values printed by the script.
+
+## Cleanup
+
+After the PR is merged:
+
+```bash
+git worktree remove <worktree-path>   # from any worktree
+git branch -d issue-<n>-<slug>        # delete local branch when done
+```
+
+Full details: [.cursor/skills/issue-worktree/SKILL.md](../skills/issue-worktree/SKILL.md). Issue steps also in [github-issues.mdc](github-issues.mdc).

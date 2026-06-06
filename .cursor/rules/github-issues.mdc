@@ -12,10 +12,15 @@ When the user references a GitHub issue number or asks to implement/fix an issue
    gh issue view <n>
    ./scripts/issue-context.sh <n>
    ```
-2. **Branch**: `issue-<n>-short-slug` from `main`.
+2. **Worktree** (required — see [issue-worktree.mdc](issue-worktree.mdc)):
+   ```bash
+   ./scripts/issue-worktree.sh <n> [short-slug]
+   cd <printed-worktree-path>
+   ```
+   Branch `issue-<n>-short-slug` is created from `main`. All edits and git commands for the issue happen in the worktree, not the main repo checkout.
 3. **Implement** with minimal diffs; follow `jade-court.mdc` conventions.
-4. **Commit**: reference the issue, e.g. `fix: room sync on reconnect (#42)`.
-5. **PR**: use the PR template; include `Closes #<n>` when the work completes the issue.
+4. **Commit** (from the worktree): reference the issue, e.g. `fix: room sync on reconnect (#42)`.
+5. **PR** (from the worktree): use the PR template; include `Closes #<n>` when the work completes the issue.
 
 If `git push` fails on HTTPS, use the `gh auth token` push pattern in [git-gh-auth.mdc](git-gh-auth.mdc). If `gh` is unavailable, ask the user to paste the issue title and body, or install/auth `gh` per [.cursor/docs/github-workflow.md](../docs/github-workflow.md).
 

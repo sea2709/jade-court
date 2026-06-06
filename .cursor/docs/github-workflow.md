@@ -71,15 +71,18 @@ gh issue view 42
 
 Paste script output into an agent chat when helpful.
 
-### 3. Branch
+### 3. Worktree and branch (agents: required)
+
+Use a **git worktree** per issue so parallel agents do not share one working tree:
 
 ```bash
 git checkout main
 git pull
-git checkout -b issue-42-fix-room-sync
+./scripts/issue-worktree.sh 42 fix-room-sync
+cd ../jade-court-worktrees/issue-42-fix-room-sync
 ```
 
-Naming: `issue-<number>-<short-slug>`.
+Naming: `issue-<number>-<short-slug>`. Humans may use `git checkout -b` on `main` instead; agents should prefer the script. Details: [.cursor/skills/issue-worktree/SKILL.md](../skills/issue-worktree/SKILL.md).
 
 ### 4. Implement and verify
 
@@ -138,6 +141,7 @@ After CI passes, merge on GitHub. Delete the branch when done.
 | List open issues | `gh issue list` |
 | View one issue | `gh issue view <n>` |
 | Issue context for agents | `./scripts/issue-context.sh <n>` |
+| Issue worktree (parallel agents) | `./scripts/issue-worktree.sh <n> [slug]` |
 | Create PR | `gh pr create` |
 | Check PR CI | `gh pr checks` |
 | Push when HTTPS auth fails | See [git-gh-auth.mdc](../rules/git-gh-auth.mdc) |
@@ -146,4 +150,6 @@ After CI passes, merge on GitHub. Delete the branch when done.
 
 - [AGENTS.md](../../AGENTS.md) — agent instructions at repo root
 - `.cursor/rules/github-issues.mdc` — always-on issue workflow rule
+- `.cursor/rules/issue-worktree.mdc` — git worktree per issue (parallel agents)
+- `.cursor/skills/issue-worktree/SKILL.md` — full worktree workflow
 - `.cursor/rules/jade-court.mdc` — project conventions

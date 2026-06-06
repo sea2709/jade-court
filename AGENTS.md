@@ -16,12 +16,13 @@ Work from GitHub issues when the user or task references one.
    gh issue view <n>
    ./scripts/issue-context.sh <n>   # formatted title, body, labels for context
    ```
-2. **Branch** from `main`:
+2. **Worktree** from `main` (isolates parallel agents — do not only branch in the main checkout):
    ```bash
-   git checkout -b issue-<n>-short-slug
+   ./scripts/issue-worktree.sh <n> [short-slug]
+   cd <printed-worktree-path>
    ```
-   Use a short kebab-case slug from the issue title (e.g. `issue-42-fix-room-sync`).
-3. **Implement** with minimal, focused diffs. Match existing patterns in touched files.
+   Creates branch `issue-<n>-short-slug` under `../jade-court-worktrees/`. See [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md).
+3. **Implement** with minimal, focused diffs. Match existing patterns in touched files (inside the worktree).
 4. **Commit** with the issue reference:
    ```bash
    git commit -m "fix: describe change (#<n>)"
@@ -86,4 +87,6 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 - Prefer focused diffs over broad refactors.
 - **Teaching comments** when editing `packages/xiangqi-engine`, `apps/server`, or `apps/web`: follow [.cursor/rules/code-comments.mdc](.cursor/rules/code-comments.mdc) (file headers, JSDoc on exports, section labels on non-obvious logic — not line-by-line noise).
 
-Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `code-comments.mdc`).
+Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `issue-worktree.mdc`, `code-comments.mdc`).
+
+**Project skills:** [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md) — git worktree per issue for parallel agents.
