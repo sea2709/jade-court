@@ -118,10 +118,9 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax) |
 | `PIKAFISH_PATH` | _(unset)_ | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing |
 | `ENGINE_MOVE_TIMEOUT_MS` | `30000` | Max wait for a Pikafish move |
-| `LLM_TIMEOUT_MS` | `25000` | Max wait for an LLM response (fallback: `GEMINI_TIMEOUT_MS`) |
-| `LLM_HISTORY_LIMIT` | `150` | Max plies in opponent “Recent history” prompt (fallback: `GEMINI_HISTORY_LIMIT`) |
-| `LLM_LOG_TOKENS` | _(dev default)_ | `1` = log token usage; `0` = suppress (fallback: `GEMMA_LOG_TOKENS`) |
-| `GEMINI_MODEL` | `gemma-4-26b-a4b-it` | Legacy: used when `LLM_PROVIDER=gemini` and `LLM_MODEL` unset |
+| `LLM_TIMEOUT_MS` | `25000` | Max wait for an LLM response |
+| `LLM_HISTORY_LIMIT` | `150` | Max plies in opponent “Recent history” prompt |
+| `LLM_LOG_TOKENS` | _(dev default)_ | `1` = log token usage; `0` = suppress |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
 

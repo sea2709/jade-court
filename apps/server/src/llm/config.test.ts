@@ -45,25 +45,19 @@ describe('llm config', () => {
   it('llmModel prefers LLM_MODEL then provider default', () => {
     process.env.LLM_PROVIDER = 'anthropic';
     delete process.env.LLM_MODEL;
-    delete process.env.GEMINI_MODEL;
     assert.equal(llmModel(), defaultModelForProvider('anthropic'));
     process.env.LLM_MODEL = 'claude-custom';
     assert.equal(llmModel(), 'claude-custom');
   });
 
-  it('gemini model falls back to GEMINI_MODEL', () => {
-    process.env.LLM_PROVIDER = 'gemini';
-    delete process.env.LLM_MODEL;
-    process.env.GEMINI_MODEL = 'gemma-custom';
-    assert.equal(llmModel(), 'gemma-custom');
-  });
-
-  it('timeout and history honor GEMINI_* fallbacks', () => {
+  it('timeout and history use LLM_* or defaults', () => {
     delete process.env.LLM_TIMEOUT_MS;
-    process.env.GEMINI_TIMEOUT_MS = '12000';
+    assert.equal(llmTimeoutMs(), 25000);
+    process.env.LLM_TIMEOUT_MS = '12000';
     assert.equal(llmTimeoutMs(), 12000);
     delete process.env.LLM_HISTORY_LIMIT;
-    process.env.GEMINI_HISTORY_LIMIT = '80';
+    assert.equal(llmHistoryLimit(), 150);
+    process.env.LLM_HISTORY_LIMIT = '80';
     assert.equal(llmHistoryLimit(), 80);
   });
 
