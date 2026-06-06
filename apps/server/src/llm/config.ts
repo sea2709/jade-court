@@ -1,5 +1,5 @@
 /**
- * LLM provider selection and env (LLM_* with GEMINI_* fallbacks for migration).
+ * LLM provider selection and env (`LLM_*` plus per-provider API keys).
  */
 import type { LlmProviderId } from './types.js';
 
@@ -36,23 +36,19 @@ export function defaultModelForProvider(id: LlmProviderId): string {
 /** Resolved model id for the active (or given) provider. */
 export function llmModel(id?: LlmProviderId): string {
   const provider = id ?? llmProviderId();
-  const generic = process.env.LLM_MODEL?.trim();
-  if (generic) return generic;
-  if (provider === 'gemini') {
-    const legacy = process.env.GEMINI_MODEL?.trim();
-    if (legacy) return legacy;
-  }
+  const model = process.env.LLM_MODEL?.trim();
+  if (model) return model;
   return defaultModelForProvider(provider);
 }
 
 export function llmTimeoutMs(): number {
-  const n = Number(process.env.LLM_TIMEOUT_MS ?? process.env.GEMINI_TIMEOUT_MS ?? 25000);
+  const n = Number(process.env.LLM_TIMEOUT_MS ?? 25000);
   return Number.isFinite(n) && n > 0 ? n : 25000;
 }
 
 /** Max plies in opponent “Recent history” prompt section. */
 export function llmHistoryLimit(): number {
-  const n = Number(process.env.LLM_HISTORY_LIMIT ?? process.env.GEMINI_HISTORY_LIMIT ?? 150);
+  const n = Number(process.env.LLM_HISTORY_LIMIT ?? 150);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 150;
 }
 
@@ -62,10 +58,10 @@ export function isLlmConfigured(): boolean {
 
 /**
  * Log token usage after successful LLM calls.
- * On when `NODE_ENV=development`, `LLM_LOG_TOKENS=1`, or legacy `GEMMA_LOG_TOKENS=1`.
+ * On when `NODE_ENV=development` or `LLM_LOG_TOKENS=1`.
  */
 export function shouldLogLlmTokenUsage(): boolean {
-  const flag = process.env.LLM_LOG_TOKENS?.trim() ?? process.env.GEMMA_LOG_TOKENS?.trim();
+  const flag = process.env.LLM_LOG_TOKENS?.trim();
   if (flag === '0') return false;
   if (flag === '1') return true;
   return process.env.NODE_ENV === 'development';

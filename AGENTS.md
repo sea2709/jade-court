@@ -76,7 +76,7 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 
 - **Web** reads `VITE_*` only (exposed in the browser if set).
 - **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `PORT`, `MONGODB_URI`, etc. **without** a `VITE_` prefix.
-- **LLM:** set `LLM_PROVIDER` (`gemini` \| `openai` \| `anthropic`) and the matching API key; server log shows `LLM: enabled (provider / model)`. Optional `LLM_HISTORY_LIMIT` (default `150`) caps opponent prompt history. Legacy `GEMINI_*` env vars still work as fallbacks. Use `PLAY_OPPONENT_PROVIDER=llm` for Play vs Computer with the same backend.
+- **LLM:** set `LLM_PROVIDER` (`gemini` \| `openai` \| `anthropic`) and the matching API key; server log shows `LLM: enabled (provider / model)`. Optional `LLM_HISTORY_LIMIT` (default `150`) caps opponent prompt history. Use `PLAY_OPPONENT_PROVIDER=llm` for Play vs Computer with the same backend.
 - Restart `pnpm dev` after editing `.env`.
 
 ## Conventions (summary)
