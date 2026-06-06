@@ -97,12 +97,7 @@ export function HomeScreen() {
         </div>
       </div>
 
-      <div className="flex items-baseline justify-between mb-[18px]">
-        <h2 className="text-[26px] m-0">Choose how you want to play</h2>
-        <button type="button" className="nav-link text-[15px]" onClick={() => go('/lessons')}>
-          Browse lessons →
-        </button>
-      </div>
+      <h2 className="text-[26px] m-0 mb-[18px]">Choose how you want to play</h2>
       <div className="grid grid-cols-3 gap-[22px]">
         <ModeCard
           tag="Guided"
@@ -147,7 +142,7 @@ export function HomeScreen() {
           ['Legal moves, lit up', 'Green dots and gold rings show exactly where a piece may go.'],
           ['The why, in plain words', 'Every move comes with a one-line explanation you can actually learn from.'],
           ['Move grading', 'Great, inaccuracy, blunder — instant feedback after each move.'],
-          ['Lessons & puzzles', 'Bite-size lessons on every piece, plus checkmate puzzles.'],
+          ['Coach chat', 'Ask Master Lin about the position, hints, or strategy while you play.'],
         ].map(([t, d], i) => (
           <div key={i} className="p-1">
             <div className="w-[34px] h-1 rounded-[9px] bg-gold mb-3" />

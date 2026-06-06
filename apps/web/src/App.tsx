@@ -4,7 +4,6 @@ const NAV = [
   ['/', 'Home'],
   ['/learn', 'Learn with AI'],
   ['/play', 'Play vs Computer'],
-  ['/lessons', 'Lessons'],
   ['/multiplayer', 'Friends'],
 ] as const;
 
@@ -55,13 +54,6 @@ export function App() {
             onClick={() => navigate('/learn')}
           >
             Learn
-          </button>
-          <button
-            type="button"
-            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
-            onClick={() => navigate('/lessons')}
-          >
-            Lessons
           </button>
           <button
             type="button"

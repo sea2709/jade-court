@@ -4,7 +4,6 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { HomeScreen } from './screens/HomeScreen';
 import { LearnScreen } from './screens/LearnScreen';
-import { LessonsScreen } from './screens/LessonsScreen';
 import { MultiplayerScreen } from './screens/MultiplayerScreen';
 import { PlayScreen } from './screens/PlayScreen';
 import './index.css';
@@ -20,7 +19,6 @@ createRoot(document.getElementById('root')!).render(
           <Route index element={<HomeScreen />} />
           <Route path="learn" element={<LearnScreen />} />
           <Route path="play" element={<PlayScreen />} />
-          <Route path="lessons" element={<LessonsScreen />} />
           <Route path="multiplayer" element={<MultiplayerScreen />} />
         </Route>
       </Routes>

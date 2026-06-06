@@ -394,26 +394,6 @@
     @apply ml-auto font-body font-bold text-[13px] border border-line-soft rounded-full px-2.5 py-1.5 bg-white text-ink;
   }
 
-  .lesson-nav-btn {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-[background] duration-150 cursor-pointer;
-  }
-
-  .lesson-nav-btn-active {
-    @apply bg-jade-soft;
-  }
-
-  .lesson-nav-glyph {
-    @apply w-9 h-9 rounded-[10px] shrink-0 grid place-items-center font-piece font-bold text-[19px] bg-white border border-line-soft;
-  }
-
-  .tab-switcher {
-    @apply ml-auto flex gap-1.5 bg-white p-[5px] rounded-full shadow-sm border border-line-soft;
-  }
-
-  .puzzle-card-active {
-    outline: 3px solid var(--gold);
-  }
-
   .level-card {
     @apply relative transition-[outline,transform,box-shadow,border-color] duration-150;
   }
