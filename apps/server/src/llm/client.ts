@@ -1,7 +1,7 @@
 /**
  * LLM façade — routes call these helpers, not provider modules directly.
  */
-import { isLlmConfigured, llmProviderId } from './config.js';
+import { isLlmConfigured, llmModel, llmProviderId } from './config.js';
 import { createProvider } from './providers/index.js';
 import {
   COACH_FEEDBACK_SCHEMA,
@@ -9,13 +9,28 @@ import {
   COACH_OPENING_SCHEMA,
   MOVE_SCHEMA,
 } from './schemas.js';
-import type { LlmProvider } from './types.js';
+import type { LlmProvider, LlmProviderId } from './types.js';
 
-let provider: LlmProvider | null = null;
+let cachedProvider: LlmProvider | null = null;
+let cachedProviderId: LlmProviderId | null = null;
+let cachedModel: string | null = null;
 
 export function getLlmProvider(): LlmProvider {
-  if (!provider) provider = createProvider(llmProviderId());
-  return provider;
+  const id = llmProviderId();
+  const model = llmModel(id);
+  if (!cachedProvider || cachedProviderId !== id || cachedModel !== model) {
+    cachedProvider = createProvider(id);
+    cachedProviderId = id;
+    cachedModel = model;
+  }
+  return cachedProvider;
+}
+
+/** Clear cached provider — for tests when env changes between cases. */
+export function resetLlmProviderCache(): void {
+  cachedProvider = null;
+  cachedProviderId = null;
+  cachedModel = null;
 }
 
 export { isLlmConfigured, llmHistoryLimit } from './config.js';
