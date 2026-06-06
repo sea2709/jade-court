@@ -112,14 +112,16 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | Hono server port |
-| `GEMINI_API_KEY` | _(unset)_ | Learn coach + LLM opponent (`/api/coach/*`, `/api/ai/move`). Without it, coach uses templates and LLM opponent is unavailable |
+| `LLM_PROVIDER` | `gemini` | LLM backend: `gemini`, `openai`, or `anthropic` |
+| `LLM_MODEL` | _(provider default)_ | Model id for the active provider |
+| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | _(unset)_ | API key for the active `LLM_PROVIDER`. Without it, coach uses templates and LLM opponent returns `503` |
 | `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax) |
 | `PIKAFISH_PATH` | _(unset)_ | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing |
 | `ENGINE_MOVE_TIMEOUT_MS` | `30000` | Max wait for a Pikafish move |
-| `GEMINI_MODEL` | `gemma-4-26b-a4b-it` | Gemini API model id for opponent moves |
-| `GEMINI_TIMEOUT_MS` | `25000` | Max wait for a Gemma move response |
-| `GEMINI_HISTORY_LIMIT` | `150` | Max plies (both sides) in Gemma “Recent history” prompt text |
-| `GEMMA_LOG_TOKENS` | _(dev default)_ | `1` = log token usage to server console; `0` = suppress; unset follows `NODE_ENV` (`development` logs via `pnpm dev:server`) |
+| `LLM_TIMEOUT_MS` | `25000` | Max wait for an LLM response (fallback: `GEMINI_TIMEOUT_MS`) |
+| `LLM_HISTORY_LIMIT` | `150` | Max plies in opponent “Recent history” prompt (fallback: `GEMINI_HISTORY_LIMIT`) |
+| `LLM_LOG_TOKENS` | _(dev default)_ | `1` = log token usage; `0` = suppress (fallback: `GEMMA_LOG_TOKENS`) |
+| `GEMINI_MODEL` | `gemma-4-26b-a4b-it` | Legacy: used when `LLM_PROVIDER=gemini` and `LLM_MODEL` unset |
 | `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
 | `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
 
@@ -141,5 +143,5 @@ Core work from [.cursor/plans/jade-court-implementation.md](.cursor/plans/jade-c
 - Rooms are **in-memory** — lost on server restart; no Redis yet.
 - **Guest sessions only** — Clerk auth is stubbed for later.
 - **No Playwright e2e** in this release.
-- **Play vs Computer** defaults to Pikafish when `PIKAFISH_PATH` is set; falls back to built-in negamax. **Learn** uses the LLM coach when `GEMINI_API_KEY` is set.
+- **Play vs Computer** defaults to Pikafish when `PIKAFISH_PATH` is set; falls back to built-in negamax. **Learn** uses the LLM coach when the active provider’s API key is set (`LLM_PROVIDER`).
 - MongoDB only persists **finished** online games when `MONGODB_URI` is set.

@@ -1,5 +1,5 @@
 /**
- * POST /api/coach/* — Master Lin natural-language coach (engine grades; Gemma explains).
+ * POST /api/coach/* — Master Lin natural-language coach (engine grades; LLM explains).
  */
 import { Hono } from 'hono';
 import { AI, Coach, LLM, X } from '@jade-court/xiangqi-engine';
@@ -15,12 +15,13 @@ import type {
   Side,
 } from '@jade-court/xiangqi-engine';
 import {
-  generateCoachFeedbackJson,
-  generateCoachHintJson,
-  generateCoachOpeningJson,
-} from '../gemini/client.js';
-import { gemmaHistoryLimit, isGemmaConfigured } from '../gemini/config.js';
-import { checkRateLimit } from '../gemini/rateLimit.js';
+  isLlmConfigured,
+  llmGenerateCoachFeedbackJson,
+  llmGenerateCoachHintJson,
+  llmGenerateCoachOpeningJson,
+  llmHistoryLimit,
+} from '../llm/client.js';
+import { checkRateLimit } from '../llm/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
 
 const coach = new Hono();
@@ -112,7 +113,7 @@ coach.post('/feedback', async (c) => {
   const v = Coach.VERDICT[grade.verdict];
   const moveDescription = Coach.describeMove(req.boardBefore, req.move);
 
-  if (!isGemmaConfigured()) {
+  if (!isLlmConfigured()) {
     return c.json({ error: 'llm_unconfigured' }, 503);
   }
 
@@ -128,9 +129,9 @@ coach.post('/feedback', async (c) => {
       bestMove: grade.best,
       difficulty: req.difficulty,
       history: req.history,
-      historyLimit: gemmaHistoryLimit(),
+      historyLimit: llmHistoryLimit(),
     });
-    const raw = await generateCoachFeedbackJson(system, user);
+    const raw = await llmGenerateCoachFeedbackJson(system, user);
     const copy = LLM.parseCoachFeedbackJson(raw);
     if (!copy) {
       console.warn('[llm] invalid coach feedback JSON, using template');
@@ -195,7 +196,7 @@ coach.post('/hint', async (c) => {
     ? `${X.NAME[piece.t]} ${from} → ${to}${capLabel ? ` (captures ${capLabel})` : ''}`
     : 'Best move';
 
-  if (!isGemmaConfigured()) {
+  if (!isLlmConfigured()) {
     return c.json({ error: 'llm_unconfigured' }, 503);
   }
 
@@ -210,7 +211,7 @@ coach.post('/hint', async (c) => {
       captures: Boolean(captured),
       difficulty: req.difficulty,
     });
-    const raw = await generateCoachHintJson(system, user);
+    const raw = await llmGenerateCoachHintJson(system, user);
     const copy = LLM.parseCoachHintJson(raw);
     if (!copy) {
       console.warn('[llm] invalid coach hint JSON, using template');
@@ -249,12 +250,12 @@ coach.post('/opening', async (c) => {
     /* empty body is fine */
   }
 
-  if (!isGemmaConfigured()) {
+  if (!isLlmConfigured()) {
     return c.json({ error: 'llm_unconfigured' }, 503);
   }
 
   try {
-    const raw = await generateCoachOpeningJson(
+    const raw = await llmGenerateCoachOpeningJson(
       LLM.coachOpeningSystem(),
       LLM.coachOpeningUser(difficulty),
     );

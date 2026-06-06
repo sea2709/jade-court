@@ -1,4 +1,4 @@
-/** Simple per-guest rate limit for Gemma API routes (dev / abuse guard). */
+/** Simple per-guest rate limit for LLM API routes (dev / abuse guard). */
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 30;
 
