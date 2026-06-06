@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as X from '../rules.js';
 import {
+  coachAskSystem,
+  coachAskUser,
   coachFeedbackSystem,
   coachFeedbackUser,
   coachHintSystem,
@@ -80,5 +82,20 @@ describe('coach system prompts', () => {
   it('move selection prompt stays separate from coach', () => {
     expect(moveSelectionSystem('beginner')).toContain('moveIndex');
     expect(coachOpeningSystem()).not.toContain('moveIndex');
+  });
+});
+
+describe('coachAskUser', () => {
+  it('includes question and board context', () => {
+    const board = X.initialBoard();
+    const user = coachAskUser({
+      board,
+      side: 'r',
+      question: 'Why is my chariot important?',
+      inCheck: false,
+    });
+    expect(user).toContain('Why is my chariot important?');
+    expect(user).toContain('Current board');
+    expect(coachAskSystem()).toContain('hint button');
   });
 });

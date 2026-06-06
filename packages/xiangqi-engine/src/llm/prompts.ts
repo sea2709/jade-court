@@ -161,3 +161,56 @@ export function coachOpeningUser(difficulty?: Difficulty): string {
         : 'beginner';
   return `Student skill level: ${level}. Write a fresh welcome (not a generic template).`;
 }
+
+export function coachFeedbackStreamSystem(): string {
+  return [
+    'You are Master Lin, a warm and patient Xiangqi (Chinese chess) teacher.',
+    'The rules engine has already graded the student move — do NOT change or contradict the verdict.',
+    'Write 2-3 short plain sentences: first what the move did, then friendly coaching that matches the verdict.',
+    'If a better move is listed in the prompt, mention it gently in the last sentence.',
+    'Plain text only — no JSON, markdown, or bullet points.',
+  ].join('\n');
+}
+
+export function coachHintStreamSystem(): string {
+  return [
+    'You are Master Lin, a patient Xiangqi teacher.',
+    'The engine has already chosen the best move — do NOT suggest a different move.',
+    'Write 2 short plain sentences: an encouraging hint naming the piece, then a reminder about how that piece moves.',
+    'Plain text only — no JSON or markdown.',
+  ].join('\n');
+}
+
+export interface CoachAskContext {
+  board: Board;
+  side: Side;
+  question: string;
+  difficulty?: Difficulty;
+  history?: MoveHistoryEntry[];
+  historyLimit?: number;
+  inCheck: boolean;
+}
+
+export function coachAskSystem(): string {
+  return [
+    'You are Master Lin, a warm Xiangqi teacher in Learn mode.',
+    'Answer only from the board position and game history provided.',
+    'Do not invent moves or recommend specific moves — tell the student to use the hint button for move ideas.',
+    'Keep answers to 2-4 short sentences. Plain text only, no markdown.',
+  ].join('\n');
+}
+
+export function coachAskUser(ctx: CoachAskContext): string {
+  const sideLabel = ctx.side === 'r' ? 'Red (student)' : 'Black';
+  const lines = [
+    `Student side: ${sideLabel}${ctx.inCheck ? ' (in check)' : ''}`,
+    `Student question: ${ctx.question}`,
+    '',
+    'Current board (student perspective):',
+    formatBoard(ctx.board, ctx.side),
+  ];
+  if (ctx.history?.length) {
+    lines.push('', 'Recent history:', formatHistory(ctx.history, ctx.historyLimit ?? 150));
+  }
+  return lines.join('\n');
+}

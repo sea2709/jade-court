@@ -7,80 +7,21 @@ import type {
   Move,
   Side,
 } from '@jade-court/xiangqi-engine';
-import { CoachAvatar } from '../components/CoachAvatar';
+import { CoachAskInput } from '../components/coach/CoachAskInput';
+import { CoachChatPanel } from '../components/coach/CoachChatPanel';
+import { createCoachMessage, useCoachChat } from '../hooks/useCoachChat';
 import { XQBoard } from '../components/XQBoard';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
+import { streamCoachPost } from '../lib/coachStream';
 import {
+  fetchCoachAsk,
   fetchCoachFeedback,
   fetchCoachHint,
   fetchCoachOpening,
   isLlmUnconfigured,
 } from '../lib/gemmaApi';
 
-let msgId = 0;
-
-interface ChatMessage {
-  id: number;
-  from: 'coach' | 'system';
-  text: string;
-  verdict?: string;
-  label?: string;
-  emoji?: string;
-  tone?: string;
-  lossCp?: number;
-  sub?: string;
-  think?: boolean;
-}
-
-const TONE_CLASS: Record<string, string> = {
-  great: 'text-good',
-  good: 'text-good',
-  ok: 'text-ink-soft',
-  warn: 'text-warn',
-  bad: 'text-bad',
-  info: 'text-jade-deep',
-  sys: 'text-muted',
-};
-
-function ChatBubble({ m }: { m: ChatMessage }) {
-  const toneClass = TONE_CLASS[m.tone ?? 'info'] ?? 'text-jade-deep';
-
-  if (m.from === 'system') {
-    return (
-      <div className="pop self-center text-muted text-[13px] font-bold text-center py-0.5">
-        {m.text}
-      </div>
-    );
-  }
-
-  return (
-    <div className="pop flex gap-2.5 items-start">
-      <CoachAvatar size={34} mood={m.think ? 'think' : 'happy'} />
-      <div className="chat-bubble">
-        {m.verdict && !m.think && (
-          <div className="flex items-center gap-[7px] mb-1">
-            <span className={`font-extrabold text-[13px] inline-flex items-center gap-[5px] ${toneClass}`}>
-              {m.emoji} {m.label}
-            </span>
-            {typeof m.lossCp === 'number' && m.lossCp > 60 && (
-              <span className="text-[11px] text-muted font-bold">
-                −{(m.lossCp / 100).toFixed(1)}
-              </span>
-            )}
-          </div>
-        )}
-        <div className="text-[14.5px] leading-normal font-semibold text-ink">{m.text}</div>
-        {m.sub && !m.think && (
-          <div className="text-[13px] leading-snug text-ink-soft font-semibold mt-[5px]">
-            {m.sub}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function feedbackToMessage(fb: CoachFeedbackResponse): Omit<ChatMessage, 'id' | 'from'> {
+function feedbackToPatch(fb: CoachFeedbackResponse) {
   return {
     verdict: fb.verdict,
     label: fb.label,
@@ -92,26 +33,42 @@ function feedbackToMessage(fb: CoachFeedbackResponse): Omit<ChatMessage, 'id' | 
   };
 }
 
+function historyPayload(history: { side: Side; from: [number, number]; to: [number, number] }[]) {
+  return history.length ? history : undefined;
+}
+
 export function LearnScreen() {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    { id: ++msgId, from: 'coach', text: Coach.opening() },
-  ]);
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
   const [coachBusy, setCoachBusy] = useState(false);
-  const chatRef = useRef<HTMLDivElement>(null);
   const difficultyRef = useRef(difficulty);
   difficultyRef.current = difficulty;
 
-  const replaceMessage = useCallback((id: number, patch: Partial<ChatMessage>) => {
-    setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch, think: false } : m)));
-  }, []);
+  const chat = useCoachChat([
+    createCoachMessage('coach', { text: Coach.opening() }),
+  ]);
+  const { setMessages, pushCoach } = chat;
 
-  const push = useCallback((m: Omit<ChatMessage, 'id' | 'from'>) => {
-    setMessages((ms) => [...ms, { id: ++msgId, from: 'coach', ...m }]);
-  }, []);
+  const loadOpening = useCallback(async (replaceFirst = false) => {
+    try {
+      const { text } = await fetchCoachOpening({ difficulty: difficultyRef.current });
+      if (replaceFirst) {
+        setMessages((ms) => {
+          if (!ms.length || ms[0].from !== 'coach') return ms;
+          return [{ ...ms[0], text }, ...ms.slice(1)];
+        });
+      } else {
+        pushCoach({ text });
+      }
+    } catch (err) {
+      if (!isLlmUnconfigured(err)) {
+        console.warn('[coach] fetchCoachOpening failed:', err);
+      }
+    }
+  }, [setMessages, pushCoach]);
 
-  const pushSys = useCallback((text: string) => {
-    setMessages((ms) => [...ms, { id: ++msgId, from: 'system', text }]);
+  useEffect(() => {
+    void loadOpening(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only welcome refresh
   }, []);
 
   const requestCoachFeedback = useCallback(
@@ -120,33 +77,16 @@ export function LearnScreen() {
       move: Move,
       history: { side: Side; from: [number, number]; to: [number, number] }[],
     ) => {
-      const pendingId = ++msgId;
-      setMessages((ms) => [
-        ...ms,
-        {
-          id: pendingId,
-          from: 'coach',
-          think: true,
-          text: 'Let me see how that move plays out…',
-        },
-      ]);
+      const pendingId = chat.pushCoach({
+        think: true,
+        text: 'Let me see how that move plays out…',
+      });
       setCoachBusy(true);
-      try {
-        const fb = await fetchCoachFeedback({
-          boardBefore,
-          move,
-          side: 'r',
-          depth: 2,
-          difficulty: difficultyRef.current,
-          history,
-        });
-        replaceMessage(pendingId, feedbackToMessage(fb));
-      } catch (err) {
-        if (!isLlmUnconfigured(err)) {
-          console.warn('[coach] fetchCoachFeedback failed, using template:', err);
-        }
+      const signal = chat.newAbortSignal();
+
+      const applyTemplate = () => {
         const fb = Coach.feedbackFor(boardBefore, move, 'r', 2);
-        replaceMessage(pendingId, {
+        chat.replaceMessage(pendingId, {
           verdict: fb.verdict,
           label: fb.label,
           emoji: fb.emoji,
@@ -155,11 +95,58 @@ export function LearnScreen() {
           text: fb.desc,
           sub: fb.body,
         });
+      };
+
+      try {
+        await streamCoachPost(
+          '/api/coach/feedback/stream',
+          {
+            boardBefore,
+            move,
+            side: 'r',
+            depth: 2,
+            difficulty: difficultyRef.current,
+            history: historyPayload(history),
+          },
+          {
+            onMeta: (meta) => {
+              chat.replaceMessage(pendingId, {
+                verdict: meta.verdict,
+                label: meta.label,
+                emoji: meta.emoji,
+                tone: meta.tone,
+                lossCp: meta.lossCp,
+                text: '',
+              });
+            },
+            onToken: (text) => chat.appendToMessage(pendingId, text),
+            onError: () => applyTemplate(),
+          },
+          signal,
+        );
+      } catch (err) {
+        if (signal.aborted) return;
+        try {
+          const fb = await fetchCoachFeedback({
+            boardBefore,
+            move,
+            side: 'r',
+            depth: 2,
+            difficulty: difficultyRef.current,
+            history,
+          });
+          chat.replaceMessage(pendingId, feedbackToPatch(fb));
+        } catch (batchErr) {
+          if (!isLlmUnconfigured(batchErr)) {
+            console.warn('[coach] feedback failed, using template:', batchErr);
+          }
+          applyTemplate();
+        }
       } finally {
-        setCoachBusy(false);
+        if (!signal.aborted) setCoachBusy(false);
       }
     },
-    [replaceMessage],
+    [chat],
   );
 
   const game = useXiangqiGame({
@@ -167,95 +154,160 @@ export function LearnScreen() {
     difficulty,
     aiProvider: 'llm',
     onSelect: (piece, count) => {
-      push({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
+      chat.pushCoach({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
     },
     onMove: (move, boardBefore, side, meta) => {
       if (side === 'r') {
+        chat.pushPlayer({ text: Coach.describeMove(boardBefore, move) });
         void requestCoachFeedback(boardBefore, move, meta.history ?? []);
       } else {
         const text =
           meta.aiComment ?? `I'll play ${Coach.describeMove(boardBefore, move)}`;
-        push({ text, tone: 'info' });
-        if (meta.gaveCheck) push({ text: Coach.checkAlert('r'), tone: 'bad' });
+        chat.pushCoach({ text, tone: 'info' });
+        if (meta.gaveCheck) chat.pushCoach({ text: Coach.checkAlert('r'), tone: 'bad' });
       }
       if (meta.status === 'checkmate') {
-        pushSys(side === 'r' ? '🏆 Checkmate — you win!' : 'Checkmate — I win this one. Rematch?');
+        chat.pushSys(side === 'r' ? '🏆 Checkmate — you win!' : 'Checkmate — I win this one. Rematch?');
       } else if (meta.status === 'stalemate') {
-        pushSys('Stalemate — no legal moves. That\'s a loss for the side to move in Xiangqi.');
+        chat.pushSys("Stalemate — no legal moves. That's a loss for the side to move in Xiangqi.");
       }
     },
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { text } = await fetchCoachOpening({ difficulty: difficultyRef.current });
-        if (!cancelled) {
-          setMessages((ms) => {
-            if (!ms.length || ms[0].from !== 'coach') return ms;
-            return [{ ...ms[0], text }, ...ms.slice(1)];
-          });
-        }
-      } catch (err) {
-        if (!isLlmUnconfigured(err)) {
-          console.warn('[coach] fetchCoachOpening failed, keeping template welcome:', err);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [messages]);
+  const gameHistory = useCallback(
+    () =>
+      game.history.map((h) => ({
+        side: h.side,
+        from: h.move.from,
+        to: h.move.to,
+      })),
+    [game.history],
+  );
 
   const onHint = async () => {
-    const pendingId = ++msgId;
-    setMessages((ms) => [
-      ...ms,
-      { id: pendingId, from: 'coach', think: true, text: 'Looking for the strongest idea…' },
-    ]);
+    const pendingId = chat.pushCoach({
+      think: true,
+      text: 'Looking for the strongest idea…',
+    });
     setCoachBusy(true);
-    try {
-      const h = await fetchCoachHint({
-        board: game.board,
-        side: game.turn,
-        depth: 2,
-        difficulty,
-      });
-      game.revealHint(h.move);
-      replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip });
-    } catch (err) {
-      if (!isLlmUnconfigured(err)) {
-        console.warn('[coach] fetchCoachHint failed, using template:', err);
-      }
+    const signal = chat.newAbortSignal();
+    let hinted = false;
+
+    const applyTemplate = () => {
       const h = game.showHint(2);
-      replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip || undefined });
+      chat.replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip || undefined });
+    };
+
+    try {
+      await streamCoachPost(
+        '/api/coach/hint/stream',
+        {
+          board: game.board,
+          side: game.turn,
+          depth: 2,
+          difficulty,
+        },
+        {
+          onMeta: (meta) => {
+            if (meta.move && !hinted) {
+              game.revealHint(meta.move);
+              hinted = true;
+            }
+            chat.replaceMessage(pendingId, { text: '', tone: 'info' });
+          },
+          onToken: (text) => chat.appendToMessage(pendingId, text),
+          onError: () => applyTemplate(),
+        },
+        signal,
+      );
+    } catch (err) {
+      if (signal.aborted) return;
+      try {
+        const h = await fetchCoachHint({
+          board: game.board,
+          side: game.turn,
+          depth: 2,
+          difficulty,
+        });
+        game.revealHint(h.move);
+        chat.replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip });
+      } catch (batchErr) {
+        if (!isLlmUnconfigured(batchErr)) {
+          console.warn('[coach] fetchCoachHint failed, using template:', batchErr);
+        }
+        applyTemplate();
+      }
     } finally {
-      setCoachBusy(false);
+      if (!signal.aborted) setCoachBusy(false);
     }
   };
 
+  const askCoach = useCallback(
+    async (question: string) => {
+      chat.pushPlayer({ text: question });
+      const pendingId = chat.pushCoach({ think: true, text: 'Let me think about that…' });
+      setCoachBusy(true);
+      const signal = chat.newAbortSignal();
+
+      const applyTemplate = () => {
+        chat.replaceMessage(pendingId, { text: Coach.askReply(), tone: 'info' });
+      };
+
+      try {
+        await streamCoachPost(
+          '/api/coach/ask/stream',
+          {
+            board: game.board,
+            side: game.turn,
+            question,
+            difficulty: difficultyRef.current,
+            history: historyPayload(gameHistory()),
+          },
+          {
+            onToken: (text) => chat.appendToMessage(pendingId, text),
+            onError: () => applyTemplate(),
+          },
+          signal,
+        );
+      } catch (err) {
+        if (signal.aborted) return;
+        try {
+          const res = await fetchCoachAsk({
+            board: game.board,
+            side: game.turn,
+            question,
+            difficulty: difficultyRef.current,
+            history: gameHistory(),
+          });
+          chat.replaceMessage(pendingId, { text: res.text, tone: 'info' });
+        } catch (batchErr) {
+          if (!isLlmUnconfigured(batchErr)) {
+            console.warn('[coach] ask failed, using template:', batchErr);
+          }
+          applyTemplate();
+        }
+      } finally {
+        if (!signal.aborted) setCoachBusy(false);
+      }
+    },
+    [chat, game.board, game.turn, gameHistory],
+  );
+
   const onExplain = () => {
-    const turnTxt =
-      game.checkSide === 'r'
-        ? "You're in check — your only job this move is to save the General."
-        : "It's your move (red). Look for active chariots, cannon screens, and advancing soldiers.";
-    push({ text: turnTxt, tone: 'info' });
+    void askCoach('What should I focus on this turn?');
   };
 
   const newGame = () => {
     game.reset();
-    setMessages([{ id: ++msgId, from: 'coach', text: `Fresh board! ${Coach.opening()}` }]);
+    chat.resetMessages([createCoachMessage('coach', { text: Coach.opening() })]);
+    void loadOpening(true);
   };
 
   const yourTurn = game.turn === 'r' && !game.status;
+  const inputDisabled = coachBusy || !!game.status;
 
   return (
-    <div className="max-w-[1180px] mx-auto px-[30px] pt-[26px] pb-[50px] grid gap-[30px] items-start justify-center grid-cols-[auto_380px]">
+    <div className="learn-layout">
       <div>
         <div className="flex items-center gap-3 mb-3.5">
           <span className="pill pill-jade">Learn mode</span>
@@ -283,67 +335,49 @@ export function LearnScreen() {
         />
       </div>
 
-      <div className="card flex flex-col h-[642px] overflow-hidden">
-        <div className="px-[18px] py-4 border-b border-line-soft flex items-center gap-3">
-          <CoachAvatar size={44} mood={game.aiThinking || coachBusy ? 'think' : 'happy'} />
-          <div>
-            <div className="font-display font-extrabold text-[17px]">Master Lin</div>
-            <div className="text-[12.5px] text-muted font-bold">Your Xiangqi coach</div>
-          </div>
-          <select
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-            className="chat-select ml-auto"
-          >
-            <option value="beginner">Gentle</option>
-            <option value="intermediate">Firm</option>
-            <option value="advanced">Tough</option>
-          </select>
-        </div>
-
-        <div
-          ref={chatRef}
-          className="scroll-area flex-1 overflow-y-auto p-4 flex flex-col gap-3"
-        >
-          {messages.map((m) => (
-            <ChatBubble key={m.id} m={m} />
-          ))}
-        </div>
-
-        <div className="p-3.5 border-t border-line-soft flex flex-col gap-2 bg-cream">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn btn-primary btn-sm flex-1"
-              disabled={!yourTurn || coachBusy}
-              onClick={() => void onHint()}
-            >
-              💡 Show me a hint
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm flex-1"
-              disabled={!yourTurn || coachBusy}
-              onClick={onExplain}
-            >
-              What should I look for?
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm flex-1"
-              disabled={game.history.length === 0}
-              onClick={() => game.undoLast(game.turn === 'r' ? 2 : 1)}
-            >
-              ↶ Take back
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={newGame}>
-              ↻ New game
-            </button>
-          </div>
-        </div>
-      </div>
+      <CoachChatPanel
+        messages={chat.messages}
+        chatRef={chat.chatRef}
+        difficulty={difficulty}
+        onDifficultyChange={setDifficulty}
+        coachThinking={game.aiThinking || coachBusy}
+        footer={
+          <>
+            <CoachAskInput disabled={inputDisabled} onAsk={(q) => void askCoach(q)} />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm flex-1"
+                disabled={!yourTurn || coachBusy}
+                onClick={() => void onHint()}
+              >
+                💡 Show me a hint
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm flex-1"
+                disabled={!yourTurn || coachBusy}
+                onClick={onExplain}
+              >
+                What should I look for?
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm flex-1"
+                disabled={game.history.length === 0}
+                onClick={() => game.undoLast(game.turn === 'r' ? 2 : 1)}
+              >
+                ↶ Take back
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={newGame}>
+                ↻ New game
+              </button>
+            </div>
+          </>
+        }
+      />
     </div>
   );
 }

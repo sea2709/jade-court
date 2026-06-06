@@ -36,3 +36,11 @@ export const COACH_OPENING_SCHEMA = {
   },
   required: ['text'],
 } as const;
+
+export const COACH_ASK_SCHEMA = {
+  type: 'object',
+  properties: {
+    text: { type: 'string' },
+  },
+  required: ['text'],
+} as const;

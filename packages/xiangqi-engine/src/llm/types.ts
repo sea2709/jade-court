@@ -92,3 +92,20 @@ export interface CoachHintPayload {
 export interface CoachOpeningPayload {
   text?: string;
 }
+
+export interface CoachAskRequest {
+  board: Board;
+  side: Side;
+  question: string;
+  difficulty?: Difficulty;
+  history?: MoveHistoryEntry[];
+}
+
+export interface CoachAskResponse {
+  text: string;
+  source: 'llm' | 'template';
+}
+
+export interface CoachAskPayload {
+  text?: string;
+}

@@ -8,7 +8,7 @@ For the full roadmap and architecture notes, see [.cursor/plans/jade-court-imple
 
 | Mode | Route | What it does |
 |------|-------|-------------|
-| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — move grading, hints, and piece tips. With `GEMINI_API_KEY`, coach feedback and hints use **Gemma 4** via the server (`POST /api/coach/*`); piece tips stay instant and local. Falls back to template copy when Gemma is off or unavailable. |
+| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — bidirectional messages, move grading, hints, piece tips, and free-form questions. With an LLM API key, coach copy streams over SSE (`POST /api/coach/{feedback,hint,ask}/stream`); piece tips stay instant and local. Falls back to template copy when the LLM is off or unavailable. |
 | **Play vs Computer** | `/play` | Same engine and board, lighter UI; beginner / intermediate / advanced difficulty. |
 | **Lessons & Puzzles** | `/lessons` | Eight static piece lessons and three tactical puzzles. |
 | **Friends** | `/multiplayer` | Create or join a `JADE-XXXX` room over WebSocket, or **pass-and-play** on one device (no server). |

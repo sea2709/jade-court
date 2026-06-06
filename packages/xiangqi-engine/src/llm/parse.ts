@@ -6,6 +6,7 @@ import type { Board, Move, Side } from '../types.js';
 import type {
   CoachFeedbackPayload,
   CoachHintPayload,
+  CoachAskPayload,
   CoachOpeningPayload,
   GemmaMovePayload,
   ParsedMoveCoords,
@@ -119,4 +120,12 @@ export function parseCoachOpeningJson(text: string): { text: string } | null {
   const openingText = nonEmptyString(obj.text);
   if (!openingText) return null;
   return { text: openingText };
+}
+
+export function parseCoachAskJson(text: string): { text: string } | null {
+  const obj = parsePayload(text) as CoachAskPayload | null;
+  if (!obj) return null;
+  const answer = nonEmptyString(obj.text);
+  if (!answer) return null;
+  return { text: answer };
 }

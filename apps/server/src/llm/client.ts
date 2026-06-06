@@ -4,6 +4,7 @@
 import { isLlmConfigured, llmModel, llmProviderId } from './config.js';
 import { createProvider } from './providers/index.js';
 import {
+  COACH_ASK_SCHEMA,
   COACH_FEEDBACK_SCHEMA,
   COACH_HINT_SCHEMA,
   COACH_OPENING_SCHEMA,
@@ -51,4 +52,14 @@ export function llmGenerateCoachOpeningJson(system: string, user: string): Promi
   return getLlmProvider().generateJson({ system, user, schema: COACH_OPENING_SCHEMA });
 }
 
-// Phase 2: coach SSE — llmStreamCoachText(system, user) via getLlmProvider().streamText()
+export function llmGenerateCoachAskJson(system: string, user: string): Promise<string> {
+  return getLlmProvider().generateJson({ system, user, schema: COACH_ASK_SCHEMA });
+}
+
+export async function* llmStreamCoachText(
+  system: string,
+  user: string,
+  signal?: AbortSignal,
+): AsyncGenerator<string> {
+  yield* getLlmProvider().streamText({ system, user, signal });
+}

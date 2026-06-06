@@ -3,10 +3,10 @@
  */
 import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
 import { apiKeyForProvider, llmModel } from '../config.js';
-import { assertLlmConfigured, streamTextNotImplemented } from '../errors.js';
+import { assertLlmConfigured } from '../errors.js';
 import { logLlmTokenUsage } from '../logUsage.js';
 import { llmAbortSignal } from '../timeout.js';
-import type { GenerateJsonParams, LlmProvider, LlmUsage } from '../types.js';
+import type { GenerateJsonParams, LlmProvider, LlmUsage, StreamTextParams } from '../types.js';
 
 let client: GoogleGenAI | null = null;
 
@@ -48,6 +48,24 @@ export function createGeminiProvider(): LlmProvider {
       logLlmTokenUsage('gemini', usageFromResponse(response));
       return response.text ?? '';
     },
-    streamText: streamTextNotImplemented,
+    async *streamText(params: StreamTextParams) {
+      const ai = getClient();
+      const signal = llmAbortSignal(params.signal);
+      const responseStream = await ai.models.generateContentStream({
+        model,
+        contents: params.user,
+        config: {
+          systemInstruction: params.system,
+          abortSignal: signal,
+        },
+      });
+      let lastResponse: GenerateContentResponse | undefined;
+      for await (const chunk of responseStream) {
+        lastResponse = chunk;
+        const text = chunk.text;
+        if (text) yield text;
+      }
+      if (lastResponse) logLlmTokenUsage('gemini', usageFromResponse(lastResponse));
+    },
   };
 }
