@@ -7,7 +7,7 @@ import { playOpponentProvider } from '../engine/config.js';
 import { getPikafishMove, negamaxFallback } from '../engine/move.js';
 import { computeLlmOpponentMove } from '../opponent/llmOpponentMove.js';
 import { parseOpponentMoveBody } from '../opponent/parseRequest.js';
-import { checkRateLimit } from '../gemini/rateLimit.js';
+import { checkRateLimit } from '../llm/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
 
 const opponent = new Hono();

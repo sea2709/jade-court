@@ -1,7 +1,10 @@
 import { LLM, X } from '@jade-court/xiangqi-engine';
 import type { AiMoveRequest, AiMoveResponse } from '@jade-court/xiangqi-engine';
-import { generateMoveJson } from '../gemini/client.js';
-import { gemmaHistoryLimit, isGemmaConfigured } from '../gemini/config.js';
+import {
+  isLlmConfigured,
+  llmGenerateMoveJson,
+  llmHistoryLimit,
+} from '../llm/client.js';
 import { negamaxFallback } from '../engine/move.js';
 
 export type OpponentMoveResult =
@@ -10,7 +13,7 @@ export type OpponentMoveResult =
 
 /** LLM opponent move with negamax fallback (Learn / PLAY_OPPONENT_PROVIDER=llm). */
 export async function computeLlmOpponentMove(req: AiMoveRequest): Promise<OpponentMoveResult> {
-  if (!isGemmaConfigured()) {
+  if (!isLlmConfigured()) {
     return { ok: false, status: 503, error: 'llm_unconfigured' };
   }
 
@@ -26,9 +29,9 @@ export async function computeLlmOpponentMove(req: AiMoveRequest): Promise<Oppone
       legalMoves: legal,
       lastMove: req.lastMove,
       history: req.history,
-      historyLimit: gemmaHistoryLimit(),
+      historyLimit: llmHistoryLimit(),
     });
-    const raw = await generateMoveJson(system, user);
+    const raw = await llmGenerateMoveJson(system, user);
     const resolved = LLM.resolveModelMove(req.board, req.side, legal, raw);
     const move = resolved?.move ?? null;
 

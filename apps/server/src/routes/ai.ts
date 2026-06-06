@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { computeLlmOpponentMove } from '../opponent/llmOpponentMove.js';
 import { parseOpponentMoveBody } from '../opponent/parseRequest.js';
-import { checkRateLimit } from '../gemini/rateLimit.js';
+import { checkRateLimit } from '../llm/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
 
 const ai = new Hono();

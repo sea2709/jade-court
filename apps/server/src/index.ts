@@ -21,7 +21,12 @@ import coachRoutes from './routes/coach.js';
 import engineRoutes from './routes/engine.js';
 import opponentRoutes from './routes/opponent.js';
 import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engine/config.js';
-import { isGemmaConfigured, shouldLogGemmaTokenUsage } from './gemini/config.js';
+import {
+  isLlmConfigured,
+  llmModel,
+  llmProviderId,
+  shouldLogLlmTokenUsage,
+} from './llm/config.js';
 
 const app = new Hono();
 
@@ -162,13 +167,18 @@ httpServer.listen(port, () => {
       console.log('Pikafish: PIKAFISH_PATH missing — Play will use negamax fallback');
     }
   }
-  if (isGemmaConfigured()) {
-    console.log('LLM: enabled (GEMINI_API_KEY) — /api/ai/move, coach /api/coach/*');
-    if (shouldLogGemmaTokenUsage()) {
+  if (isLlmConfigured()) {
+    const provider = llmProviderId();
+    console.log(
+      `LLM: enabled (${provider} / ${llmModel()}) — /api/ai/move, coach /api/coach/*`,
+    );
+    if (shouldLogLlmTokenUsage()) {
       console.log('LLM token usage: logging enabled (development)');
     }
   } else {
-    console.log('LLM: disabled (set GEMINI_API_KEY for Learn coach and PLAY_OPPONENT_PROVIDER=llm)');
+    console.log(
+      `LLM: disabled (set API key for LLM_PROVIDER=${llmProviderId()} — Learn coach and PLAY_OPPONENT_PROVIDER=llm)`,
+    );
   }
 });
 
