@@ -89,3 +89,7 @@ export function checkAlert(s: Side): string {
     ? 'Heads up — your General is in check! You must get out of it this move.'
     : "Check! Your opponent's General is under attack.";
 }
+
+export function askReply(): string {
+  return 'Try the hint button for a strong move, or tap any piece to see where it can go.';
+}

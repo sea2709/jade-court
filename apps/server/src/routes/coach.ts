@@ -23,8 +23,10 @@ import {
 } from '../llm/client.js';
 import { checkRateLimit } from '../llm/rateLimit.js';
 import { getGuestId } from '../middleware/auth.js';
+import { registerCoachStreamRoutes } from './coachStreams.js';
 
 const coach = new Hono();
+registerCoachStreamRoutes(coach);
 
 function isBoard(v: unknown): v is Board {
   if (!Array.isArray(v) || v.length !== X.ROWS) return false;

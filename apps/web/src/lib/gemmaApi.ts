@@ -6,6 +6,8 @@ import type {
   CoachFeedbackResponse,
   CoachHintRequest,
   CoachHintResponse,
+  CoachAskRequest,
+  CoachAskResponse,
   CoachOpeningRequest,
   CoachOpeningResponse,
   Coord,
@@ -119,6 +121,25 @@ export async function fetchCoachOpening(
   params: Pick<CoachOpeningRequest, 'difficulty'> = {},
 ): Promise<CoachOpeningResponse> {
   return postJson<CoachOpeningResponse>('/api/coach/opening', params);
+}
+
+export interface FetchCoachAskParams {
+  board: Board;
+  side: Side;
+  question: string;
+  difficulty?: Difficulty;
+  history?: CoachAskRequest['history'];
+}
+
+export async function fetchCoachAsk(params: FetchCoachAskParams): Promise<CoachAskResponse> {
+  const body: CoachAskRequest = {
+    board: params.board,
+    side: params.side,
+    question: params.question,
+    difficulty: params.difficulty,
+    ...(params.history?.length ? { history: params.history } : {}),
+  };
+  return postJson<CoachAskResponse>('/api/coach/ask', body);
 }
 
 export function isLlmUnconfigured(err: unknown): boolean {

@@ -8,6 +8,8 @@ export type {
   CoachHintResponse,
   CoachOpeningRequest,
   CoachOpeningResponse,
+  CoachAskRequest,
+  CoachAskResponse,
   MoveHistoryEntry,
 } from './llm/types.js';
 export * as X from './rules.js';

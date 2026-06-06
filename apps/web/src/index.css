@@ -390,6 +390,31 @@
     @apply bg-white border border-line-soft rounded-[4px_16px_16px_16px] px-3.5 py-[11px] shadow-sm max-w-[320px];
   }
 
+  .chat-bubble-player {
+    @apply bg-jade-soft border border-jade/25 rounded-[16px_4px_16px_16px] px-3.5 py-[11px] shadow-sm max-w-[320px];
+  }
+
+  .learn-layout {
+    @apply max-w-[1180px] mx-auto px-[30px] pt-[26px] pb-[50px] grid gap-[30px] items-start justify-center;
+    grid-template-columns: auto minmax(320px, 380px);
+  }
+
+  @media (max-width: 1024px) {
+    .learn-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .learn-chat-panel {
+    @apply h-[642px];
+  }
+
+  @media (max-width: 1024px) {
+    .learn-chat-panel {
+      height: min(50vh, 480px);
+    }
+  }
+
   .chat-select {
     @apply ml-auto font-body font-bold text-[13px] border border-line-soft rounded-full px-2.5 py-1.5 bg-white text-ink;
   }

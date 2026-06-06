@@ -51,7 +51,7 @@ Build the engine before first dev run if needed: `pnpm build`.
 ## Play vs Computer opponent
 
 - **Play:** `aiProvider: 'server'` → `POST /api/opponent/move` (backend from `PLAY_OPPONENT_PROVIDER`: `engine` | `llm` | `local`).
-- **Learn:** `aiProvider: 'llm'` → `POST /api/ai/move` for the opponent; coach uses `/api/coach/*`.
+- **Learn:** `aiProvider: 'llm'` → `POST /api/ai/move` for the opponent; coach uses `/api/coach/*` (batch JSON + `/stream` SSE for feedback, hints, and ask).
 - **Pikafish:** set `PIKAFISH_PATH` when `PLAY_OPPONENT_PROVIDER=engine`.
 - **Fallback:** negamax in `packages/xiangqi-engine` when Pikafish or the LLM fails.
 - Install Pikafish from [official-pikafish/Pikafish](https://github.com/official-pikafish/Pikafish/releases) and set `PIKAFISH_PATH` in repo-root `.env`.
