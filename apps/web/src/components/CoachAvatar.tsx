@@ -1,4 +1,10 @@
-export function CoachAvatar({ size = 54, mood = 'happy' }: { size?: number; mood?: 'happy' | 'think' }) {
+export function CoachAvatar({
+  size = 54,
+  mood = 'happy',
+}: {
+  size?: number;
+  mood?: 'happy' | 'think';
+}) {
   return (
     <div
       className="shrink-0 grid place-items-center relative font-piece font-bold text-white"

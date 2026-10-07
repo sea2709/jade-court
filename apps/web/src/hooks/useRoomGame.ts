@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, type Board, type Coord, type GameStatus, type Move, type Side } from '@jade-court/xiangqi-engine';
+import {
+  X,
+  type Board,
+  type Coord,
+  type GameStatus,
+  type Move,
+  type Side,
+} from '@jade-court/xiangqi-engine';
 import { type PublicRoom, wsUrl } from '../lib/api';
 import { getGuestId } from '../lib/guestId';
 
@@ -100,9 +107,7 @@ export function useRoomGame(code: string, side: Side) {
         if (s.selected) {
           const t = s.targets.find((m) => m.to[0] === r && m.to[1] === c);
           if (t) {
-            wsRef.current?.send(
-              JSON.stringify({ type: 'move', from: t.from, to: t.to, guestId }),
-            );
+            wsRef.current?.send(JSON.stringify({ type: 'move', from: t.from, to: t.to, guestId }));
             return { ...s, selected: null, targets: [] };
           }
         }

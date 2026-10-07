@@ -139,15 +139,15 @@ After CI passes, merge on GitHub. Delete the branch when done.
 
 ## Quick reference
 
-| Task | Command |
-|------|---------|
-| List open issues | `gh issue list` |
-| View one issue | `gh issue view <n>` |
-| Issue context for agents | `./scripts/issue-context.sh <n>` |
-| Issue worktree (parallel agents) | `./scripts/issue-worktree.sh <n> [slug]` |
-| Create PR | `gh pr create` |
-| Check PR CI | `gh pr checks` |
-| Push when HTTPS auth fails | See [git-gh-auth.mdc](../rules/git-gh-auth.mdc) |
+| Task                             | Command                                         |
+| -------------------------------- | ----------------------------------------------- |
+| List open issues                 | `gh issue list`                                 |
+| View one issue                   | `gh issue view <n>`                             |
+| Issue context for agents         | `./scripts/issue-context.sh <n>`                |
+| Issue worktree (parallel agents) | `./scripts/issue-worktree.sh <n> [slug]`        |
+| Create PR                        | `gh pr create`                                  |
+| Check PR CI                      | `gh pr checks`                                  |
+| Push when HTTPS auth fails       | See [git-gh-auth.mdc](../rules/git-gh-auth.mdc) |
 
 ## Agent entry points
 

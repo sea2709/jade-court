@@ -85,11 +85,7 @@ export function resolveModelMove(
 
 export function findLegalMove(board: Board, side: Side, parsed: ParsedMoveCoords): Move | null {
   const legal = X.legalMoves(board, side);
-  return (
-    legal.find(
-      (m) => coordEqual(m.from, parsed.from) && coordEqual(m.to, parsed.to),
-    ) ?? null
-  );
+  return legal.find((m) => coordEqual(m.from, parsed.from) && coordEqual(m.to, parsed.to)) ?? null;
 }
 
 function nonEmptyString(v: unknown): string | null {

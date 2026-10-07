@@ -44,9 +44,7 @@ function PassPlay({ onExit }: { onExit: () => void }) {
               <div className="text-[42px]">🏆</div>
               <h2 className="my-1.5 mb-1 text-[26px]">{youWin ? 'Red wins!' : 'Black wins!'}</h2>
               <p className="text-ink-soft font-semibold m-0 mb-4">
-                {game.status === 'stalemate'
-                  ? 'Stalemate — no legal moves.'
-                  : 'Checkmate!'}
+                {game.status === 'stalemate' ? 'Stalemate — no legal moves.' : 'Checkmate!'}
               </p>
               <button type="button" className="btn btn-gold" onClick={() => game.reset()}>
                 Rematch
@@ -73,9 +71,7 @@ function PassPlay({ onExit }: { onExit: () => void }) {
           </label>
         </div>
         <div className="card p-4 flex flex-col gap-2">
-          <div className="font-extrabold text-sm text-ink-soft">
-            Moves: {game.history.length}
-          </div>
+          <div className="font-extrabold text-sm text-ink-soft">Moves: {game.history.length}</div>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
@@ -96,15 +92,7 @@ function PassPlay({ onExit }: { onExit: () => void }) {
   );
 }
 
-function OnlineGame({
-  code,
-  side,
-  onExit,
-}: {
-  code: string;
-  side: Side;
-  onExit: () => void;
-}) {
+function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: () => void }) {
   const game = useRoomGame(code, side);
   const flip = side === 'b';
   const yourTurn = game.turn === side && !game.status;
@@ -154,15 +142,9 @@ function OnlineGame({
           <div className="font-extrabold text-[15px] mb-2.5">Room {code}</div>
           <div className="text-[13px] text-ink-soft font-semibold leading-normal">
             You are playing as {side === 'r' ? 'Red 帥' : 'Black 將'}.
-            {!game.opponentJoined && (
-              <div className="mt-2 text-muted">Waiting for opponent…</div>
-            )}
-            {game.opponentJoined && (
-              <div className="mt-2 text-jade-deep">Opponent connected ✓</div>
-            )}
-            {game.error && (
-              <div className="mt-2 text-red-deep">{game.error}</div>
-            )}
+            {!game.opponentJoined && <div className="mt-2 text-muted">Waiting for opponent…</div>}
+            {game.opponentJoined && <div className="mt-2 text-jade-deep">Opponent connected ✓</div>}
+            {game.error && <div className="mt-2 text-red-deep">{game.error}</div>}
           </div>
         </div>
         <div className="card p-4">
@@ -191,9 +173,7 @@ function Lobby({
   const [error, setError] = useState<string | null>(null);
   const [opponentJoined, setOpponentJoined] = useState(false);
 
-  const link = code
-    ? `${location.origin}/multiplayer?room=${encodeURIComponent(code)}`
-    : '';
+  const link = code ? `${location.origin}/multiplayer?room=${encodeURIComponent(code)}` : '';
 
   useEffect(() => {
     const roomParam = searchParams.get('room');
@@ -219,7 +199,10 @@ function Lobby({
       );
     };
     ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data as string) as { type: string; room?: { blackJoined?: boolean } };
+      const msg = JSON.parse(ev.data as string) as {
+        type: string;
+        room?: { blackJoined?: boolean };
+      };
       if (msg.type === 'room' && msg.room?.blackJoined) setOpponentJoined(true);
     };
     return () => ws.close();
@@ -253,7 +236,9 @@ function Lobby({
     setLoading(true);
     setError(null);
     try {
-      const res = await joinRoom(normalized.startsWith('JADE-') ? normalized : `JADE-${normalized}`);
+      const res = await joinRoom(
+        normalized.startsWith('JADE-') ? normalized : `JADE-${normalized}`,
+      );
       setSearchParams({ room: res.room.code });
       onOnline(res.room.code, res.side);
     } catch (e) {
@@ -311,9 +296,7 @@ function Lobby({
             Pass-and-play on this device →
           </button>
         </div>
-        {error && (
-          <p className="text-center text-red-deep font-bold mt-4">{error}</p>
-        )}
+        {error && <p className="text-center text-red-deep font-bold mt-4">{error}</p>}
       </div>
     );
   }
@@ -340,9 +323,7 @@ function Lobby({
           >
             {loading ? 'Joining…' : 'Join game →'}
           </button>
-          {error && (
-            <p className="text-red-deep font-bold mt-3">{error}</p>
-          )}
+          {error && <p className="text-red-deep font-bold mt-3">{error}</p>}
           <button type="button" className="nav-link mt-3.5" onClick={() => setMode(null)}>
             ← Back
           </button>
@@ -369,9 +350,7 @@ function Lobby({
             </span>
           ))}
         </div>
-        <div className="font-display font-extrabold text-muted tracking-[3px] mb-5">
-          {code}
-        </div>
+        <div className="font-display font-extrabold text-muted tracking-[3px] mb-5">{code}</div>
 
         <div className="flex gap-2 mb-[22px]">
           <input readOnly value={link} className="room-link-input" />

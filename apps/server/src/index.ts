@@ -21,12 +21,7 @@ import coachRoutes from './routes/coach.js';
 import engineRoutes from './routes/engine.js';
 import opponentRoutes from './routes/opponent.js';
 import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engine/config.js';
-import {
-  isLlmConfigured,
-  llmModel,
-  llmProviderId,
-  shouldLogLlmTokenUsage,
-} from './llm/config.js';
+import { isLlmConfigured, llmModel, llmProviderId, shouldLogLlmTokenUsage } from './llm/config.js';
 
 const app = new Hono();
 
@@ -92,7 +87,13 @@ wss.on('connection', (ws) => {
     try {
       const msg = JSON.parse(raw.toString()) as
         | { type: 'subscribe'; code: string; guestId: string }
-        | { type: 'move'; code?: string; guestId: string; from: [number, number]; to: [number, number] };
+        | {
+            type: 'move';
+            code?: string;
+            guestId: string;
+            from: [number, number];
+            to: [number, number];
+          };
 
       if (msg.type === 'subscribe') {
         const code = msg.code.toUpperCase();
@@ -169,9 +170,7 @@ httpServer.listen(port, () => {
   }
   if (isLlmConfigured()) {
     const provider = llmProviderId();
-    console.log(
-      `LLM: enabled (${provider} / ${llmModel()}) — /api/ai/move, coach /api/coach/*`,
-    );
+    console.log(`LLM: enabled (${provider} / ${llmModel()}) — /api/ai/move, coach /api/coach/*`);
     if (shouldLogLlmTokenUsage()) {
       console.log('LLM token usage: logging enabled (development)');
     }

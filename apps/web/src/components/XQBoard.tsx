@@ -57,7 +57,9 @@ export function XQBoard({
       lines.push(<line key={`v${c}`} x1={x} y1={margin} x2={x} y2={margin + 9 * cell} />);
     } else {
       lines.push(<line key={`vt${c}`} x1={x} y1={margin} x2={x} y2={margin + 4 * cell} />);
-      lines.push(<line key={`vb${c}`} x1={x} y1={margin + 5 * cell} x2={x} y2={margin + 9 * cell} />);
+      lines.push(
+        <line key={`vb${c}`} x1={x} y1={margin + 5 * cell} x2={x} y2={margin + 9 * cell} />,
+      );
     }
   }
 

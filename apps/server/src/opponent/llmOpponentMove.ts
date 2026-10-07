@@ -1,15 +1,10 @@
 import { LLM, X } from '@jade-court/xiangqi-engine';
 import type { AiMoveRequest, AiMoveResponse } from '@jade-court/xiangqi-engine';
-import {
-  isLlmConfigured,
-  llmGenerateMoveJson,
-  llmHistoryLimit,
-} from '../llm/client.js';
+import { isLlmConfigured, llmGenerateMoveJson, llmHistoryLimit } from '../llm/client.js';
 import { negamaxFallback } from '../engine/move.js';
 
 export type OpponentMoveResult =
-  | { ok: true; body: AiMoveResponse }
-  | { ok: false; status: number; error: string };
+  { ok: true; body: AiMoveResponse } | { ok: false; status: number; error: string };
 
 /** LLM opponent move with negamax fallback (Learn / PLAY_OPPONENT_PROVIDER=llm). */
 export async function computeLlmOpponentMove(req: AiMoveRequest): Promise<OpponentMoveResult> {

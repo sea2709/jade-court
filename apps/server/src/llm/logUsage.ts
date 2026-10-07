@@ -2,10 +2,7 @@ import { llmModel, shouldLogLlmTokenUsage } from './config.js';
 import type { LlmProviderId, LlmUsage } from './types.js';
 
 /** Console log normalized token counts after a successful LLM call. */
-export function logLlmTokenUsage(
-  providerId: LlmProviderId,
-  usage: LlmUsage | undefined,
-): void {
+export function logLlmTokenUsage(providerId: LlmProviderId, usage: LlmUsage | undefined): void {
   if (!shouldLogLlmTokenUsage()) return;
   if (!usage) {
     console.warn('[llm] tokens: usage missing from API response');

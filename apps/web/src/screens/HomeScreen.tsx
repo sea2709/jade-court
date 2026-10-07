@@ -44,12 +44,9 @@ function ModeCard({
         <span className={`pill ${tagClass} self-start`}>{tag}</span>
         <div>
           <div className="font-display font-extrabold text-[23px] leading-tight">
-            {title}{' '}
-            <span className="text-muted font-piece font-bold text-[19px]">{zh}</span>
+            {title} <span className="text-muted font-piece font-bold text-[19px]">{zh}</span>
           </div>
-          <p className="mt-2 mb-0 text-ink-soft text-[15px] leading-normal font-semibold">
-            {desc}
-          </p>
+          <p className="mt-2 mb-0 text-ink-soft text-[15px] leading-normal font-semibold">{desc}</p>
         </div>
         <span className={`btn ${ctaClass} self-start mt-1.5`}>{cta}</span>
       </div>
@@ -140,7 +137,10 @@ export function HomeScreen() {
       <div className="grid grid-cols-4 gap-[18px] mt-10">
         {[
           ['Legal moves, lit up', 'Green dots and gold rings show exactly where a piece may go.'],
-          ['The why, in plain words', 'Every move comes with a one-line explanation you can actually learn from.'],
+          [
+            'The why, in plain words',
+            'Every move comes with a one-line explanation you can actually learn from.',
+          ],
           ['Move grading', 'Great, inaccuracy, blunder — instant feedback after each move.'],
           ['Coach chat', 'Ask Master Lin about the position, hints, or strategy while you play.'],
         ].map(([t, d], i) => (

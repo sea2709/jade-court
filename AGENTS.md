@@ -38,14 +38,14 @@ Full human + agent steps: [.cursor/docs/github-workflow.md](.cursor/docs/github-
 
 Run from the repo root:
 
-| Command | Purpose |
-|---------|---------|
-| `pnpm install` | Install all workspace dependencies |
-| `pnpm build` | Build engine, web, and server |
-| `pnpm test` | Run Vitest in packages that define tests |
-| `pnpm dev` | Web (:5173) + server (:3001) in parallel |
-| `pnpm typecheck` | Typecheck all packages |
-| `pnpm lint` / `pnpm lint:fix` | ESLint (flat config in `eslint.config.mjs`) |
+| Command                             | Purpose                                               |
+| ----------------------------------- | ----------------------------------------------------- |
+| `pnpm install`                      | Install all workspace dependencies                    |
+| `pnpm build`                        | Build engine, web, and server                         |
+| `pnpm test`                         | Run Vitest in packages that define tests              |
+| `pnpm dev`                          | Web (:5173) + server (:3001) in parallel              |
+| `pnpm typecheck`                    | Typecheck all packages                                |
+| `pnpm lint` / `pnpm lint:fix`       | ESLint (flat config in `eslint.config.mjs`)           |
 | `pnpm format` / `pnpm format:check` | Prettier (`.prettierrc.json`); CI runs `format:check` |
 
 Build the engine before first dev run if needed: `pnpm build`.
@@ -72,8 +72,8 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 
 ## Environment (single `.env` at repo root)
 
-| File | Used by | Variables |
-|------|---------|-----------|
+| File               | Used by                           | Variables                                |
+| ------------------ | --------------------------------- | ---------------------------------------- |
 | `.env` (repo root) | Vite / `apps/web` and Hono server | Copy from [`.env.example`](.env.example) |
 
 - **Web** reads `VITE_*` only (exposed in the browser if set).

@@ -29,8 +29,14 @@ function pieceChar(p: { t: string; s: Side }): string {
 /** ASCII board; rank 10 (red back rank) printed at bottom when perspective is red. */
 export function formatBoard(board: Board, perspective: Side = 'r'): string {
   const rows: string[] = [];
-  const rankNums = perspective === 'r' ? [...Array(X.ROWS)].map((_, i) => X.ROWS - i) : [...Array(X.ROWS)].map((_, i) => i + 1);
-  const rowIndices = perspective === 'r' ? [...Array(X.ROWS)].map((_, i) => X.ROWS - 1 - i) : [...Array(X.ROWS)].map((_, i) => i);
+  const rankNums =
+    perspective === 'r'
+      ? [...Array(X.ROWS)].map((_, i) => X.ROWS - i)
+      : [...Array(X.ROWS)].map((_, i) => i + 1);
+  const rowIndices =
+    perspective === 'r'
+      ? [...Array(X.ROWS)].map((_, i) => X.ROWS - 1 - i)
+      : [...Array(X.ROWS)].map((_, i) => i);
 
   rows.push('   ' + [...Array(X.COLS)].map((_, c) => String(c + 1)).join(' '));
   for (let i = 0; i < X.ROWS; i++) {

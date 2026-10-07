@@ -47,12 +47,7 @@ function isBoard(v: unknown): v is Board {
 function isMove(v: unknown): v is Move {
   if (!v || typeof v !== 'object') return false;
   const m = v as Move;
-  return (
-    Array.isArray(m.from) &&
-    m.from.length === 2 &&
-    Array.isArray(m.to) &&
-    m.to.length === 2
-  );
+  return Array.isArray(m.from) && m.from.length === 2 && Array.isArray(m.to) && m.to.length === 2;
 }
 
 function parseDifficulty(v: unknown): Difficulty | undefined {
