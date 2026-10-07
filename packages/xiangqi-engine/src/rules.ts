@@ -1,4 +1,4 @@
-import type { Board, Coord, GameStatus, Move, Piece, PieceType, Side } from './types.js';
+import type { Board, Coord, GameStatus, Move, PieceType, Side } from './types.js';
 
 export const ROWS = 10;
 export const COLS = 9;

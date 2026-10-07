@@ -124,7 +124,7 @@ export function LearnScreen() {
           },
           signal,
         );
-      } catch (err) {
+      } catch {
         if (signal.aborted) return;
         try {
           const fb = await fetchCoachFeedback({
@@ -220,7 +220,7 @@ export function LearnScreen() {
         },
         signal,
       );
-    } catch (err) {
+    } catch {
       if (signal.aborted) return;
       try {
         const h = await fetchCoachHint({
@@ -269,7 +269,7 @@ export function LearnScreen() {
           },
           signal,
         );
-      } catch (err) {
+      } catch {
         if (signal.aborted) return;
         try {
           const res = await fetchCoachAsk({

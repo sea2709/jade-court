@@ -12,7 +12,6 @@ import type {
   CoachOpeningResponse,
   Difficulty,
   Move,
-  Side,
 } from '@jade-court/xiangqi-engine';
 import {
   isLlmConfigured,

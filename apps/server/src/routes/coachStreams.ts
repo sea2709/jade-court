@@ -7,7 +7,6 @@ import type {
   CoachHintRequest,
   Difficulty,
   Move,
-  Side,
 } from '@jade-court/xiangqi-engine';
 import type { Hono } from 'hono';
 import { coachSseResponse, type CoachSseEvent } from '../coach/sse.js';

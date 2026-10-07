@@ -2,7 +2,7 @@
  * Text representations of board state for LLM prompts.
  */
 import * as X from '../rules.js';
-import type { Board, Coord, Move, Side } from '../types.js';
+import type { Board, Move, Side } from '../types.js';
 import type { MoveHistoryEntry } from './types.js';
 
 const PIECE_LETTER: Record<string, string> = {

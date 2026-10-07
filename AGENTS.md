@@ -45,6 +45,8 @@ Run from the repo root:
 | `pnpm test` | Run Vitest in packages that define tests |
 | `pnpm dev` | Web (:5173) + server (:3001) in parallel |
 | `pnpm typecheck` | Typecheck all packages |
+| `pnpm lint` / `pnpm lint:fix` | ESLint (flat config in `eslint.config.mjs`) |
+| `pnpm format` / `pnpm format:check` | Prettier (`.prettierrc.json`); CI runs `format:check` |
 
 Build the engine before first dev run if needed: `pnpm build`.
 

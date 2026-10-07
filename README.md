@@ -77,11 +77,13 @@ pnpm dev:server
 
 Copy [`.env.example`](.env.example) → `.env` at the repo root; set `GEMINI_API_KEY` there for Gemma opponent moves and Master Lin coach copy (see [Environment variables](#environment-variables)).
 
-### Tests & typecheck
+### Tests, lint & typecheck
 
 ```bash
 pnpm test         # xiangqi-engine Vitest suite
 pnpm typecheck    # all packages
+pnpm lint         # ESLint (pnpm lint:fix to auto-fix)
+pnpm format       # Prettier write (pnpm format:check in CI)
 pnpm build        # engine + web + server
 ```
 

@@ -47,8 +47,10 @@ Replace `OWNER/jade-court` with your GitHub org/user and repo name. After the fi
 On every push and pull request to `main`, [.github/workflows/ci.yml](../../.github/workflows/ci.yml) runs:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm build`
-3. `pnpm test`
+2. `pnpm lint`
+3. `pnpm format:check`
+4. `pnpm build`
+5. `pnpm test`
 
 Node 20; pnpm is enabled via corepack. No `gh` in CI.
 
@@ -88,6 +90,7 @@ Naming: `issue-<number>-<short-slug>`. Humans may use `git checkout -b` on `main
 
 ```bash
 cp .env.example .env   # add GEMINI_API_KEY for Gemma opponent
+pnpm lint && pnpm format:check
 pnpm build
 pnpm test
 pnpm dev    # manual check when UI or multiplayer changes

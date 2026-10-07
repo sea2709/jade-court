@@ -1,3 +1,4 @@
+import type { Board, GameStatus, Move, Side } from '@jade-court/xiangqi-engine';
 import { getGuestId } from './guestId';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
@@ -18,10 +19,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface PublicRoom {
   code: string;
-  board: import('@jade-court/xiangqi-engine').Board;
-  turn: import('@jade-court/xiangqi-engine').Side;
-  history: import('@jade-court/xiangqi-engine').Move[];
-  status: import('@jade-court/xiangqi-engine').GameStatus;
+  board: Board;
+  turn: Side;
+  history: Move[];
+  status: GameStatus;
   redJoined: boolean;
   blackJoined: boolean;
   redConnected: boolean;
