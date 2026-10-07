@@ -50,7 +50,10 @@ export function getRoom(code: string): RoomState | undefined {
   return rooms.get(code.toUpperCase());
 }
 
-export function joinRoom(code: string, guestId: string): { room: RoomState; side: Side } | { error: string } {
+export function joinRoom(
+  code: string,
+  guestId: string,
+): { room: RoomState; side: Side } | { error: string } {
   const room = getRoom(code);
   if (!room) return { error: 'Room not found' };
   if (room.red?.guestId === guestId || room.black?.guestId === guestId) {
@@ -74,7 +77,8 @@ export function applyRoomMove(
   move: Move,
 ): { ok: true; room: RoomState } | { ok: false; error: string } {
   if (room.status) return { ok: false, error: 'Game is over' };
-  const player = room.red?.guestId === guestId ? room.red : room.black?.guestId === guestId ? room.black : null;
+  const player =
+    room.red?.guestId === guestId ? room.red : room.black?.guestId === guestId ? room.black : null;
   if (!player || player.side !== room.turn) return { ok: false, error: 'Not your turn' };
 
   const legal = X.X.legalMoves(room.board, room.turn);

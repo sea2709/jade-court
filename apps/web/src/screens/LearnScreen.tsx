@@ -43,28 +43,29 @@ export function LearnScreen() {
   const difficultyRef = useRef(difficulty);
   difficultyRef.current = difficulty;
 
-  const chat = useCoachChat([
-    createCoachMessage('coach', { text: Coach.opening() }),
-  ]);
+  const chat = useCoachChat([createCoachMessage('coach', { text: Coach.opening() })]);
   const { setMessages, pushCoach } = chat;
 
-  const loadOpening = useCallback(async (replaceFirst = false) => {
-    try {
-      const { text } = await fetchCoachOpening({ difficulty: difficultyRef.current });
-      if (replaceFirst) {
-        setMessages((ms) => {
-          if (!ms.length || ms[0].from !== 'coach') return ms;
-          return [{ ...ms[0], text }, ...ms.slice(1)];
-        });
-      } else {
-        pushCoach({ text });
+  const loadOpening = useCallback(
+    async (replaceFirst = false) => {
+      try {
+        const { text } = await fetchCoachOpening({ difficulty: difficultyRef.current });
+        if (replaceFirst) {
+          setMessages((ms) => {
+            if (!ms.length || ms[0].from !== 'coach') return ms;
+            return [{ ...ms[0], text }, ...ms.slice(1)];
+          });
+        } else {
+          pushCoach({ text });
+        }
+      } catch (err) {
+        if (!isLlmUnconfigured(err)) {
+          console.warn('[coach] fetchCoachOpening failed:', err);
+        }
       }
-    } catch (err) {
-      if (!isLlmUnconfigured(err)) {
-        console.warn('[coach] fetchCoachOpening failed:', err);
-      }
-    }
-  }, [setMessages, pushCoach]);
+    },
+    [setMessages, pushCoach],
+  );
 
   useEffect(() => {
     void loadOpening(true);
@@ -124,7 +125,7 @@ export function LearnScreen() {
           },
           signal,
         );
-      } catch (err) {
+      } catch {
         if (signal.aborted) return;
         try {
           const fb = await fetchCoachFeedback({
@@ -161,13 +162,14 @@ export function LearnScreen() {
         chat.pushPlayer({ text: Coach.describeMove(boardBefore, move) });
         void requestCoachFeedback(boardBefore, move, meta.history ?? []);
       } else {
-        const text =
-          meta.aiComment ?? `I'll play ${Coach.describeMove(boardBefore, move)}`;
+        const text = meta.aiComment ?? `I'll play ${Coach.describeMove(boardBefore, move)}`;
         chat.pushCoach({ text, tone: 'info' });
         if (meta.gaveCheck) chat.pushCoach({ text: Coach.checkAlert('r'), tone: 'bad' });
       }
       if (meta.status === 'checkmate') {
-        chat.pushSys(side === 'r' ? '🏆 Checkmate — you win!' : 'Checkmate — I win this one. Rematch?');
+        chat.pushSys(
+          side === 'r' ? '🏆 Checkmate — you win!' : 'Checkmate — I win this one. Rematch?',
+        );
       } else if (meta.status === 'stalemate') {
         chat.pushSys("Stalemate — no legal moves. That's a loss for the side to move in Xiangqi.");
       }
@@ -220,7 +222,7 @@ export function LearnScreen() {
         },
         signal,
       );
-    } catch (err) {
+    } catch {
       if (signal.aborted) return;
       try {
         const h = await fetchCoachHint({
@@ -269,7 +271,7 @@ export function LearnScreen() {
           },
           signal,
         );
-      } catch (err) {
+      } catch {
         if (signal.aborted) return;
         try {
           const res = await fetchCoachAsk({

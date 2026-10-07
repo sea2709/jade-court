@@ -19,9 +19,24 @@ export const VERDICT: Record<
   great: { label: 'Great move!', tone: 'great', emoji: '★', note: "That's the engine's top pick." },
   good: { label: 'Good move', tone: 'good', emoji: '✓', note: 'Solid and principled.' },
   ok: { label: 'Playable', tone: 'ok', emoji: '•', note: 'Fine, though there was a touch better.' },
-  inaccuracy: { label: 'Inaccuracy', tone: 'warn', emoji: '!?', note: 'A more active option was available.' },
-  mistake: { label: 'Mistake', tone: 'bad', emoji: '?', note: 'This gives your opponent the edge.' },
-  blunder: { label: 'Blunder', tone: 'bad', emoji: '??', note: 'This loses material or allows a strong reply.' },
+  inaccuracy: {
+    label: 'Inaccuracy',
+    tone: 'warn',
+    emoji: '!?',
+    note: 'A more active option was available.',
+  },
+  mistake: {
+    label: 'Mistake',
+    tone: 'bad',
+    emoji: '?',
+    note: 'This gives your opponent the edge.',
+  },
+  blunder: {
+    label: 'Blunder',
+    tone: 'bad',
+    emoji: '??',
+    note: 'This loses material or allows a strong reply.',
+  },
 };
 
 export function describeMove(boardBefore: Board, move: Move): string {
@@ -45,7 +60,9 @@ export function feedbackFor(boardBefore: Board, move: Move, s: Side, depth = 2) 
   const desc = describeMove(boardBefore, move);
   let body = v.note;
   if (
-    (grade.verdict === 'inaccuracy' || grade.verdict === 'mistake' || grade.verdict === 'blunder') &&
+    (grade.verdict === 'inaccuracy' ||
+      grade.verdict === 'mistake' ||
+      grade.verdict === 'blunder') &&
     grade.best
   ) {
     const bp = boardBefore[grade.best.from[0]][grade.best.from[1]];
@@ -57,7 +74,8 @@ export function feedbackFor(boardBefore: Board, move: Move, s: Side, depth = 2) 
 
 export function hint(board: Board, s: Side, depth = 2) {
   const { move } = AI.bestMove(board, s, depth);
-  if (!move) return { move: null as Move | null, text: 'No legal moves — the game is over.', tip: '' };
+  if (!move)
+    return { move: null as Move | null, text: 'No legal moves — the game is over.', tip: '' };
   const p = board[move.from[0]][move.from[1]]!;
   const captured = board[move.to[0]][move.to[1]];
   const after = X.applyMove(board, move);

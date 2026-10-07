@@ -1,51 +1,51 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ===== Jade Court design tokens ===== */
 :root {
   /* Surfaces */
-  --cream: #FBF3E1;
-  --cream-2: #F4E8CE;
-  --paper: #FFFDF6;
-  --ink: #2B2622;
-  --ink-soft: #5C5347;
-  --muted: #94886F;
-  --line-soft: #E7DABc;
+  --cream: #fbf3e1;
+  --cream-2: #f4e8ce;
+  --paper: #fffdf6;
+  --ink: #2b2622;
+  --ink-soft: #5c5347;
+  --muted: #94886f;
+  --line-soft: #e7dabc;
 
   /* Board */
-  --board: #EBC987;
-  --board-2: #E3BC73;
-  --board-edge: #B07F44;
-  --grid: #97632F;
-  --grid-soft: #B58a52;
+  --board: #ebc987;
+  --board-2: #e3bc73;
+  --board-edge: #b07f44;
+  --grid: #97632f;
+  --grid-soft: #b58a52;
 
   /* Sides */
-  --red: #D5452C;
-  --red-deep: #AE3119;
-  --red-soft: #F6D7CC;
-  --black: #38342F;
+  --red: #d5452c;
+  --red-deep: #ae3119;
+  --red-soft: #f6d7cc;
+  --black: #38342f;
   --black-deep: #211e1a;
-  --black-soft: #DCD6CB;
+  --black-soft: #dcd6cb;
 
   /* Accents */
-  --jade: #1F9E81;
-  --jade-deep: #157A63;
-  --jade-soft: #D6EFE7;
-  --gold: #E7AC3F;
-  --gold-deep: #C98C1F;
+  --jade: #1f9e81;
+  --jade-deep: #157a63;
+  --jade-soft: #d6efe7;
+  --gold: #e7ac3f;
+  --gold-deep: #c98c1f;
 
   /* feedback tones */
-  --good: #1F9E81;
-  --warn: #E0902A;
-  --bad: #D5452C;
+  --good: #1f9e81;
+  --warn: #e0902a;
+  --bad: #d5452c;
 
   /* shape */
   --r-sm: 10px;
   --r-md: 16px;
   --r-lg: 24px;
   --r-xl: 34px;
-  --shadow-sm: 0 2px 6px rgba(80,55,20,.12);
-  --shadow-md: 0 10px 26px -8px rgba(80,55,20,.30);
-  --shadow-lg: 0 24px 60px -18px rgba(60,40,12,.45);
+  --shadow-sm: 0 2px 6px rgba(80, 55, 20, 0.12);
+  --shadow-md: 0 10px 26px -8px rgba(80, 55, 20, 0.3);
+  --shadow-lg: 0 24px 60px -18px rgba(60, 40, 12, 0.45);
 
   --font-display: 'Baloo 2', system-ui, sans-serif;
   --font-body: 'Nunito', system-ui, sans-serif;
@@ -112,9 +112,8 @@
     font-family: var(--font-body);
     color: var(--ink);
     background:
-      radial-gradient(1200px 700px at 80% -10%, #FCEFD2 0%, transparent 60%),
-      radial-gradient(900px 600px at -10% 110%, #F3E6CA 0%, transparent 55%),
-      var(--cream);
+      radial-gradient(1200px 700px at 80% -10%, #fcefd2 0%, transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, #f3e6ca 0%, transparent 55%), var(--cream);
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     @apply min-h-screen;
@@ -140,7 +139,7 @@
 
   /* faint paper grain */
   body::before {
-    content: "";
+    content: '';
     @apply fixed inset-0 pointer-events-none z-0;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
     mix-blend-mode: multiply;
@@ -158,7 +157,7 @@
 
   .topbar {
     @apply flex items-center gap-4 px-[30px] py-4 sticky top-0 z-40;
-    background: rgba(251,243,225,.82);
+    background: rgba(251, 243, 225, 0.82);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line-soft);
   }
@@ -170,7 +169,9 @@
   .brand-mark {
     @apply w-[42px] h-[42px] rounded-[13px] grid place-items-center font-piece font-black text-2xl text-white;
     background: linear-gradient(150deg, var(--red), var(--red-deep));
-    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.4);
+    box-shadow:
+      var(--shadow-sm),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .brand-name {
@@ -200,7 +201,10 @@
 
   .btn {
     @apply inline-flex items-center justify-center gap-2 font-extrabold text-base rounded-full px-[26px] py-[13px] whitespace-nowrap;
-    transition: transform .12s, box-shadow .16s, background .16s;
+    transition:
+      transform 0.12s,
+      box-shadow 0.16s,
+      background 0.16s;
   }
 
   .btn:active {
@@ -213,7 +217,7 @@
   }
 
   .btn-primary:hover {
-    box-shadow: 0 16px 34px -10px rgba(21,122,99,.55);
+    box-shadow: 0 16px 34px -10px rgba(21, 122, 99, 0.55);
   }
 
   .btn-red {
@@ -267,21 +271,33 @@
   }
 
   @keyframes riseIn {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   @keyframes popIn {
-    from { opacity: 0; transform: scale(.94); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .rise {
-    animation: riseIn .5s cubic-bezier(.2,.8,.2,1) both;
+    animation: riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   .pop {
-    animation: popIn .3s cubic-bezier(.2,.8,.2,1) both;
+    animation: popIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   .scroll-area::-webkit-scrollbar {
@@ -296,7 +312,7 @@
 
   .game-overlay {
     @apply absolute inset-0 grid place-items-center rounded-[14px] z-20;
-    background: rgba(43,38,34,.45);
+    background: rgba(43, 38, 34, 0.45);
   }
 
   .game-layout {
@@ -455,7 +471,6 @@
   .level-card-active .level-card-body {
     box-shadow: inset 4px 0 0 var(--jade-deep);
   }
-
 }
 
 @import './styles/board.css';

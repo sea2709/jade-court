@@ -7,7 +7,6 @@ import type {
   CoachHintRequest,
   Difficulty,
   Move,
-  Side,
 } from '@jade-court/xiangqi-engine';
 import type { Hono } from 'hono';
 import { coachSseResponse, type CoachSseEvent } from '../coach/sse.js';
@@ -42,12 +41,7 @@ function isBoard(v: unknown): v is Board {
 function isMove(v: unknown): v is Move {
   if (!v || typeof v !== 'object') return false;
   const m = v as Move;
-  return (
-    Array.isArray(m.from) &&
-    m.from.length === 2 &&
-    Array.isArray(m.to) &&
-    m.to.length === 2
-  );
+  return Array.isArray(m.from) && m.from.length === 2 && Array.isArray(m.to) && m.to.length === 2;
 }
 
 function parseDifficulty(v: unknown): Difficulty | undefined {
@@ -96,7 +90,8 @@ export function registerCoachStreamRoutes(coach: Hono): void {
 
     if (!body || typeof body !== 'object') return c.json({ error: 'invalid_request' }, 400);
     const o = body as Record<string, unknown>;
-    if (!isBoard(o.boardBefore) || !isMove(o.move)) return c.json({ error: 'invalid_request' }, 400);
+    if (!isBoard(o.boardBefore) || !isMove(o.move))
+      return c.json({ error: 'invalid_request' }, 400);
     if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
 
     const req: CoachFeedbackRequest = {

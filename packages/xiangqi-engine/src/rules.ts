@@ -1,4 +1,4 @@
-import type { Board, Coord, GameStatus, Move, Piece, PieceType, Side } from './types.js';
+import type { Board, Coord, GameStatus, Move, PieceType, Side } from './types.js';
 
 export const ROWS = 10;
 export const COLS = 9;
@@ -128,10 +128,34 @@ export function pieceMoves(b: Board, r: number, c: number): Move[] {
     }
     case 'H': {
       const legs = [
-        { leg: [-1, 0], jumps: [[-2, -1], [-2, 1]] as Coord[] },
-        { leg: [1, 0], jumps: [[2, -1], [2, 1]] },
-        { leg: [0, -1], jumps: [[-1, -2], [1, -2]] },
-        { leg: [0, 1], jumps: [[-1, 2], [1, 2]] },
+        {
+          leg: [-1, 0],
+          jumps: [
+            [-2, -1],
+            [-2, 1],
+          ] as Coord[],
+        },
+        {
+          leg: [1, 0],
+          jumps: [
+            [2, -1],
+            [2, 1],
+          ],
+        },
+        {
+          leg: [0, -1],
+          jumps: [
+            [-1, -2],
+            [1, -2],
+          ],
+        },
+        {
+          leg: [0, 1],
+          jumps: [
+            [-1, 2],
+            [1, 2],
+          ],
+        },
       ];
       for (const { leg, jumps } of legs) {
         const lr = r + leg[0];

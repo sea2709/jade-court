@@ -5,8 +5,7 @@ describe('xiangqi rules', () => {
   it('starts with 32 pieces', () => {
     const b = X.initialBoard();
     let n = 0;
-    for (let r = 0; r < X.ROWS; r++)
-      for (let c = 0; c < X.COLS; c++) if (b[r][c]) n++;
+    for (let r = 0; r < X.ROWS; r++) for (let c = 0; c < X.COLS; c++) if (b[r][c]) n++;
     expect(n).toBe(32);
   });
 

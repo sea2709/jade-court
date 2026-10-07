@@ -1,7 +1,7 @@
 /**
  * LLM façade — routes call these helpers, not provider modules directly.
  */
-import { isLlmConfigured, llmModel, llmProviderId } from './config.js';
+import { llmModel, llmProviderId } from './config.js';
 import { createProvider } from './providers/index.js';
 import {
   COACH_ASK_SCHEMA,

@@ -70,20 +70,14 @@ export class UciEngine {
   ): Promise<string> {
     this.write(positionLine);
     this.write(`go ${goArgs}`);
-    const line = await this.waitForLine(
-      (l) => l.startsWith('bestmove '),
-      timeoutMs,
-    );
+    const line = await this.waitForLine((l) => l.startsWith('bestmove '), timeoutMs);
     const parts = line.split(/\s+/);
     const move = parts[1];
     if (!move || move === '(none)') throw new Error('engine_no_move');
     return move;
   }
 
-  private waitForLine(
-    match: (line: string) => boolean,
-    timeoutMs: number,
-  ): Promise<string> {
+  private waitForLine(match: (line: string) => boolean, timeoutMs: number): Promise<string> {
     return new Promise((resolve, reject) => {
       if (!this.rl) {
         reject(new Error('engine_not_running'));

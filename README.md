@@ -6,20 +6,20 @@ For the full roadmap and architecture notes, see [.cursor/plans/jade-court-imple
 
 ## Features
 
-| Mode | Route | What it does |
-|------|-------|-------------|
-| **Learn with AI** | `/learn` | Play vs the computer with **Master Lin** coach chat — bidirectional messages, move grading, hints, piece tips, and free-form questions. With an LLM API key, coach copy streams over SSE (`POST /api/coach/{feedback,hint,ask}/stream`); piece tips stay instant and local. Falls back to template copy when the LLM is off or unavailable. |
-| **Play vs Computer** | `/play` | Same engine and board, lighter UI; beginner / intermediate / advanced difficulty. |
-| **Friends** | `/multiplayer` | Create or join a `JADE-XXXX` room over WebSocket, or **pass-and-play** on one device (no server). |
+| Mode                 | Route          | What it does                                                                                                                                                                                                                                                                                                                                |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Learn with AI**    | `/learn`       | Play vs the computer with **Master Lin** coach chat — bidirectional messages, move grading, hints, piece tips, and free-form questions. With an LLM API key, coach copy streams over SSE (`POST /api/coach/{feedback,hint,ask}/stream`); piece tips stay instant and local. Falls back to template copy when the LLM is off or unavailable. |
+| **Play vs Computer** | `/play`        | Same engine and board, lighter UI; beginner / intermediate / advanced difficulty.                                                                                                                                                                                                                                                           |
+| **Friends**          | `/multiplayer` | Create or join a `JADE-XXXX` room over WebSocket, or **pass-and-play** on one device (no server).                                                                                                                                                                                                                                           |
 
 ## Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Web** | React 19, Vite, Tailwind CSS v4, React Router, `vite-plugin-pwa` (installable PWA) |
-| **Server** | Hono REST + WebSocket (`ws`), guest sessions via `x-guest-id` |
-| **Game logic** | `packages/xiangqi-engine` — rules, negamax AI, coach heuristics, LLM prompt helpers; Vitest golden tests |
-| **Rooms** | In-memory store (lost on restart); optional **MongoDB** for finished online games when `MONGODB_URI` is set |
+| Layer          | Technology                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Web**        | React 19, Vite, Tailwind CSS v4, React Router, `vite-plugin-pwa` (installable PWA)                          |
+| **Server**     | Hono REST + WebSocket (`ws`), guest sessions via `x-guest-id`                                               |
+| **Game logic** | `packages/xiangqi-engine` — rules, negamax AI, coach heuristics, LLM prompt helpers; Vitest golden tests    |
+| **Rooms**      | In-memory store (lost on restart); optional **MongoDB** for finished online games when `MONGODB_URI` is set |
 
 Local dev proxies `/api` and `/ws` from the web app to the server — no production env vars required.
 
@@ -72,28 +72,30 @@ pnpm dev:web
 pnpm dev:server
 ```
 
-- Web: http://localhost:5173  
-- Server health: http://localhost:3001/health  
+- Web: http://localhost:5173
+- Server health: http://localhost:3001/health
 
 Copy [`.env.example`](.env.example) → `.env` at the repo root; set `GEMINI_API_KEY` there for Gemma opponent moves and Master Lin coach copy (see [Environment variables](#environment-variables)).
 
-### Tests & typecheck
+### Tests, lint & typecheck
 
 ```bash
 pnpm test         # xiangqi-engine Vitest suite
 pnpm typecheck    # all packages
+pnpm lint         # ESLint (pnpm lint:fix to auto-fix)
+pnpm format       # Prettier write (pnpm format:check in CI)
 pnpm build        # engine + web + server
 ```
 
 ## Project structure
 
-| Path | Role |
-|------|------|
-| `packages/xiangqi-engine/` | Shared Xiangqi rules, AI, coach; used by web and server |
-| `apps/web/` | Vite React PWA — screens, board UI, room client |
-| `apps/server/` | Hono API, WebSocket rooms, optional Mongo persistence |
-| `chinese-chess.html` | Archived single-file prototype (reference only; not the running app) |
-| `reference/extracted/` | Decoded assets from the prototype (gitignored locally) |
+| Path                       | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| `packages/xiangqi-engine/` | Shared Xiangqi rules, AI, coach; used by web and server              |
+| `apps/web/`                | Vite React PWA — screens, board UI, room client                      |
+| `apps/server/`             | Hono API, WebSocket rooms, optional Mongo persistence                |
+| `chinese-chess.html`       | Archived single-file prototype (reference only; not the running app) |
+| `reference/extracted/`     | Decoded assets from the prototype (gitignored locally)               |
 
 ## Multiplayer
 
@@ -108,27 +110,27 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 
 **Server** (no `VITE_` prefix — never exposed to the client)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3001` | Hono server port |
-| `LLM_PROVIDER` | `gemini` | LLM backend: `gemini`, `openai`, or `anthropic` |
-| `LLM_MODEL` | _(provider default)_ | Model id for the active provider |
-| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | _(unset)_ | API key for the active `LLM_PROVIDER`. Without it, coach uses templates and LLM opponent returns `503` |
-| `PLAY_OPPONENT_PROVIDER` | `engine` | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax) |
-| `PIKAFISH_PATH` | _(unset)_ | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing |
-| `ENGINE_MOVE_TIMEOUT_MS` | `30000` | Max wait for a Pikafish move |
-| `LLM_TIMEOUT_MS` | `25000` | Max wait for an LLM response |
-| `LLM_HISTORY_LIMIT` | `150` | Max plies in opponent “Recent history” prompt |
-| `LLM_LOG_TOKENS` | _(dev default)_ | `1` = log token usage; `0` = suppress |
-| `MONGODB_URI` | _(unset)_ | Optional MongoDB Atlas URI for finished-game persistence |
-| `MONGODB_DB` | `jade_court` | Database name when Mongo is enabled |
+| Variable                                                  | Default              | Description                                                                                            |
+| --------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `PORT`                                                    | `3001`               | Hono server port                                                                                       |
+| `LLM_PROVIDER`                                            | `gemini`             | LLM backend: `gemini`, `openai`, or `anthropic`                                                        |
+| `LLM_MODEL`                                               | _(provider default)_ | Model id for the active provider                                                                       |
+| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | _(unset)_            | API key for the active `LLM_PROVIDER`. Without it, coach uses templates and LLM opponent returns `503` |
+| `PLAY_OPPONENT_PROVIDER`                                  | `engine`             | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax)  |
+| `PIKAFISH_PATH`                                           | _(unset)_            | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing                       |
+| `ENGINE_MOVE_TIMEOUT_MS`                                  | `30000`              | Max wait for a Pikafish move                                                                           |
+| `LLM_TIMEOUT_MS`                                          | `25000`              | Max wait for an LLM response                                                                           |
+| `LLM_HISTORY_LIMIT`                                       | `150`                | Max plies in opponent “Recent history” prompt                                                          |
+| `LLM_LOG_TOKENS`                                          | _(dev default)_      | `1` = log token usage; `0` = suppress                                                                  |
+| `MONGODB_URI`                                             | _(unset)_            | Optional MongoDB Atlas URI for finished-game persistence                                               |
+| `MONGODB_DB`                                              | `jade_court`         | Database name when Mongo is enabled                                                                    |
 
 **Web** (`VITE_*` only)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_WS_URL` | _(proxy)_ | Override WebSocket URL for production web builds |
-| `VITE_API_URL` | _(same origin)_ | Override REST API base URL for production |
+| Variable       | Default         | Description                                      |
+| -------------- | --------------- | ------------------------------------------------ |
+| `VITE_WS_URL`  | _(proxy)_       | Override WebSocket URL for production web builds |
+| `VITE_API_URL` | _(same origin)_ | Override REST API base URL for production        |
 
 ## Implementation status
 

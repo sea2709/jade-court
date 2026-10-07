@@ -36,12 +36,12 @@ Omit `short-slug` when `gh` is available — it is derived from the issue title.
 
 ## Agent obligations
 
-| Do | Don't |
-|----|--------|
-| `cd` into the worktree before editing | Checkout the issue branch in the main repo tree |
-| Commit and push from the worktree | Run `git checkout issue-*` in the primary workspace |
-| Use `issue-<n>-slug` branch name | Reuse another issue's worktree for new work |
-| Run `pnpm build` / `pnpm test` in the worktree | Assume `node_modules` from main repo applies |
+| Do                                             | Don't                                               |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `cd` into the worktree before editing          | Checkout the issue branch in the main repo tree     |
+| Commit and push from the worktree              | Run `git checkout issue-*` in the primary workspace |
+| Use `issue-<n>-slug` branch name               | Reuse another issue's worktree for new work         |
+| Run `pnpm build` / `pnpm test` in the worktree | Assume `node_modules` from main repo applies        |
 
 ## Full issue flow (with worktree)
 
@@ -79,12 +79,12 @@ Remove stale worktrees before re-running the script if Git reports a conflict.
 
 ## Troubleshooting
 
-| Problem | Action |
-|---------|--------|
+| Problem                                | Action                                                |
+| -------------------------------------- | ----------------------------------------------------- |
 | `fatal: 'main' is already checked out` | Use worktree script; don't create branch in main tree |
-| Worktree path exists but branch wrong | `git worktree list`; remove or reuse path |
-| Missing `.env` / LLM keys | Copy from main worktree or `cp .env.example .env` |
-| `pnpm` errors in worktree | Run `pnpm install` inside the worktree |
+| Worktree path exists but branch wrong  | `git worktree list`; remove or reuse path             |
+| Missing `.env` / LLM keys              | Copy from main worktree or `cp .env.example .env`     |
+| `pnpm` errors in worktree              | Run `pnpm install` inside the worktree                |
 
 ## Related
 

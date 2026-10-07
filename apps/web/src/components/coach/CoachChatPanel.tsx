@@ -40,10 +40,7 @@ export function CoachChatPanel({
         </select>
       </div>
 
-      <div
-        ref={chatRef}
-        className="scroll-area flex-1 overflow-y-auto p-4 flex flex-col gap-3"
-      >
+      <div ref={chatRef} className="scroll-area flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {messages.map((m) => (
           <ChatBubble key={m.id} m={m} />
         ))}

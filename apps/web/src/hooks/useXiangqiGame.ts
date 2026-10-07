@@ -143,8 +143,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case 'UNDO': {
       const keep = Math.max(0, state.history.length - action.count);
-      const board =
-        keep > 0 ? X.cloneBoard(state.history[keep].boardBefore) : X.initialBoard();
+      const board = keep > 0 ? X.cloneBoard(state.history[keep].boardBefore) : X.initialBoard();
       const lastEntry = keep > 0 ? state.history[keep - 1] : null;
       const turn = lastEntry ? X.opp(lastEntry.side) : 'r';
       return {
@@ -152,9 +151,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         turn,
         selected: null,
         targets: [],
-        lastMove: lastEntry
-          ? { from: [...lastEntry.move.from], to: [...lastEntry.move.to] }
-          : null,
+        lastMove: lastEntry ? { from: [...lastEntry.move.from], to: [...lastEntry.move.to] } : null,
         history: state.history.slice(0, keep),
         status: keep > 0 ? X.gameStatus(board, turn) : null,
         hintMove: null,
@@ -231,36 +228,39 @@ export function useXiangqiGame(config: GameConfig = {}) {
     if (h.capturedType) captured[h.side].push(h.capturedType);
   });
 
-  const applyAndAdvance = useCallback((move: Move, extras?: { aiComment?: string }) => {
-    const cfg = cfgRef.current;
-    const prevBoard = boardRef.current;
-    const mover = prevBoard[move.from[0]][move.from[1]];
-    if (!mover) return;
+  const applyAndAdvance = useCallback(
+    (move: Move, extras?: { aiComment?: string }) => {
+      const cfg = cfgRef.current;
+      const prevBoard = boardRef.current;
+      const mover = prevBoard[move.from[0]][move.from[1]];
+      if (!mover) return;
 
-    const capturedPiece = prevBoard[move.to[0]][move.to[1]];
-    const side = mover.s;
-    const nb = X.applyMove(prevBoard, move);
-    const next = X.opp(side);
-    const st = X.gameStatus(nb, next);
+      const capturedPiece = prevBoard[move.to[0]][move.to[1]];
+      const side = mover.s;
+      const nb = X.applyMove(prevBoard, move);
+      const next = X.opp(side);
+      const st = X.gameStatus(nb, next);
 
-    cfg.onMove?.(move, prevBoard, side, {
-      captured: capturedPiece ? capturedPiece.t : null,
-      gaveCheck: X.inCheck(nb, next),
-      status: st,
-      aiComment: extras?.aiComment,
-      history: historyRef.current.map((h) => ({
-        side: h.side,
-        from: h.move.from,
-        to: h.move.to,
-      })),
-    });
+      cfg.onMove?.(move, prevBoard, side, {
+        captured: capturedPiece ? capturedPiece.t : null,
+        gaveCheck: X.inCheck(nb, next),
+        status: st,
+        aiComment: extras?.aiComment,
+        history: historyRef.current.map((h) => ({
+          side: h.side,
+          from: h.move.from,
+          to: h.move.to,
+        })),
+      });
 
-    dispatch({ type: 'APPLY_MOVE', move });
+      dispatch({ type: 'APPLY_MOVE', move });
 
-    if (cfg.aiSide && side === cfg.aiSide) {
-      startOpponentReveal(prevBoard, move);
-    }
-  }, [startOpponentReveal]);
+      if (cfg.aiSide && side === cfg.aiSide) {
+        startOpponentReveal(prevBoard, move);
+      }
+    },
+    [startOpponentReveal],
+  );
 
   const onPoint = useCallback(
     (r: number, c: number) => {
@@ -314,8 +314,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
     setAiThinking(true);
     cfg.onAIThinking?.(true);
 
-    const thinkMs =
-      cfg.aiThinkDelayMs ?? Math.round(900 + Math.random() * 500);
+    const thinkMs = cfg.aiThinkDelayMs ?? Math.round(900 + Math.random() * 500);
     const minDelay = new Promise<void>((r) => setTimeout(r, thinkMs));
 
     (async () => {
@@ -391,9 +390,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
       const cfg = cfgRef.current;
       const keep = Math.max(0, state.history.length - count);
       const trimmed = state.history.slice(0, keep);
-      setLastOpponentMoveText(
-        cfg.aiSide ? lastAiMoveText(trimmed, cfg.aiSide) : null,
-      );
+      setLastOpponentMoveText(cfg.aiSide ? lastAiMoveText(trimmed, cfg.aiSide) : null);
     },
     [clearReveal, state.history],
   );

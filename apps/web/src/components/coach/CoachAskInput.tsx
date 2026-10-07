@@ -27,7 +27,11 @@ export function CoachAskInput({ disabled, onAsk }: CoachAskInputProps) {
         maxLength={500}
         className="flex-1 text-[13.5px] font-semibold px-3 py-2 rounded-[10px] border border-line-soft bg-white text-ink placeholder:text-muted disabled:opacity-50"
       />
-      <button type="submit" className="btn btn-primary btn-sm shrink-0" disabled={disabled || !question.trim()}>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm shrink-0"
+        disabled={disabled || !question.trim()}
+      >
         Send
       </button>
     </form>

@@ -3,7 +3,7 @@
  */
 import { Hono } from 'hono';
 import { X } from '@jade-court/xiangqi-engine';
-import type { AiMoveRequest, Board, Difficulty, Move, Side } from '@jade-court/xiangqi-engine';
+import type { AiMoveRequest, Board, Difficulty } from '@jade-court/xiangqi-engine';
 import { getGuestId } from '../middleware/auth.js';
 import { isPikafishConfigured } from '../engine/config.js';
 import { getPikafishMove, negamaxFallback } from '../engine/move.js';

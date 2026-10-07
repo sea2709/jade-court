@@ -47,8 +47,10 @@ Replace `OWNER/jade-court` with your GitHub org/user and repo name. After the fi
 On every push and pull request to `main`, [.github/workflows/ci.yml](../../.github/workflows/ci.yml) runs:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm build`
-3. `pnpm test`
+2. `pnpm lint`
+3. `pnpm format:check`
+4. `pnpm build`
+5. `pnpm test`
 
 Node 20; pnpm is enabled via corepack. No `gh` in CI.
 
@@ -88,6 +90,7 @@ Naming: `issue-<number>-<short-slug>`. Humans may use `git checkout -b` on `main
 
 ```bash
 cp .env.example .env   # add GEMINI_API_KEY for Gemma opponent
+pnpm lint && pnpm format:check
 pnpm build
 pnpm test
 pnpm dev    # manual check when UI or multiplayer changes
@@ -136,15 +139,15 @@ After CI passes, merge on GitHub. Delete the branch when done.
 
 ## Quick reference
 
-| Task | Command |
-|------|---------|
-| List open issues | `gh issue list` |
-| View one issue | `gh issue view <n>` |
-| Issue context for agents | `./scripts/issue-context.sh <n>` |
-| Issue worktree (parallel agents) | `./scripts/issue-worktree.sh <n> [slug]` |
-| Create PR | `gh pr create` |
-| Check PR CI | `gh pr checks` |
-| Push when HTTPS auth fails | See [git-gh-auth.mdc](../rules/git-gh-auth.mdc) |
+| Task                             | Command                                         |
+| -------------------------------- | ----------------------------------------------- |
+| List open issues                 | `gh issue list`                                 |
+| View one issue                   | `gh issue view <n>`                             |
+| Issue context for agents         | `./scripts/issue-context.sh <n>`                |
+| Issue worktree (parallel agents) | `./scripts/issue-worktree.sh <n> [slug]`        |
+| Create PR                        | `gh pr create`                                  |
+| Check PR CI                      | `gh pr checks`                                  |
+| Push when HTTPS auth fails       | See [git-gh-auth.mdc](../rules/git-gh-auth.mdc) |
 
 ## Agent entry points
 

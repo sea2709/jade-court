@@ -4,11 +4,11 @@ Project-level Cursor configuration for this repo. Global Cursor settings (user p
 
 ## Contents
 
-| Path | Purpose |
-|------|---------|
-| `plans/` | Implementation plans and architecture notes |
+| Path     | Purpose                                                                  |
+| -------- | ------------------------------------------------------------------------ |
+| `plans/` | Implementation plans and architecture notes                              |
 | `rules/` | Cursor agent rules (`.mdc` files) that guide AI behavior in this project |
-| `docs/` | Human and agent workflow docs (see below) |
+| `docs/`  | Human and agent workflow docs (see below)                                |
 
 ## plans/
 

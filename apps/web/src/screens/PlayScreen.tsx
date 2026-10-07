@@ -94,13 +94,7 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
 
 type GameCfg = { level: Difficulty; side: Side };
 
-function Game({
-  cfg,
-  setCfg,
-}: {
-  cfg: GameCfg;
-  setCfg: Dispatch<SetStateAction<GameCfg | null>>;
-}) {
+function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<GameCfg | null>> }) {
   const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
   const game = useXiangqiGame({
@@ -114,8 +108,7 @@ function Game({
   const won = game.status && game.turn === aiSide;
   const levelMeta = LEVELS.find((l) => l.id === level)!;
   const lastPly = game.history.length > 0 ? game.history[game.history.length - 1] : null;
-  const humanLastMove =
-    lastPly?.side === humanSide && game.lastMove ? game.lastMove : null;
+  const humanLastMove = lastPly?.side === humanSide && game.lastMove ? game.lastMove : null;
 
   const statusLine = game.status
     ? 'Game over'
@@ -125,15 +118,7 @@ function Game({
         ? 'Your move'
         : 'Waiting…';
 
-  const PlayerStrip = ({
-    side,
-    label,
-    sub,
-  }: {
-    side: Side;
-    label: string;
-    sub: string;
-  }) => (
+  const PlayerStrip = ({ side, label, sub }: { side: Side; label: string; sub: string }) => (
     <div className="card px-4 py-3 flex items-center gap-3">
       <span className={`player-badge ${side === 'r' ? 'player-badge-red' : 'player-badge-black'}`}>
         {side === 'r' ? '帥' : '將'}
@@ -157,9 +142,7 @@ function Game({
           <span className="font-extrabold text-sm max-w-[520px] leading-snug text-ink-soft">
             {statusLine}
           </span>
-          {game.checkSide && !game.status && (
-            <span className="pill pill-gold">Check!</span>
-          )}
+          {game.checkSide && !game.status && <span className="pill pill-gold">Check!</span>}
         </div>
         <XQBoard
           board={game.board}

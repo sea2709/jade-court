@@ -11,9 +11,7 @@ export function createCoachMessage(
 }
 
 export function useCoachChat(initialMessages?: ChatMessage[]) {
-  const [messages, setMessages] = useState<ChatMessage[]>(
-    initialMessages ?? [],
-  );
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const chatRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -45,23 +43,22 @@ export function useCoachChat(initialMessages?: ChatMessage[]) {
   }, []);
 
   const replaceMessage = useCallback((id: number, patch: ChatMessagePatch) => {
-    setMessages((ms) =>
-      ms.map((m) => (m.id === id ? { ...m, ...patch, think: false } : m)),
-    );
+    setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch, think: false } : m)));
   }, []);
 
   const appendToMessage = useCallback((id: number, text: string) => {
     setMessages((ms) =>
-      ms.map((m) =>
-        m.id === id ? { ...m, text: m.text + text, think: false } : m,
-      ),
+      ms.map((m) => (m.id === id ? { ...m, text: m.text + text, think: false } : m)),
     );
   }, []);
 
-  const resetMessages = useCallback((next: ChatMessage[]) => {
-    abortStreams();
-    setMessages(next);
-  }, [abortStreams]);
+  const resetMessages = useCallback(
+    (next: ChatMessage[]) => {
+      abortStreams();
+      setMessages(next);
+    },
+    [abortStreams],
+  );
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;

@@ -1,0 +1,7 @@
+dist/
+dev-dist/
+coverage/
+pnpm-lock.yaml
+reference/
+chinese-chess.html
+.cursor/plans/

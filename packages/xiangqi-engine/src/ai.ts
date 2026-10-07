@@ -60,7 +60,8 @@ function negamax(b: Board, s: Side, depth: number, alpha: number, beta: number):
 
 export function bestMove(b: Board, s: Side, depth: number) {
   const moves = orderMoves(b, X.legalMoves(b, s));
-  if (!moves.length) return { move: null as Move | null, score: -100000, scored: [] as { m: Move; val: number }[] };
+  if (!moves.length)
+    return { move: null as Move | null, score: -100000, scored: [] as { m: Move; val: number }[] };
   let best: Move | null = null;
   let bestVal = -Infinity;
   const scored: { m: Move; val: number }[] = [];
