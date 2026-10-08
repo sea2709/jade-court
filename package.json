@@ -10,7 +10,7 @@
     "test:coverage": "pnpm -r run test:coverage",
     "test:e2e": "pnpm --filter @jade-court/web test:e2e",
     "typecheck": "pnpm -r run typecheck",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

@@ -22,7 +22,7 @@ Work from GitHub issues when the user or task references one.
    cd <printed-worktree-path>
    ```
    Creates branch `issue-<n>-short-slug` under `../jade-court-worktrees/`. See [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md).
-3. **Implement** with minimal, focused diffs. Match existing patterns in touched files (inside the worktree). Tests are part of the task: unit tests for new behavior, Playwright for changed flows, and `pnpm test:coverage` green — see [.cursor/rules/testing.mdc](.cursor/rules/testing.mdc).
+3. **Implement** with minimal, focused diffs. Match existing patterns in touched files (inside the worktree). Tests are part of the task: unit tests for new behavior, Playwright for changed flows, and `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, and `pnpm test:coverage` all passing with zero errors and zero warnings — see [.cursor/rules/testing.mdc](.cursor/rules/testing.mdc).
 4. **Commit** with the issue reference:
    ```bash
    git commit -m "fix: describe change (#<n>)"
@@ -47,7 +47,7 @@ Run from the repo root:
 | `pnpm test:e2e`                     | Playwright E2E (own server :3101 + Vite :5199)        |
 | `pnpm dev`                          | Web (:5173) + server (:3001) in parallel              |
 | `pnpm typecheck`                    | Typecheck all packages                                |
-| `pnpm lint` / `pnpm lint:fix`       | ESLint (flat config in `eslint.config.mjs`)           |
+| `pnpm lint` / `pnpm lint:fix`       | ESLint (`eslint.config.mjs`); any warning fails       |
 | `pnpm format` / `pnpm format:check` | Prettier (`.prettierrc.json`); CI runs `format:check` |
 
 Build the engine before first dev run if needed: `pnpm build`.

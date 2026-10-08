@@ -1,11 +1,11 @@
 ---
-description: Tests are part of every implementation task — unit, E2E, and coverage
+description: Every task ends with tests, lint, format, and typecheck all clean — zero errors and zero warnings
 alwaysApply: true
 ---
 
-# Testing
+# Testing and quality gates
 
-A code change is not done until its tests are written and green. Applies to every agent that edits `packages/xiangqi-engine`, `apps/server`, or `apps/web` — including work done directly in chat, not only the developer subagents.
+A code change is not done until its tests are written and every check below passes with **zero errors and zero warnings**. Applies to every agent that edits `packages/xiangqi-engine`, `apps/server`, or `apps/web` — including work done directly in chat, not only the developer subagents.
 
 ## Write tests with the change
 
@@ -21,9 +21,21 @@ A code change is not done until its tests are written and green. Applies to ever
 - Never delete, `.skip`, `.only`, or loosen an assertion to get green. If behavior changed on purpose, update the test and say why in the report or PR.
 - Never lower a coverage threshold in a `vitest.config.ts`. Raise it when your tests push coverage clearly above it.
 
+## Don't silence warnings
+
+- Fix the cause of a lint, type, or test warning instead of hiding it. No new `eslint-disable`, `@ts-ignore` / `@ts-expect-error`, rule downgrades in `eslint.config.mjs`, or Prettier ignores just to get green.
+- If a suppression is genuinely unavoidable, scope it to one line, give the reason in the comment, and call it out in the report or PR.
+
 ## Run before reporting done
 
-1. `pnpm test:coverage` — all packages; fails if coverage drops below the thresholds (same as CI).
-2. `pnpm test:e2e` — when a user flow, or an endpoint/message it uses, changed.
+Run all of these from the repo root; each must pass with no errors and no warnings:
 
-List the tests you added or updated — and anything left untested, with why — in your report or PR test plan.
+1. `pnpm lint` — ESLint with `--max-warnings 0`, so any warning fails (same as CI).
+2. `pnpm format:check` — Prettier; run `pnpm format` to fix, then re-check.
+3. `pnpm typecheck` — `tsc` across all packages.
+4. `pnpm test:coverage` — all packages; fails if coverage drops below the thresholds (same as CI).
+5. `pnpm test:e2e` — when a user flow, or an endpoint/message it uses, changed.
+
+Also read the test output, not just the exit code: new React `act(...)` warnings, unhandled rejections, or `console.error` noise from your change count as failures to fix. Pre-existing environment noise (for example Node's `localStorage` ExperimentalWarning in Vitest) is fine.
+
+List the checks you ran, the tests you added or updated — and anything left untested, with why — in your report or PR test plan.

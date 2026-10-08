@@ -55,10 +55,9 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs['recommended-latest'].rules,
-      // React Compiler rules: existing hooks predate them; tighten to 'error' once refactored.
-      'react-hooks/refs': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/static-components': 'warn',
+      'react-hooks/refs': 'error',
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/static-components': 'error',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
