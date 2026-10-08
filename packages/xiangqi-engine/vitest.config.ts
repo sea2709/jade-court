@@ -8,6 +8,8 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts'],
       reporter: ['text-summary', 'html'],
+      // Floors just below current coverage — raise as tests are added, never lower.
+      thresholds: { statements: 85, branches: 85, functions: 80, lines: 85 },
     },
   },
 });

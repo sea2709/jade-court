@@ -24,7 +24,7 @@ Your job is to **find and report problems, not to fix product code.** Be skeptic
 
 ## 2. CI checks (owned by developers)
 
-Running `pnpm lint`, `format:check`, `build`, `test`, and `typecheck` is the responsibility of `backend-developer` and `frontend-developer`. Do **not** re-run them as a QA step.
+Running `pnpm lint`, `format:check`, `build`, `test:coverage`, and `typecheck` is the responsibility of `backend-developer` and `frontend-developer`. Do **not** re-run them as a QA step.
 
 - Confirm the developer report lists all five commands as passing, plus `pnpm test:e2e` when a user flow or an endpoint/message used by `apps/web/e2e/` changed. If any are missing or failing, mark the verdict **FAIL — CI not green** and send it back to the developer instead of continuing.
 - Review test coverage instead: developers must add tests for every new or changed behavior. Flag new logic without tests, bug fixes without a regression test, and existing tests that were deleted, skipped (`.skip` / `.only`), or loosened without a stated reason (`git diff main...HEAD -- '*.test.*' '*.spec.*'`). Unit tests are Vitest in all three packages; user flows are Playwright in `apps/web/e2e/`.

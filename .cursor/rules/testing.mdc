@@ -1,0 +1,29 @@
+---
+description: Tests are part of every implementation task — unit, E2E, and coverage
+alwaysApply: true
+---
+
+# Testing
+
+A code change is not done until its tests are written and green. Applies to every agent that edits `packages/xiangqi-engine`, `apps/server`, or `apps/web` — including work done directly in chat, not only the developer subagents.
+
+## Write tests with the change
+
+- **Unit (Vitest)** for every new or changed behavior, next to the code:
+  - Engine: `packages/xiangqi-engine/src/**/*.test.ts`
+  - Server: `apps/server/src/**/*.test.ts` — mock LLM providers, Pikafish, and MongoDB (no keys, binaries, or DB needed)
+  - Web: `apps/web/src/**/*.test.{ts,tsx}` — Testing Library in jsdom; mock `fetch`, WebSocket, SSE
+- **E2E (Playwright)** in `apps/web/e2e/` for a new or changed user flow, or an endpoint/WebSocket message those flows use.
+- **Bug fixes** start with a test that fails before the fix.
+
+## Don't break or weaken existing tests
+
+- Never delete, `.skip`, `.only`, or loosen an assertion to get green. If behavior changed on purpose, update the test and say why in the report or PR.
+- Never lower a coverage threshold in a `vitest.config.ts`. Raise it when your tests push coverage clearly above it.
+
+## Run before reporting done
+
+1. `pnpm test:coverage` — all packages; fails if coverage drops below the thresholds (same as CI).
+2. `pnpm test:e2e` — when a user flow, or an endpoint/message it uses, changed.
+
+List the tests you added or updated — and anything left untested, with why — in your report or PR test plan.

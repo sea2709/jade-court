@@ -50,9 +50,9 @@ On every push and pull request to `main`, [.github/workflows/ci.yml](../../.gith
 2. `pnpm lint`
 3. `pnpm format:check`
 4. `pnpm build`
-5. `pnpm test`
+5. `pnpm test:coverage` — unit tests; fails if coverage drops below the thresholds in each `vitest.config.ts`
 
-Node 20; pnpm is enabled via corepack. No `gh` in CI.
+A separate `e2e` job runs `pnpm test:e2e` (Playwright). Node 20; pnpm is enabled via corepack. No `gh` in CI.
 
 ## Working an issue (human or agent)
 

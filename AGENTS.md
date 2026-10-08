@@ -22,7 +22,7 @@ Work from GitHub issues when the user or task references one.
    cd <printed-worktree-path>
    ```
    Creates branch `issue-<n>-short-slug` under `../jade-court-worktrees/`. See [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md).
-3. **Implement** with minimal, focused diffs. Match existing patterns in touched files (inside the worktree).
+3. **Implement** with minimal, focused diffs. Match existing patterns in touched files (inside the worktree). Tests are part of the task: unit tests for new behavior, Playwright for changed flows, and `pnpm test:coverage` green — see [.cursor/rules/testing.mdc](.cursor/rules/testing.mdc).
 4. **Commit** with the issue reference:
    ```bash
    git commit -m "fix: describe change (#<n>)"
@@ -43,7 +43,7 @@ Run from the repo root:
 | `pnpm install`                      | Install all workspace dependencies                    |
 | `pnpm build`                        | Build engine, web, and server                         |
 | `pnpm test`                         | Vitest unit tests in engine, server, and web          |
-| `pnpm test:coverage`                | Vitest with v8 coverage summaries                     |
+| `pnpm test:coverage`                | Vitest + v8 coverage; fails below thresholds (CI)     |
 | `pnpm test:e2e`                     | Playwright E2E (own server :3101 + Vite :5199)        |
 | `pnpm dev`                          | Web (:5173) + server (:3001) in parallel              |
 | `pnpm typecheck`                    | Typecheck all packages                                |
@@ -91,6 +91,6 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 - Prefer focused diffs over broad refactors.
 - **Teaching comments** when editing `packages/xiangqi-engine`, `apps/server`, or `apps/web`: follow [.cursor/rules/code-comments.mdc](.cursor/rules/code-comments.mdc) (file headers, JSDoc on exports, section labels on non-obvious logic — not line-by-line noise).
 
-Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `issue-worktree.mdc`, `code-comments.mdc`).
+Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `issue-worktree.mdc`, `code-comments.mdc`, `testing.mdc`).
 
 **Project skills:** [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md) — git worktree per issue for parallel agents.

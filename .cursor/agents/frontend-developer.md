@@ -69,14 +69,15 @@ Do **not** edit:
   1. `pnpm lint`
   2. `pnpm format:check` (run `pnpm format` to fix, then re-check)
   3. `pnpm build`
-  4. `pnpm test`
+  4. `pnpm test:coverage` (unit tests + coverage thresholds, as CI runs it)
   5. `pnpm typecheck`
   6. `pnpm test:e2e` — when you change a user flow covered by `apps/web/e2e/` or add a new one (CI runs it).
 - For visible UI changes, start `pnpm dev` and check the affected screen in a browser at `http://localhost:5173` (layout, console errors, failed network requests).
 
 ## Tests
 
-- **Don't break existing tests.** Run the full `pnpm test` (every package, not just the web) and `pnpm test:e2e` for affected flows. Never delete, skip (`.skip` / `.only`), or loosen an existing test to make it pass. If behavior intentionally changed, update the test and say why in your report.
+- Follow `.cursor/rules/testing.mdc`. Never lower a coverage threshold.
+- **Don't break existing tests.** Run the full `pnpm test:coverage` (every package, not just the web) and `pnpm test:e2e` for affected flows. Never delete, skip (`.skip` / `.only`), or loosen an existing test to make it pass. If behavior intentionally changed, update the test and say why in your report.
 - **Cover every new or changed behavior** in the same change:
   - Unit: Vitest + Testing Library (jsdom) in `apps/web/src/**/*.test.{ts,tsx}` next to the code. Cover hooks (`src/hooks/`), client libs (`src/lib/` — mock `fetch`, WebSocket, SSE), and components with logic or states (loading, error, disabled, `move_rejected`). Query by role and label like a user would.
   - E2E: add or update a Playwright spec in `apps/web/e2e/` for a new or changed user flow.

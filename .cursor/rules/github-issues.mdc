@@ -18,7 +18,7 @@ When the user references a GitHub issue number or asks to implement/fix an issue
    cd <printed-worktree-path>
    ```
    Branch `issue-<n>-short-slug` is created from `main`. All edits and git commands for the issue happen in the worktree, not the main repo checkout.
-3. **Implement** with minimal diffs; follow `jade-court.mdc` conventions.
+3. **Implement** with minimal diffs; follow `jade-court.mdc` conventions. Write unit/E2E tests with the change and run `pnpm test:coverage` per [testing.mdc](testing.mdc).
 4. **Commit** (from the worktree): reference the issue, e.g. `fix: room sync on reconnect (#42)`.
 5. **PR** (from the worktree): use the PR template; include `Closes #<n>` when the work completes the issue.
 

@@ -14,6 +14,8 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/vite-env.d.ts'],
       reporter: ['text-summary', 'html'],
+      // Floors just below current coverage — raise as tests are added, never lower.
+      thresholds: { statements: 33, branches: 74, functions: 70, lines: 33 },
     },
   },
 });

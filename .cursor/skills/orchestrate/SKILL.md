@@ -26,7 +26,7 @@ The adversarial reviewer and QA must each **save a report** (markdown + screensh
 
 The designer is used only for tasks with **visible UI changes**. Skip its steps for backend-only or non-visual frontend work.
 
-Developers own the CI checks (`lint`, `format:check`, `build`, `test`, `typecheck`, and `test:e2e` when user flows change) and must add tests for every new or changed behavior without breaking existing ones. QA rejects work whose CI is not green or whose new logic is untested.
+Developers own the CI checks (`lint`, `format:check`, `build`, `test:coverage`, `typecheck`, and `test:e2e` when user flows change) and must add tests for every new or changed behavior without breaking existing ones or lowering coverage thresholds (see `.cursor/rules/testing.mdc`). QA rejects work whose CI is not green or whose new logic is untested.
 
 ## Workflow
 

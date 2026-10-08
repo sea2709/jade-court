@@ -65,13 +65,14 @@ Do **not** edit:
   1. `pnpm lint`
   2. `pnpm format:check` (run `pnpm format` to fix, then re-check)
   3. `pnpm build`
-  4. `pnpm test`
+  4. `pnpm test:coverage` (unit tests + coverage thresholds, as CI runs it)
   5. `pnpm typecheck`
   6. `pnpm test:e2e` — when you change an endpoint or WebSocket message used by the flows in `apps/web/e2e/` (CI runs it).
 
 ## Tests
 
-- **Don't break existing tests.** Run the full `pnpm test` (every package, not just the server) — server changes can break engine or web tests through shared types and contracts. Never delete, skip (`.skip` / `.only`), or loosen an existing test to make it pass. If behavior intentionally changed, update the test and say why in your report.
+- Follow `.cursor/rules/testing.mdc`. Never lower a coverage threshold.
+- **Don't break existing tests.** Run the full `pnpm test:coverage` (every package, not just the server) — server changes can break engine or web tests through shared types and contracts. Never delete, skip (`.skip` / `.only`), or loosen an existing test to make it pass. If behavior intentionally changed, update the test and say why in your report.
 - **Cover every new or changed behavior** with Vitest tests in the same change:
   - Server: `apps/server/src/**/*.test.ts` next to the code (picked up automatically by `apps/server/vitest.config.ts`). Cover routes (success and 4xx on invalid input), WebSocket messages, room state changes, and fallback paths (LLM / Pikafish failure → negamax).
   - Engine: `packages/xiangqi-engine/src/**/*.test.ts` for any rule or helper you add.
