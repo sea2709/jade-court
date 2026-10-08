@@ -15,4 +15,5 @@
 - [ ] `pnpm lint` and `pnpm format:check`
 - [ ] `pnpm build`
 - [ ] `pnpm test`
+- [ ] `pnpm test:e2e` (if UI, routes, or WebSocket behavior changed)
 - [ ] Manual check (describe route or flow):

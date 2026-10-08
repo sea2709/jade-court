@@ -1,6 +1,8 @@
 dist/
 dev-dist/
 coverage/
+test-results/
+playwright-report/
 pnpm-lock.yaml
 reference/
 chinese-chess.html

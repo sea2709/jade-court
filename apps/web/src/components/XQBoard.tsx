@@ -153,6 +153,8 @@ export function XQBoard({
       pieces.push(
         <div key={`pc${r}-${c}`} className={pointCls} style={{ left: x, top: y }}>
           <div
+            data-square={`${r}-${c}`}
+            data-piece={`${p.s}${p.t}`}
             className={cls.join(' ')}
             style={{ width: disc, height: disc, fontSize: disc * 0.56, position: 'relative' }}
             onClick={
@@ -191,6 +193,7 @@ export function XQBoard({
       markers.push(
         <div
           key={`hit${i}`}
+          data-square={`${r}-${c}`}
           className="hit"
           style={{ left: x, top: y, width: cell * 0.92, height: cell * 0.92 }}
           onClick={(e) => {
@@ -259,7 +262,12 @@ export function XQBoard({
 
   return (
     <div className="board-wrap" style={{ width: W + 28 }}>
-      <div className="board" style={{ width: W, height: H }} onClick={() => onPoint(-1, -1)}>
+      <div
+        className="board"
+        data-testid="board"
+        style={{ width: W, height: H }}
+        onClick={() => onPoint(-1, -1)}
+      >
         <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
           <g
             stroke="var(--grid)"

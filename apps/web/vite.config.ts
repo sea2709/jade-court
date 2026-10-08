@@ -8,6 +8,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 /** Repo-root `.env` — web uses `VITE_*` only; server loads the same file via `loadEnv.ts`. */
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
+/** Dev proxy target for `/api` and `/ws`; Playwright points this at its own server port. */
+const apiProxyTarget = process.env.JADE_API_PROXY_TARGET ?? 'http://localhost:3001';
+
 export default defineConfig({
   envDir: repoRoot,
   /** Only `VITE_*` from `.env` are exposed to `import.meta.env` (server secrets stay unprefixed). */
@@ -32,8 +35,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:3001', changeOrigin: true },
-      '/ws': { target: 'ws://localhost:3001', ws: true },
+      '/api': { target: apiProxyTarget, changeOrigin: true },
+      '/ws': { target: apiProxyTarget.replace(/^http/, 'ws'), ws: true },
     },
   },
 });

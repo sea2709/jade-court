@@ -80,12 +80,18 @@ Copy [`.env.example`](.env.example) → `.env` at the repo root; set `GEMINI_API
 ### Tests, lint & typecheck
 
 ```bash
-pnpm test         # xiangqi-engine Vitest suite
-pnpm typecheck    # all packages
-pnpm lint         # ESLint (pnpm lint:fix to auto-fix)
-pnpm format       # Prettier write (pnpm format:check in CI)
-pnpm build        # engine + web + server
+pnpm test           # Vitest unit tests (engine, server, web)
+pnpm test:coverage  # same, with v8 coverage summaries (HTML in each package's coverage/)
+pnpm test:e2e       # Playwright E2E (starts its own server :3101 + Vite :5199)
+pnpm typecheck      # all packages
+pnpm lint           # ESLint (pnpm lint:fix to auto-fix)
+pnpm format         # Prettier write (pnpm format:check in CI)
+pnpm build          # engine + web + server
 ```
+
+E2E needs a built engine (`pnpm build`) and a one-time browser install:
+`pnpm --filter @jade-court/web exec playwright install chromium`. The E2E server runs with
+`PLAY_OPPONENT_PROVIDER=local` and no LLM keys or MongoDB; Learn specs stub LLM routes in the browser.
 
 ## Project structure
 

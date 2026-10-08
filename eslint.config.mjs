@@ -9,7 +9,15 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/dev-dist/**', 'reference/**', 'coverage/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/dev-dist/**',
+      'reference/**',
+      '**/coverage/**',
+      '**/test-results/**',
+      '**/playwright-report/**',
+    ],
   },
 
   js.configs.recommended,
@@ -27,7 +35,13 @@ export default tseslint.config(
 
   // --- Node: server, engine, scripts, and root config files ---
   {
-    files: ['apps/server/**/*.ts', 'packages/**/*.ts', '*.{js,mjs,cjs}', 'apps/web/vite.config.ts'],
+    files: [
+      'apps/server/**/*.ts',
+      'packages/**/*.ts',
+      '*.{js,mjs,cjs}',
+      'apps/web/*.config.ts',
+      'apps/web/e2e/**/*.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
 

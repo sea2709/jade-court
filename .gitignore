@@ -46,3 +46,4 @@ reference/extracted/
 # E2E / local tooling
 .playwright/
 test-results/
+playwright-report/
