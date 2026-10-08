@@ -7,6 +7,7 @@ import {
   llmModel,
   llmProviderId,
   llmTimeoutMs,
+  shouldLogLlmTokenUsage,
 } from './config.js';
 
 const envSnapshot = { ...process.env };
@@ -67,5 +68,18 @@ describe('llm config', () => {
     expect(apiKeyForProvider('gemini')).toBe('g');
     expect(apiKeyForProvider('openai')).toBe('o');
     expect(apiKeyForProvider('anthropic')).toBe('a');
+  });
+
+  it('shouldLogLlmTokenUsage respects LLM_LOG_TOKENS and NODE_ENV', () => {
+    delete process.env.LLM_LOG_TOKENS;
+    process.env.NODE_ENV = 'development';
+    expect(shouldLogLlmTokenUsage()).toBe(true);
+
+    process.env.LLM_LOG_TOKENS = '0';
+    expect(shouldLogLlmTokenUsage()).toBe(false);
+
+    process.env.LLM_LOG_TOKENS = '1';
+    process.env.NODE_ENV = 'test';
+    expect(shouldLogLlmTokenUsage()).toBe(true);
   });
 });
