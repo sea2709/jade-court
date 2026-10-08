@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { afterEach, describe, it } from 'node:test';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   apiKeyForProvider,
   defaultModelForProvider,
@@ -25,48 +24,48 @@ afterEach(() => {
 describe('llm config', () => {
   it('defaults provider to gemini', () => {
     delete process.env.LLM_PROVIDER;
-    assert.equal(llmProviderId(), 'gemini');
+    expect(llmProviderId()).toBe('gemini');
   });
 
   it('parses LLM_PROVIDER', () => {
     process.env.LLM_PROVIDER = 'openai';
-    assert.equal(llmProviderId(), 'openai');
+    expect(llmProviderId()).toBe('openai');
   });
 
   it('isLlmConfigured checks active provider key', () => {
     process.env.LLM_PROVIDER = 'openai';
     delete process.env.OPENAI_API_KEY;
     delete process.env.GEMINI_API_KEY;
-    assert.equal(isLlmConfigured(), false);
+    expect(isLlmConfigured()).toBe(false);
     process.env.OPENAI_API_KEY = 'sk-test';
-    assert.equal(isLlmConfigured(), true);
+    expect(isLlmConfigured()).toBe(true);
   });
 
   it('llmModel prefers LLM_MODEL then provider default', () => {
     process.env.LLM_PROVIDER = 'anthropic';
     delete process.env.LLM_MODEL;
-    assert.equal(llmModel(), defaultModelForProvider('anthropic'));
+    expect(llmModel()).toBe(defaultModelForProvider('anthropic'));
     process.env.LLM_MODEL = 'claude-custom';
-    assert.equal(llmModel(), 'claude-custom');
+    expect(llmModel()).toBe('claude-custom');
   });
 
   it('timeout and history use LLM_* or defaults', () => {
     delete process.env.LLM_TIMEOUT_MS;
-    assert.equal(llmTimeoutMs(), 25000);
+    expect(llmTimeoutMs()).toBe(25000);
     process.env.LLM_TIMEOUT_MS = '12000';
-    assert.equal(llmTimeoutMs(), 12000);
+    expect(llmTimeoutMs()).toBe(12000);
     delete process.env.LLM_HISTORY_LIMIT;
-    assert.equal(llmHistoryLimit(), 150);
+    expect(llmHistoryLimit()).toBe(150);
     process.env.LLM_HISTORY_LIMIT = '80';
-    assert.equal(llmHistoryLimit(), 80);
+    expect(llmHistoryLimit()).toBe(80);
   });
 
   it('apiKeyForProvider reads correct env var', () => {
     process.env.GEMINI_API_KEY = 'g';
     process.env.OPENAI_API_KEY = 'o';
     process.env.ANTHROPIC_API_KEY = 'a';
-    assert.equal(apiKeyForProvider('gemini'), 'g');
-    assert.equal(apiKeyForProvider('openai'), 'o');
-    assert.equal(apiKeyForProvider('anthropic'), 'a');
+    expect(apiKeyForProvider('gemini')).toBe('g');
+    expect(apiKeyForProvider('openai')).toBe('o');
+    expect(apiKeyForProvider('anthropic')).toBe('a');
   });
 });

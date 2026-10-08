@@ -42,7 +42,9 @@ Run from the repo root:
 | ----------------------------------- | ----------------------------------------------------- |
 | `pnpm install`                      | Install all workspace dependencies                    |
 | `pnpm build`                        | Build engine, web, and server                         |
-| `pnpm test`                         | Run Vitest in packages that define tests              |
+| `pnpm test`                         | Vitest unit tests in engine, server, and web          |
+| `pnpm test:coverage`                | Vitest with v8 coverage summaries                     |
+| `pnpm test:e2e`                     | Playwright E2E (own server :3101 + Vite :5199)        |
 | `pnpm dev`                          | Web (:5173) + server (:3001) in parallel              |
 | `pnpm typecheck`                    | Typecheck all packages                                |
 | `pnpm lint` / `pnpm lint:fix`       | ESLint (flat config in `eslint.config.mjs`)           |

@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { afterEach, describe, it } from 'node:test';
+import { afterEach, describe, expect, it } from 'vitest';
 import { getLlmProvider, resetLlmProviderCache } from './client.js';
 
 const envSnapshot = { ...process.env };
@@ -21,13 +20,13 @@ describe('getLlmProvider', () => {
     process.env.GEMINI_API_KEY = 'gemini-key';
     delete process.env.OPENAI_API_KEY;
     const gemini = getLlmProvider();
-    assert.equal(gemini.id, 'gemini');
+    expect(gemini.id).toBe('gemini');
 
     process.env.LLM_PROVIDER = 'openai';
     process.env.OPENAI_API_KEY = 'openai-key';
     const openai = getLlmProvider();
-    assert.equal(openai.id, 'openai');
-    assert.notEqual(openai, gemini);
+    expect(openai.id).toBe('openai');
+    expect(openai).not.toBe(gemini);
   });
 
   it('recreates provider when LLM_MODEL changes for the same provider', () => {
@@ -35,11 +34,11 @@ describe('getLlmProvider', () => {
     process.env.GEMINI_API_KEY = 'gemini-key';
     process.env.LLM_MODEL = 'gemini-model-a';
     const first = getLlmProvider();
-    assert.equal(first.model, 'gemini-model-a');
+    expect(first.model).toBe('gemini-model-a');
 
     process.env.LLM_MODEL = 'gemini-model-b';
     const second = getLlmProvider();
-    assert.equal(second.model, 'gemini-model-b');
-    assert.notEqual(second, first);
+    expect(second.model).toBe('gemini-model-b');
+    expect(second).not.toBe(first);
   });
 });
