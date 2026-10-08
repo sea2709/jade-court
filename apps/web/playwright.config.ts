@@ -50,7 +50,7 @@ export default defineConfig({
       url: webUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
-      env: { JADE_API_PROXY_TARGET: serverUrl },
+      env: { JADE_API_PROXY_TARGET: serverUrl, JADE_E2E_QUIET: '1' },
     },
   ],
 });
