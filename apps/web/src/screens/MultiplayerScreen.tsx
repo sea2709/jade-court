@@ -165,23 +165,19 @@ function Lobby({
   onOnline: (code: string, side: Side) => void;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const roomFromUrl = searchParams.get('room');
+  const urlJoinCode = roomFromUrl ? roomFromUrl.toUpperCase() : '';
   const [mode, setMode] = useState<'create' | 'join' | null>(null);
   const [code, setCode] = useState('');
-  const [joinCode, setJoinCode] = useState(searchParams.get('room') ?? '');
+  const [joinCode, setJoinCode] = useState('');
+  const activeMode = mode ?? (urlJoinCode ? 'join' : null);
+  const joinCodeValue = joinCode || urlJoinCode;
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [opponentJoined, setOpponentJoined] = useState(false);
 
   const link = code ? `${location.origin}/multiplayer?room=${encodeURIComponent(code)}` : '';
-
-  useEffect(() => {
-    const roomParam = searchParams.get('room');
-    if (roomParam && !mode) {
-      setJoinCode(roomParam.toUpperCase());
-      setMode('join');
-    }
-  }, [searchParams, mode]);
 
   useEffect(() => {
     if (mode !== 'create' || !code) return;
@@ -231,7 +227,7 @@ function Lobby({
   };
 
   const handleJoin = async () => {
-    const normalized = joinCode.trim().toUpperCase();
+    const normalized = joinCodeValue.trim().toUpperCase();
     if (normalized.length < 4) return;
     setLoading(true);
     setError(null);
@@ -248,7 +244,7 @@ function Lobby({
     }
   };
 
-  if (!mode) {
+  if (!activeMode) {
     return (
       <div className="page-container-md">
         <div className="rise section-header mb-9">
@@ -301,7 +297,7 @@ function Lobby({
     );
   }
 
-  if (mode === 'join') {
+  if (activeMode === 'join') {
     return (
       <div className="max-w-[480px] mx-auto px-[30px] py-[60px]">
         <div className="card p-[30px] text-center">
@@ -310,7 +306,7 @@ function Lobby({
             Enter the invite code your friend shared.
           </p>
           <input
-            value={joinCode}
+            value={joinCodeValue}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             placeholder="JADE-XXXX"
             className="room-input"
@@ -318,7 +314,7 @@ function Lobby({
           <button
             type="button"
             className="btn btn-primary btn-lg w-full"
-            disabled={joinCode.length < 4 || loading}
+            disabled={joinCodeValue.length < 4 || loading}
             onClick={handleJoin}
           >
             {loading ? 'Joining…' : 'Join game →'}

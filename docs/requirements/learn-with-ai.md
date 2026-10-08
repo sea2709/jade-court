@@ -1,11 +1,11 @@
 # Requirements — Learn Xiangqi with AI (interactive learning + paid tier)
 
-| | |
-| --- | --- |
-| **Status** | Draft for review |
-| **Owner** | Dang |
-| **Last updated** | 2026-10-07 |
-| **Related** | [#31 coach chat + streaming](https://github.com/sea2709/jade-court/issues/31), [#33 lessons removed](https://github.com/sea2709/jade-court/issues/33), [#28 multi-provider LLM](https://github.com/sea2709/jade-court/issues/28) |
+|                  |                                                                                                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**       | Draft for review                                                                                                                                                                                                                 |
+| **Owner**        | Dang                                                                                                                                                                                                                             |
+| **Last updated** | 2026-10-07                                                                                                                                                                                                                       |
+| **Related**      | [#31 coach chat + streaming](https://github.com/sea2709/jade-court/issues/31), [#33 lessons removed](https://github.com/sea2709/jade-court/issues/33), [#28 multi-provider LLM](https://github.com/sea2709/jade-court/issues/28) |
 
 ---
 
@@ -25,15 +25,15 @@ What exists (and what this spec builds on):
 
 Gaps that matter for this feature:
 
-| Gap | Why it matters |
-| --- | --- |
-| No accounts (`authMiddleware` always sets `user = null`; only a random `x-guest-id`) | Can't charge, save progress, or enforce quotas per person. |
-| Rate limit is in-memory, keyed on the client-chosen guest id | Trivially bypassed; resets on restart. Can't be the basis for paid quotas. |
-| Learn games, chat and progress are never persisted | No history, no review, no drills, no progress tracking. |
+| Gap                                                                                          | Why it matters                                                                                          |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| No accounts (`authMiddleware` always sets `user = null`; only a random `x-guest-id`)         | Can't charge, save progress, or enforce quotas per person.                                              |
+| Rate limit is in-memory, keyed on the client-chosen guest id                                 | Trivially bypassed; resets on restart. Can't be the basis for paid quotas.                              |
+| Learn games, chat and progress are never persisted                                           | No history, no review, no drills, no progress tracking.                                                 |
 | Streaming only works on Gemini; OpenAI/Anthropic stream routes silently return template text | If we charge, paying users on those providers would get template text. **Must be fixed before launch.** |
-| Token usage is only console-logged | No cost visibility, no per-user metering, no budget cap. |
-| No repetition / perpetual-check rules in the engine | Lessons and reviews must avoid positions where this matters, or the engine must add them. |
-| Grading is depth-2 negamax | Fine for beginners; weak for "Tough". Pikafish grading is a Pro upgrade candidate. |
+| Token usage is only console-logged                                                           | No cost visibility, no per-user metering, no budget cap.                                                |
+| No repetition / perpetual-check rules in the engine                                          | Lessons and reviews must avoid positions where this matters, or the engine must add them.               |
+| Grading is depth-2 negamax                                                                   | Fine for beginners; weak for "Tough". Pikafish grading is a Pro upgrade candidate.                      |
 
 ## 3. Goals and non-goals
 
@@ -53,11 +53,11 @@ Gaps that matter for this feature:
 
 ## 4. Users and personas
 
-| Persona | Need | Likely tier |
-| --- | --- | --- |
-| **Curious beginner** — knows Western chess or nothing | Learn rules and basic tactics without feeling stupid | Free → converts after a few lessons |
-| **Returning casual player** — knows rules, loses a lot | Understand *why* moves are bad; fix recurring mistakes | Pro |
-| **Parent / teacher** — sets up for a child | Safe, patient explanations; visible progress | Pro (annual) |
+| Persona                                                | Need                                                   | Likely tier                         |
+| ------------------------------------------------------ | ------------------------------------------------------ | ----------------------------------- |
+| **Curious beginner** — knows Western chess or nothing  | Learn rules and basic tactics without feeling stupid   | Free → converts after a few lessons |
+| **Returning casual player** — knows rules, loses a lot | Understand _why_ moves are bad; fix recurring mistakes | Pro                                 |
+| **Parent / teacher** — sets up for a child             | Safe, patient explanations; visible progress           | Pro (annual)                        |
 
 ## 5. Learning experience — functional requirements
 
@@ -75,14 +75,14 @@ Lessons were removed in #33 because they were static pages that duplicated the c
 
 - **LRN-10 (P0)** Path structure (initial content; ~5 min per lesson):
 
-  | Unit | Lessons | Free? |
-  | --- | --- | --- |
+  | Unit                  | Lessons                                                                                               | Free?    |
+  | --------------------- | ----------------------------------------------------------------------------------------------------- | -------- |
   | 1. The board & pieces | River & palace, General & Advisor, Elephant, Horse (and hobbling), Chariot, Cannon (screens), Soldier | **Free** |
-  | 2. Capturing & check | Safe vs unsafe captures, giving check, escaping check, flying general | Free |
-  | 3. Checkmate patterns | Double chariot, horse-chariot, cannon-backed, smothered general | Pro |
-  | 4. Tactics | Fork, pin, discovered attack, cannon screen tricks, overloaded defender | Pro |
-  | 5. Opening principles | Central cannon, screen horse, developing chariots, common traps | Pro |
-  | 6. Endgames | Chariot vs advisors, horse+soldier, basic draws | Pro |
+  | 2. Capturing & check  | Safe vs unsafe captures, giving check, escaping check, flying general                                 | Free     |
+  | 3. Checkmate patterns | Double chariot, horse-chariot, cannon-backed, smothered general                                       | Pro      |
+  | 4. Tactics            | Fork, pin, discovered attack, cannon screen tricks, overloaded defender                               | Pro      |
+  | 5. Opening principles | Central cannon, screen horse, developing chariots, common traps                                       | Pro      |
+  | 6. Endgames           | Chariot vs advisors, horse+soldier, basic draws                                                       | Pro      |
 
 - **LRN-11 (P0)** A lesson is a sequence of **steps**. Step types:
   - **Explain** — short coach message + highlighted squares/arrows. Student taps "Got it".
@@ -100,9 +100,9 @@ Lessons were removed in #33 because they were static pages that duplicated the c
 
 - **LRN-20 (P0)** Keep the current flow: per-move feedback, hints, ask, take back, new game.
 - **LRN-21 (P0)** **Coaching style** selector replaces the bare difficulty dropdown in the chat header:
-  - *Guide me* — feedback after every move, hints offered proactively after a mistake.
-  - *Quiz me* (Socratic) — before revealing a hint, coach first asks a guiding question ("Your Chariot is undefended. What is attacking it?"). Student answers by tapping a square or typing; then the hint is revealed.
-  - *Just watch* — feedback only on inaccuracies or worse; no unsolicited messages.
+  - _Guide me_ — feedback after every move, hints offered proactively after a mistake.
+  - _Quiz me_ (Socratic) — before revealing a hint, coach first asks a guiding question ("Your Chariot is undefended. What is attacking it?"). Student answers by tapping a square or typing; then the hint is revealed.
+  - _Just watch_ — feedback only on inaccuracies or worse; no unsolicited messages.
 - **LRN-22 (P0)** Difficulty must affect coaching, not just the opponent: pass `difficulty` into feedback/hint/ask prompts (vocabulary and depth of explanation), and grade with depth 2 for beginner, 3 for intermediate, Pikafish (if configured) for advanced/Pro.
 - **LRN-23 (P1)** **Think-first prompts**: at critical moments (engine sees a swing ≥ 150 cp available, or the student is in danger), coach says "Careful — there's something important here. Take your time." without revealing the move. Max once every 5 moves.
 - **LRN-24 (P1)** **Take back with lesson**: after a mistake/blunder, "Take back" shows a one-line reason and offers "Try again" (student replays from that position).
@@ -118,7 +118,7 @@ Lessons were removed in #33 because they were static pages that duplicated the c
 
 ### 5.5 Practice my mistakes (drills)
 
-- **LRN-40 (P1)** Every student move graded *mistake* or *blunder* (in coached games or reviews) saves a drill: position before the move, the student's move, the engine's best move, tags.
+- **LRN-40 (P1)** Every student move graded _mistake_ or _blunder_ (in coached games or reviews) saves a drill: position before the move, the student's move, the engine's best move, tags.
 - **LRN-41 (P1)** Drill flow: "You played X here last time. Find something better." Accept any move within 30 cp of the best. Spaced repetition: correct → next in 3 days, then 7, 21; wrong → tomorrow.
 - **LRN-42 (P2)** Tag mistakes by motif (hanging piece, missed capture, missed check defense, etc.) using simple engine heuristics, to feed the progress view.
 
@@ -151,30 +151,30 @@ Payment requires identity. The original plan (`README`, plan doc) already chose 
 
 The rule: **if it calls an LLM, it's a metered "AI action". If it's engine or template only, it's free and unlimited.**
 
-| Feature | Free (no LLM) | AI action (metered) |
-| --- | --- | --- |
-| Move legality, verdict label, centipawn loss | ✅ | |
-| Template coach text, piece tips | ✅ | |
-| Units 1–2 lessons (template coach) | ✅ | |
-| Units 3–6 lessons | | Pro only |
-| AI-written move feedback | | 1 action |
-| AI-written hint | | 1 action |
-| Ask Master Lin (free text) | | 1 action |
-| AI explanation of a wrong lesson attempt | | 1 action |
-| Post-game review (3 key moments + summary) | | 3 actions (one call per moment, summary bundled) |
-| LLM opponent move/comment | | 0 if engine opponent (default, LRN-25); 1 if LLM opponent |
-| Pikafish-graded feedback (advanced) | | Pro only |
+| Feature                                      | Free (no LLM) | AI action (metered)                                       |
+| -------------------------------------------- | ------------- | --------------------------------------------------------- |
+| Move legality, verdict label, centipawn loss | ✅            |                                                           |
+| Template coach text, piece tips              | ✅            |                                                           |
+| Units 1–2 lessons (template coach)           | ✅            |                                                           |
+| Units 3–6 lessons                            |               | Pro only                                                  |
+| AI-written move feedback                     |               | 1 action                                                  |
+| AI-written hint                              |               | 1 action                                                  |
+| Ask Master Lin (free text)                   |               | 1 action                                                  |
+| AI explanation of a wrong lesson attempt     |               | 1 action                                                  |
+| Post-game review (3 key moments + summary)   |               | 3 actions (one call per moment, summary bundled)          |
+| LLM opponent move/comment                    |               | 0 if engine opponent (default, LRN-25); 1 if LLM opponent |
+| Pikafish-graded feedback (advanced)          |               | Pro only                                                  |
 
 ### 7.2 Plans
 
 Prices are **starting proposals** to validate against measured token costs (§8).
 
-| Plan | Price | AI actions | Content |
-| --- | --- | --- | --- |
-| **Guest** (no account) | Free | 15 total per device (one taste of a coached game) | Units 1–2, coached games with template coach |
-| **Free** (signed in) | Free | **30 per day** (≈ one fully coached game), resets 00:00 user's local time | Units 1–2, coached games, review with template text, drills |
-| **Pro monthly** | **$5.99 / month** | Unlimited, fair use **400/day** | Everything, Pikafish grading, full AI reviews |
-| **Pro annual** | **$47.99 / year** (~33% off) | Same as monthly | Same as monthly |
+| Plan                   | Price                        | AI actions                                                                | Content                                                     |
+| ---------------------- | ---------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Guest** (no account) | Free                         | 15 total per device (one taste of a coached game)                         | Units 1–2, coached games with template coach                |
+| **Free** (signed in)   | Free                         | **30 per day** (≈ one fully coached game), resets 00:00 user's local time | Units 1–2, coached games, review with template text, drills |
+| **Pro monthly**        | **$5.99 / month**            | Unlimited, fair use **400/day**                                           | Everything, Pikafish grading, full AI reviews               |
+| **Pro annual**         | **$47.99 / year** (~33% off) | Same as monthly                                                           | Same as monthly                                             |
 
 - **PAY-01 (P0)** Plans above; prices and limits are config (`BILLING_*` env / DB), not hard-coded.
 - **PAY-02 (P1)** **7-day free trial** of Pro for first-time subscribers, card required at checkout (reduces trial abuse). One trial per user.
@@ -226,23 +226,23 @@ Web (/learn)                    Server (Hono)                         Stripe
 - **PAY-32 (P0)** Webhook handler: verify `Stripe-Signature` with `STRIPE_WEBHOOK_SECRET`; store processed `event.id` in `stripe_events` and skip duplicates; handle out-of-order events by re-fetching the subscription from Stripe and using its current state.
 - **PAY-33 (P0)** Events handled:
 
-  | Event | Action |
-  | --- | --- |
-  | `checkout.session.completed` | Link Stripe customer ↔ user; fetch subscription; set plan |
+  | Event                                       | Action                                                          |
+  | ------------------------------------------- | --------------------------------------------------------------- |
+  | `checkout.session.completed`                | Link Stripe customer ↔ user; fetch subscription; set plan       |
   | `customer.subscription.created` / `updated` | Sync status, plan, `current_period_end`, `cancel_at_period_end` |
-  | `customer.subscription.deleted` | Downgrade to Free |
-  | `invoice.paid` | Extend period; clear `past_due` |
-  | `invoice.payment_failed` | Mark `past_due`; show in-app banner "Update your card" |
-  | `customer.subscription.trial_will_end` | In-app notice 3 days before trial ends |
+  | `customer.subscription.deleted`             | Downgrade to Free                                               |
+  | `invoice.paid`                              | Extend period; clear `past_due`                                 |
+  | `invoice.payment_failed`                    | Mark `past_due`; show in-app banner "Update your card"          |
+  | `customer.subscription.trial_will_end`      | In-app notice 3 days before trial ends                          |
 
 - **PAY-34 (P0)** Status → access mapping:
 
-  | Stripe status | Access |
-  | --- | --- |
-  | `trialing`, `active` | Pro |
-  | `past_due` | Pro for a **7-day grace period**, with banner; then Free |
-  | `canceled` with `cancel_at_period_end` | Pro until `current_period_end`, then Free |
-  | `unpaid`, `incomplete_expired`, `canceled` | Free |
+  | Stripe status                              | Access                                                   |
+  | ------------------------------------------ | -------------------------------------------------------- |
+  | `trialing`, `active`                       | Pro                                                      |
+  | `past_due`                                 | Pro for a **7-day grace period**, with banner; then Free |
+  | `canceled` with `cancel_at_period_end`     | Pro until `current_period_end`, then Free                |
+  | `unpaid`, `incomplete_expired`, `canceled` | Free                                                     |
 
 - **PAY-35 (P0)** Downgrade never deletes progress. Pro lessons already completed stay completed but are read-only (can review, can't replay with AI) until re-subscribed.
 - **PAY-36 (P1)** Taxes via **Stripe Tax** (or choose a merchant-of-record provider; see §12). Prices displayed tax-inclusive where required (EU/UK).
@@ -255,11 +255,11 @@ Web (/learn)                    Server (Hono)                         Stripe
 
 Assumptions: a coached game ≈ 40 student moves; each LLM call ≈ 1,500 input tokens (system prompt + board + history) and ≈ 200 output tokens; 40 feedback + 5 hints + 5 asks = 50 calls (engine opponent) or 90 calls (LLM opponent).
 
-| Model (current defaults) | ≈ cost per game, engine opponent | ≈ cost per game, LLM opponent |
-| --- | --- | --- |
-| `gpt-4o-mini` | ~$0.02 | ~$0.03 |
-| `claude-sonnet-4` | ~$0.35 | ~$0.60 |
-| Gemini / Gemma | lowest (verify current pricing / free tier limits) | |
+| Model (current defaults) | ≈ cost per game, engine opponent                   | ≈ cost per game, LLM opponent |
+| ------------------------ | -------------------------------------------------- | ----------------------------- |
+| `gpt-4o-mini`            | ~$0.02                                             | ~$0.03                        |
+| `claude-sonnet-4`        | ~$0.35                                             | ~$0.60                        |
+| Gemini / Gemma           | lowest (verify current pricing / free tier limits) |                               |
 
 These figures are back-of-envelope. **Measure real numbers** with `LLM_LOG_TOKENS=1` over 20 real games per provider before locking prices.
 
@@ -326,17 +326,17 @@ These figures are back-of-envelope. **Measure real numbers** with `LLM_LOG_TOKEN
 
 ### 11.1 New routes
 
-| Route | Auth | Purpose |
-| --- | --- | --- |
-| `GET /api/me` | user | Profile + entitlement + today's allowance |
-| `GET /api/billing/entitlement` | user | `{ plan, status, currentPeriodEnd, allowance: { used, limit, resetsAt } }` |
-| `POST /api/billing/checkout` | user | `{ plan: 'pro_monthly' \| 'pro_annual' }` → `{ url }` |
-| `POST /api/billing/portal` | user | → `{ url }` for Stripe Customer Portal |
-| `POST /api/billing/webhook` | Stripe signature | Raw body; no JSON middleware before signature check |
-| `GET/PUT /api/learn/progress` | user | Lesson progress; `PUT` also handles guest merge |
-| `POST /api/learn/games`, `GET /api/learn/games/:id` | user | Save / fetch coached games |
-| `POST /api/coach/review` (+ `/stream`) | user/guest | Post-game key-moment explanations |
-| `GET /api/learn/drills/due`, `POST /api/learn/drills/:id/attempt` | user | Drill queue |
+| Route                                                             | Auth             | Purpose                                                                    |
+| ----------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------- |
+| `GET /api/me`                                                     | user             | Profile + entitlement + today's allowance                                  |
+| `GET /api/billing/entitlement`                                    | user             | `{ plan, status, currentPeriodEnd, allowance: { used, limit, resetsAt } }` |
+| `POST /api/billing/checkout`                                      | user             | `{ plan: 'pro_monthly' \| 'pro_annual' }` → `{ url }`                      |
+| `POST /api/billing/portal`                                        | user             | → `{ url }` for Stripe Customer Portal                                     |
+| `POST /api/billing/webhook`                                       | Stripe signature | Raw body; no JSON middleware before signature check                        |
+| `GET/PUT /api/learn/progress`                                     | user             | Lesson progress; `PUT` also handles guest merge                            |
+| `POST /api/learn/games`, `GET /api/learn/games/:id`               | user             | Save / fetch coached games                                                 |
+| `POST /api/coach/review` (+ `/stream`)                            | user/guest       | Post-game key-moment explanations                                          |
+| `GET /api/learn/drills/due`, `POST /api/learn/drills/:id/attempt` | user             | Drill queue                                                                |
 
 ### 11.2 Changes to existing routes
 
@@ -375,7 +375,7 @@ Local webhook testing: `stripe listen --forward-to localhost:3001/api/billing/we
 
 1. **Stripe vs merchant of record (Paddle / Lemon Squeezy)?** Stripe is cheaper and more flexible, but we then own VAT/sales-tax registration. A merchant of record handles global tax for ~5% + fees — attractive for a solo project.
 2. **Pricing and currency** — USD only at launch, or local pricing (e.g. VND) for target markets?
-3. **Daily allowance vs. "N free coached games per day"** — actions are fairer to cost; games are easier to understand. Recommendation: meter actions internally, *display* as "about 1 coached game left today".
+3. **Daily allowance vs. "N free coached games per day"** — actions are fairer to cost; games are easier to understand. Recommendation: meter actions internally, _display_ as "about 1 coached game left today".
 4. **Default LLM provider for production** — pick based on §8 measurements; likely a mini/flash model for in-game, stronger for reviews.
 5. **Engine rules** — add repetition / perpetual-check rules before endgame lessons and reviews, or exclude those positions?
 6. **Family / classroom plans** — demand from teachers/parents? (P2)
@@ -384,13 +384,13 @@ Local webhook testing: `stripe listen --forward-to localhost:3001/api/billing/we
 
 Each phase is a set of GitHub issues; suggested order respects dependencies.
 
-| Phase | Scope | Exit criteria |
-| --- | --- | --- |
-| **0. Foundations** | Clerk auth (ACC-01..03), MongoDB persistence for users/progress, streaming for OpenAI + Anthropic, usage ledger (COST-01), persistent rate limiting | Signed-in user's coached game is saved; token cost per game measured for each provider |
-| **1. Interactive learning (free)** | Learn hub, lesson engine + Units 1–2, coaching styles, game-over card, difficulty-aware coaching, engine opponent default | Beginner can finish Units 1–2 and a coached game; all free, AI actions metered but not limited |
-| **2. Paid tier** | Entitlements, `meterAiAction`, allowance UI, paywall, Stripe Checkout/Portal/webhooks, trial, budget kill switch | End-to-end test-mode purchase → Pro unlocked via webhook; cancel → downgrade at period end; failed payment → grace → Free |
-| **3. Pro content** | Units 3–6, post-game review, drills with spaced repetition, progress screen, Pikafish grading | Pro user can review a game and practice mistakes |
-| **4. Growth** | Credit packs, promo codes, placement check, lesson authoring tooling | — |
+| Phase                              | Scope                                                                                                                                               | Exit criteria                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **0. Foundations**                 | Clerk auth (ACC-01..03), MongoDB persistence for users/progress, streaming for OpenAI + Anthropic, usage ledger (COST-01), persistent rate limiting | Signed-in user's coached game is saved; token cost per game measured for each provider                                    |
+| **1. Interactive learning (free)** | Learn hub, lesson engine + Units 1–2, coaching styles, game-over card, difficulty-aware coaching, engine opponent default                           | Beginner can finish Units 1–2 and a coached game; all free, AI actions metered but not limited                            |
+| **2. Paid tier**                   | Entitlements, `meterAiAction`, allowance UI, paywall, Stripe Checkout/Portal/webhooks, trial, budget kill switch                                    | End-to-end test-mode purchase → Pro unlocked via webhook; cancel → downgrade at period end; failed payment → grace → Free |
+| **3. Pro content**                 | Units 3–6, post-game review, drills with spaced repetition, progress screen, Pikafish grading                                                       | Pro user can review a game and practice mistakes                                                                          |
+| **4. Growth**                      | Credit packs, promo codes, placement check, lesson authoring tooling                                                                                | —                                                                                                                         |
 
 ## 14. Acceptance criteria (launch)
 
@@ -408,11 +408,11 @@ Each phase is a set of GitHub issues; suggested order respects dependencies.
 
 ## 15. Success metrics
 
-| Metric | Target (first 3 months) |
-| --- | --- |
-| Unit 1 completion (of users who start it) | ≥ 60% |
-| D7 retention of signed-in learners | ≥ 25% |
-| Free → Pro conversion (of signed-in learners) | 3–5% |
-| Trial → paid conversion | ≥ 40% |
-| LLM cost as % of net revenue | ≤ 35% |
-| Coach messages served by template fallback due to errors (paid users) | < 2% |
+| Metric                                                                | Target (first 3 months) |
+| --------------------------------------------------------------------- | ----------------------- |
+| Unit 1 completion (of users who start it)                             | ≥ 60%                   |
+| D7 retention of signed-in learners                                    | ≥ 25%                   |
+| Free → Pro conversion (of signed-in learners)                         | 3–5%                    |
+| Trial → paid conversion                                               | ≥ 40%                   |
+| LLM cost as % of net revenue                                          | ≤ 35%                   |
+| Coach messages served by template fallback due to errors (paid users) | < 2%                    |

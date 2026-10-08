@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Coach } from '@jade-court/xiangqi-engine';
 import type {
   Board,
@@ -40,8 +40,6 @@ function historyPayload(history: { side: Side; from: [number, number]; to: [numb
 export function LearnScreen() {
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
   const [coachBusy, setCoachBusy] = useState(false);
-  const difficultyRef = useRef(difficulty);
-  difficultyRef.current = difficulty;
 
   const chat = useCoachChat([createCoachMessage('coach', { text: Coach.opening() })]);
   const { setMessages, pushCoach } = chat;
@@ -49,7 +47,7 @@ export function LearnScreen() {
   const loadOpening = useCallback(
     async (replaceFirst = false) => {
       try {
-        const { text } = await fetchCoachOpening({ difficulty: difficultyRef.current });
+        const { text } = await fetchCoachOpening({ difficulty });
         if (replaceFirst) {
           setMessages((ms) => {
             if (!ms.length || ms[0].from !== 'coach') return ms;
@@ -64,7 +62,7 @@ export function LearnScreen() {
         }
       }
     },
-    [setMessages, pushCoach],
+    [difficulty, setMessages, pushCoach],
   );
 
   useEffect(() => {
@@ -106,7 +104,7 @@ export function LearnScreen() {
             move,
             side: 'r',
             depth: 2,
-            difficulty: difficultyRef.current,
+            difficulty,
             history: historyPayload(history),
           },
           {
@@ -133,7 +131,7 @@ export function LearnScreen() {
             move,
             side: 'r',
             depth: 2,
-            difficulty: difficultyRef.current,
+            difficulty,
             history,
           });
           chat.replaceMessage(pendingId, feedbackToPatch(fb));
@@ -147,7 +145,7 @@ export function LearnScreen() {
         if (!signal.aborted) setCoachBusy(false);
       }
     },
-    [chat],
+    [chat, difficulty],
   );
 
   const game = useXiangqiGame({
@@ -262,7 +260,7 @@ export function LearnScreen() {
             board: game.board,
             side: game.turn,
             question,
-            difficulty: difficultyRef.current,
+            difficulty,
             history: historyPayload(gameHistory()),
           },
           {
@@ -278,7 +276,7 @@ export function LearnScreen() {
             board: game.board,
             side: game.turn,
             question,
-            difficulty: difficultyRef.current,
+            difficulty,
             history: gameHistory(),
           });
           chat.replaceMessage(pendingId, { text: res.text, tone: 'info' });
@@ -292,7 +290,7 @@ export function LearnScreen() {
         if (!signal.aborted) setCoachBusy(false);
       }
     },
-    [chat, game.board, game.turn, gameHistory],
+    [chat, difficulty, game.board, game.turn, gameHistory],
   );
 
   const onExplain = () => {

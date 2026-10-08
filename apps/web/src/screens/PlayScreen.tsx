@@ -1,5 +1,11 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { X, type Difficulty, type Side } from '@jade-court/xiangqi-engine';
+import {
+  X,
+  type Difficulty,
+  type GameStatus,
+  type PieceType,
+  type Side,
+} from '@jade-court/xiangqi-engine';
 import { CapturedTray } from '../components/CapturedTray';
 import { GameOverCard } from '../components/GameOverCard';
 import { XQBoard } from '../components/XQBoard';
@@ -94,6 +100,36 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
 
 type GameCfg = { level: Difficulty; side: Side };
 
+function PlayerStrip({
+  side,
+  label,
+  sub,
+  captured,
+  turn,
+  status,
+}: {
+  side: Side;
+  label: string;
+  sub: string;
+  captured: PieceType[];
+  turn: Side;
+  status: GameStatus;
+}) {
+  return (
+    <div className="card px-4 py-3 flex items-center gap-3">
+      <span className={`player-badge ${side === 'r' ? 'player-badge-red' : 'player-badge-black'}`}>
+        {side === 'r' ? '帥' : '將'}
+      </span>
+      <div className="flex-1">
+        <div className="font-display font-extrabold text-[15px]">{label}</div>
+        <div className="text-xs text-muted font-bold">{sub}</div>
+      </div>
+      <CapturedTray side={side} list={captured} />
+      {turn === side && !status && <span className="turn-indicator" />}
+    </div>
+  );
+}
+
 function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<GameCfg | null>> }) {
   const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
@@ -117,20 +153,6 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
       : yourTurn
         ? 'Your move'
         : 'Waiting…';
-
-  const PlayerStrip = ({ side, label, sub }: { side: Side; label: string; sub: string }) => (
-    <div className="card px-4 py-3 flex items-center gap-3">
-      <span className={`player-badge ${side === 'r' ? 'player-badge-red' : 'player-badge-black'}`}>
-        {side === 'r' ? '帥' : '將'}
-      </span>
-      <div className="flex-1">
-        <div className="font-display font-extrabold text-[15px]">{label}</div>
-        <div className="text-xs text-muted font-bold">{sub}</div>
-      </div>
-      <CapturedTray side={side} list={game.captured[side]} />
-      {game.turn === side && !game.status && <span className="turn-indicator" />}
-    </div>
-  );
 
   return (
     <div className="game-layout-wide">
@@ -167,8 +189,22 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
       </div>
 
       <div className="flex flex-col gap-3.5">
-        <PlayerStrip side={aiSide} label={`Computer · ${levelMeta.name}`} sub="Captured pieces" />
-        <PlayerStrip side={humanSide} label="You" sub="Captured pieces" />
+        <PlayerStrip
+          side={aiSide}
+          label={`Computer · ${levelMeta.name}`}
+          sub="Captured pieces"
+          captured={game.captured[aiSide]}
+          turn={game.turn}
+          status={game.status}
+        />
+        <PlayerStrip
+          side={humanSide}
+          label="You"
+          sub="Captured pieces"
+          captured={game.captured[humanSide]}
+          turn={game.turn}
+          status={game.status}
+        />
         {game.lastOpponentMoveText && (
           <div className="card px-3.5 py-3 text-[13.5px] font-semibold leading-snug text-ink-soft">
             <div className="font-extrabold text-xs text-muted mb-1">Computer&apos;s last move</div>

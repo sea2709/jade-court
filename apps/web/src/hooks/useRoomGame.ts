@@ -28,8 +28,6 @@ export interface RoomGameState {
 export function useRoomGame(code: string, side: Side) {
   const guestId = getGuestId();
   const wsRef = useRef<WebSocket | null>(null);
-  const sideRef = useRef(side);
-  sideRef.current = side;
 
   const [state, setState] = useState<RoomGameState>(() => ({
     board: X.initialBoard(),
@@ -100,7 +98,7 @@ export function useRoomGame(code: string, side: Side) {
   const onPoint = useCallback(
     (r: number, c: number) => {
       setState((s) => {
-        if (s.status || s.turn !== sideRef.current) return s;
+        if (s.status || s.turn !== side) return s;
         if (r < 0) return { ...s, selected: null, targets: [] };
 
         const p = s.board[r]?.[c];
@@ -121,7 +119,7 @@ export function useRoomGame(code: string, side: Side) {
         return { ...s, selected: null, targets: [] };
       });
     },
-    [guestId],
+    [guestId, side],
   );
 
   const resetLocal = useCallback(() => {

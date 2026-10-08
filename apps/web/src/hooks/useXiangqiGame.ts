@@ -178,7 +178,6 @@ function lastAiMoveText(history: HistoryEntry[], aiSide: Side): string | null {
 
 export function useXiangqiGame(config: GameConfig = {}) {
   const cfgRef = useRef(config);
-  cfgRef.current = config;
 
   const [state, dispatch] = useReducer(gameReducer, undefined, () => initialGameState());
   const [aiThinking, setAiThinking] = useState(false);
@@ -186,11 +185,21 @@ export function useXiangqiGame(config: GameConfig = {}) {
   const [lastOpponentMoveText, setLastOpponentMoveText] = useState<string | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardRef = useRef(state.board);
-  boardRef.current = state.board;
   const historyRef = useRef(state.history);
-  historyRef.current = state.history;
   const revealingRef = useRef(revealingOpponentMove);
-  revealingRef.current = revealingOpponentMove;
+
+  useEffect(() => {
+    cfgRef.current = config;
+  }, [config]);
+
+  useEffect(() => {
+    boardRef.current = state.board;
+    historyRef.current = state.history;
+  }, [state.board, state.history]);
+
+  useEffect(() => {
+    revealingRef.current = revealingOpponentMove;
+  }, [revealingOpponentMove]);
 
   const clearReveal = useCallback(() => {
     if (revealTimerRef.current) {

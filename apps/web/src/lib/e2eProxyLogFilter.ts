@@ -9,8 +9,6 @@ export function isBenignE2eProxyLog(msg: unknown): boolean {
           ? String(msg)
           : '';
   return (
-    text.includes('ws proxy socket error') ||
-    text.includes('ECONNRESET') ||
-    text.includes('EPIPE')
+    text.includes('ws proxy socket error') || text.includes('ECONNRESET') || text.includes('EPIPE')
   );
 }
