@@ -19,12 +19,14 @@ You are the **tech lead**. You plan, delegate, and verify. You do **not** edit p
 | `ui-ux-designer`       | Design specs before build and visual design review after (no code)  |
 | `backend-developer`    | `apps/server`, plus `packages/xiangqi-engine` changes               |
 | `frontend-developer`   | `apps/web`                                                          |
-| `adversarial-reviewer` | Read-only hostile review of the diff (does not fix code)            |
+| `adversarial-reviewer` | Hostile review of the diff (does not fix code); writes a report     |
 | `qa-engineer`          | End-to-end verification and bug reports (does not fix product code) |
+
+The adversarial reviewer and QA must each **save a report** (markdown + screenshots) under `docs/reports/` in the worktree — see [Reports](#reports). A review or QA pass without a saved report is not done.
 
 The designer is used only for tasks with **visible UI changes**. Skip its steps for backend-only or non-visual frontend work.
 
-Developers own the CI checks (`lint`, `format:check`, `build`, `test`, `typecheck`). QA rejects work whose CI is not green.
+Developers own the CI checks (`lint`, `format:check`, `build`, `test`, `typecheck`, and `test:e2e` when user flows change) and must add tests for every new or changed behavior without breaking existing ones. QA rejects work whose CI is not green or whose new logic is untested.
 
 ## Workflow
 
@@ -51,6 +53,7 @@ Track progress with this checklist:
 
 - For an issue: `./scripts/issue-worktree.sh <n> [slug]` and note the printed path and dev ports.
 - Every subagent works in that **same worktree path** — include it in every handoff.
+- Pick the **report folder name** once: `<YYYY-MM-DD>-issue-<n>-<slug>` (or `<YYYY-MM-DD>-<slug>` without an issue). Every review and QA round uses this same name so re-runs update the existing report instead of creating new folders.
 
 ### 3. Plan, agree the contract, and get the design spec
 
@@ -71,8 +74,9 @@ Only start once the developers report CI green. For visible UI changes, run both
 
 **Adversarial review**
 
-- Send `adversarial-reviewer` the worktree path, acceptance criteria, contract, and both developer reports.
-- **Blocker / major findings:** resume the owning developer (by agent ID) with each finding's location, attack, and suggested fix. Then re-run the reviewer on the updated diff.
+- Send `adversarial-reviewer` the worktree path, report folder (`docs/reports/adversarial-review/<folder>/`), acceptance criteria, contract, and both developer reports.
+- When it returns, **read `report.md`** from that folder and confirm it exists and matches the returned verdict. If it is missing, resume the reviewer to write it before continuing.
+- **Blocker / major findings:** resume the owning developer (by agent ID) with the report path plus each finding's location, attack, and suggested fix. Then re-run the reviewer on the updated diff; it adds a `## Re-review` section to the same report.
 - Keep the reviewer's **QA hints** for step 6.
 
 **Design review**
@@ -88,11 +92,13 @@ Only start once the developers report CI green. For visible UI changes, run both
 
 ### 6. QA
 
-Send `qa-engineer` the worktree path, acceptance criteria, contract, both developer reports (including their CI results), and the reviewer's QA hints. Mention the dev ports from step 2 if the defaults are in use.
+Send `qa-engineer` the worktree path, report folder (`docs/reports/qa/<folder>/`), acceptance criteria, contract, both developer reports (including their CI results), the adversarial report path, and the reviewer's QA hints. Mention the dev ports from step 2 if the defaults are in use.
+
+When it returns, **read `report.md`** and check that every bug has repro steps and a screenshot (for UI bugs) in `screenshots/`. If the report is missing or incomplete, resume QA to finish it.
 
 ### 7. Fix loop
 
-- For each bug in the QA report, **resume** the owning developer (by agent ID) with the bug's repro steps, expected vs actual, and suspected file. Then re-run QA on the fixes.
+- For each bug in the QA report, **resume** the owning developer (by agent ID) with the QA report path plus the bug's repro steps, expected vs actual, screenshot, and suspected file. Then re-run QA on the fixes; it adds a `## Re-test` section to the same report.
 - Maximum **2 fix rounds**. If QA still fails, stop and escalate to the user with the open bugs.
 - A QA verdict of "FAIL — CI not green" goes straight back to the developer whose area failed.
 - If a fix is non-trivial (new logic, not a one-line correction), re-run `adversarial-reviewer` on it before re-running QA.
@@ -105,7 +111,22 @@ Send `qa-engineer` the worktree path, acceptance criteria, contract, both develo
 2. What changed, by area (server, engine, web).
 3. Final contract (endpoints / messages) and design spec summary, if any.
 4. CI results (from the developers), the adversarial reviewer's and designer's final verdicts, and the QA verdict.
-5. Open items: minor review and design findings, bugs QA left open, things not testable in this env, follow-ups.
+5. **Reports:** links to the adversarial review and QA `report.md` files (and the design spec/review, if any), with the most important QA screenshots embedded inline.
+6. Open items: minor review and design findings, bugs QA left open, things not testable in this env, follow-ups.
+
+Reports stay uncommitted in the worktree alongside the code, so they are included when the user commits and opens the PR.
+
+## Reports
+
+| Agent                  | Report file                                           |
+| ---------------------- | ----------------------------------------------------- |
+| `adversarial-reviewer` | `docs/reports/adversarial-review/<folder>/report.md`  |
+| `qa-engineer`          | `docs/reports/qa/<folder>/report.md` + `screenshots/` |
+| `ui-ux-designer`       | `docs/reports/design/<folder>/spec.md`, `review.md`   |
+
+- `<folder>` is the name chosen in step 2; always pass the full path in the handoff.
+- Treat the saved report as the source of truth over the subagent's chat summary when looping findings back.
+- Don't edit these reports yourself; resume the owning agent to correct them.
 
 ## Handoff template
 
@@ -122,5 +143,6 @@ Subagents start with a fresh context — every prompt must be self-contained:
 **Contract:** <endpoints/messages, or "none">
 **Context:** <relevant files, prior reports, decisions already made>
 **Out of scope:** <what not to touch>
-**Return:** your standard report (including CI results for developers).
+**Report folder:** <docs/reports/<kind>/<folder>/ — reviewer, QA, and designer only>
+**Return:** your standard report (including CI results for developers); reviewer, QA, and designer also save it to the report folder and return its path.
 ```
