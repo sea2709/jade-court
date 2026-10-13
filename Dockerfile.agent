@@ -1,0 +1,25 @@
+# Sandbox image for running opencode agents against Jade Court.
+#
+# The container is the security boundary: agents get full shell access inside it, but no
+# access to the host repo, SSH keys, or host gh/opencode credentials. Use with
+# docker-compose.yml (service `agent`).
+#
+# The base tag must match the installed @playwright/test version so Chromium is preinstalled
+# for the QA and designer agents (browser-automation skill, `pnpm test:e2e`).
+FROM mcr.microsoft.com/playwright:v1.64.0-noble
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gh git ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable \
+ && npm install -g opencode-ai
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+USER pwuser
+# Pre-create volume mount points so named volumes are owned by pwuser, not root.
+RUN mkdir -p /home/pwuser/work /home/pwuser/.local/share/opencode \
+ && corepack install -g pnpm@9.15.4
+WORKDIR /home/pwuser/work
+
+CMD ["bash"]

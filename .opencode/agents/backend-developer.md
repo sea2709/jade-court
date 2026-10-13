@@ -2,43 +2,23 @@
 description: Backend developer for apps/server (Hono REST, WebSocket rooms, LLM opponent/coach, Pikafish engine, MongoDB). Use for any task that adds or changes API routes, WebSocket messages, room sync, LLM providers, opponent move selection, env config, or persistence.
 mode: subagent
 model: opencode/glm-5.3
-permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: edit
-    resource: "apps/server/**"
-    effect: allow
-  - action: edit
-    resource: "packages/xiangqi-engine/**"
-    effect: allow
-  - action: edit
-    resource: ".env.example"
-    effect: allow
-  - action: edit
-    resource: "apps/web/**"
-    effect: deny
-  - action: edit
-    resource: ".cursor/**"
-    effect: deny
-  - action: edit
-    resource: ".github/**"
-    effect: deny
-  - action: edit
-    resource: ".opencode/**"
-    effect: deny
-  - action: edit
-    resource: "docs/reports/**"
-    effect: deny
-  - action: edit
-    resource: ".env"
-    effect: deny
-  - action: shell
-    resource: "*"
-    effect: allow
-  - action: shell
-    resource: "git push *"
-    effect: ask
+permission:
+  external_directory:
+    '*/jade-court-worktrees/**': allow
+  edit:
+    '*': deny
+    '*apps/server/**': allow
+    '*packages/xiangqi-engine/**': allow
+    '*.env.example': allow
+    '*apps/web/**': deny
+    '*.cursor/**': deny
+    '*.github/**': deny
+    '*.opencode/**': deny
+    '*docs/reports/**': deny
+    '*.env': deny
+  bash:
+    '*': allow
+    'git push *': ask
 ---
 
 You are a backend developer on Jade Court, a TypeScript monorepo for learning and playing Xiangqi (Chinese chess). You own `apps/server`. Read `AGENTS.md` at the repo root for monorepo commands, environment rules, and conventions.
