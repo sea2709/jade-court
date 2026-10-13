@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   X,
   type Difficulty,
@@ -154,6 +154,55 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
         ? 'Your move'
         : 'Waiting…';
 
+  // --- Move-session controls (undo / redo) ---
+  // Mirror the disabled conditions of the buttons below so keyboard shortcuts
+  // fire only when the corresponding button would also fire on click.
+  const canUndo = game.history.length >= 2 && yourTurn && !game.aiThinking;
+  const canRedo = game.redoCount >= 2 && yourTurn && !game.aiThinking;
+
+  const undoTitle = 'Take back your last move (Ctrl+Z)';
+  const redoTitle = !canRedo
+    ? game.redoCount < 2
+      ? 'Nothing to redo'
+      : 'Wait for the computer to move'
+    : 'Redo the moves you took back (Ctrl+Shift+Z)';
+
+  // --- Keyboard shortcuts: Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl+Y to redo.
+  // Mounted only while a game is active (Setup is the parent's no-game state).
+  // Ignores key events from text-entry fields and contentEditable, and only
+  // preempts the browser default when the action actually fires.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName?.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable) {
+          return;
+        }
+      }
+      const key = e.key.toLowerCase();
+      const isZ = key === 'z';
+      const isY = key === 'y';
+      if (!isZ && !isY) return;
+      // Redo: Ctrl/Cmd+Shift+Z (any platform), or Ctrl+Y on Windows/Linux.
+      if ((isZ && e.shiftKey) || (isY && e.ctrlKey)) {
+        if (!canRedo) return;
+        e.preventDefault();
+        game.redoLast(2);
+        return;
+      }
+      // Undo: Ctrl/Cmd+Z (no Shift).
+      if (isZ && !e.shiftKey) {
+        if (!canUndo) return;
+        e.preventDefault();
+        game.undoLast(2);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [canUndo, canRedo, game]);
+
   return (
     <div className="game-layout-wide">
       <div className="relative">
@@ -234,9 +283,21 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
             type="button"
             className="btn btn-ghost btn-sm"
             disabled={game.history.length < 2 || !yourTurn}
+            aria-label="Take back move"
+            title={undoTitle}
             onClick={() => game.undoLast(2)}
           >
             ↶ Take back move
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={game.redoCount < 2 || !yourTurn || game.aiThinking}
+            aria-label="Redo move"
+            title={redoTitle}
+            onClick={() => game.redoLast(2)}
+          >
+            ↷ Redo move
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => game.reset()}>
             ↻ Restart

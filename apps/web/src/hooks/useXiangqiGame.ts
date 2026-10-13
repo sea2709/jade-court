@@ -53,6 +53,13 @@ interface GameState {
   targets: Move[];
   lastMove: { from: Coord; to: Coord } | null;
   history: HistoryEntry[];
+  /**
+   * Plies taken back via UNDO that the player may replay with REDO.
+   * Stored chronologically with each UNDO batch appended at the END so the
+   * most recently removed plies are at the tail — same convention as `history`.
+   * Cleared on APPLY_MOVE (a new move branches the line) and on RESET.
+   */
+  redoStack: HistoryEntry[];
   status: GameStatus;
   hintMove: { from: Coord; to: Coord } | null;
 }
@@ -61,6 +68,7 @@ type GameAction =
   | { type: 'POINT'; r: number; c: number; locked?: boolean; aiSide?: Side }
   | { type: 'APPLY_MOVE'; move: Move }
   | { type: 'UNDO'; count: number }
+  | { type: 'REDO'; count: number }
   | { type: 'RESET'; startBoard?: Board }
   | { type: 'SET_HINT'; move: { from: Coord; to: Coord } | null };
 
@@ -76,6 +84,7 @@ function initialGameState(startBoard?: Board): GameState {
     targets: [],
     lastMove: null,
     history: [],
+    redoStack: [],
     status: null,
     hintMove: null,
   };
@@ -139,6 +148,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ],
         status,
         hintMove: null,
+        // A new move after a take-back branches the line; the previous
+        // redoStack no longer represents reachable positions.
+        redoStack: [],
       };
     }
     case 'UNDO': {
@@ -146,6 +158,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const board = keep > 0 ? X.cloneBoard(state.history[keep].boardBefore) : X.initialBoard();
       const lastEntry = keep > 0 ? state.history[keep - 1] : null;
       const turn = lastEntry ? X.opp(lastEntry.side) : 'r';
+      // Slice(keep) already returns the removed entries in chronological order
+      // (history[keep] is the FIRST removed ply and is older than history[keep+1]).
+      // Appending at the END keeps the stack chronological with the latest
+      // UNDO batch at the tail — REDO's `slice(stack.length - n)` will read
+      // them in the same order they were originally played.
+      const removed = state.history.slice(keep);
       return {
         board,
         turn,
@@ -155,6 +173,43 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         history: state.history.slice(0, keep),
         status: keep > 0 ? X.gameStatus(board, turn) : null,
         hintMove: null,
+        redoStack: [...state.redoStack, ...removed],
+      };
+    }
+    case 'REDO': {
+      // Clamp to the available plies. The caller typically passes the same
+      // `count` they previously passed to UNDO; an under-request is treated
+      // as a safe no-op for the missing plies (we replay what's available).
+      const req = Math.max(0, Math.floor(action.count));
+      const replayCount = Math.min(req, state.redoStack.length);
+      if (replayCount === 0) return state;
+      // Take from the tail in stack-order: these are the latest `replayCount`
+      // plies, in the chronological order they were originally played within
+      // their UNDO batch. Their first entry's `boardBefore` matches `state.board`.
+      const reapply = state.redoStack.slice(state.redoStack.length - replayCount);
+      const remaining = state.redoStack.slice(0, state.redoStack.length - replayCount);
+      // Re-compute board/turn/lastMove/status through the same apply logic
+      // as APPLY_MOVE. The full replay happens inside one dispatch so React
+      // never observes an intermediate state (in particular, never a state
+      // with `turn === aiSide`) — the effect that fires opponent moves
+      // would otherwise run for those intermediate frames.
+      let board = X.cloneBoard(state.board);
+      let lastApplied = reapply[0]!;
+      for (const entry of reapply) {
+        board = X.applyMove(board, entry.move);
+        lastApplied = entry;
+      }
+      const turn = X.opp(lastApplied.side);
+      return {
+        board,
+        turn,
+        selected: null,
+        targets: [],
+        lastMove: { from: [...lastApplied.move.from], to: [...lastApplied.move.to] },
+        history: [...state.history, ...reapply],
+        status: X.gameStatus(board, turn),
+        hintMove: null,
+        redoStack: remaining,
       };
     }
     case 'RESET':
@@ -227,7 +282,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
     [clearReveal],
   );
 
-  const { board, turn, selected, targets, lastMove, history, status, hintMove } = state;
+  const { board, turn, selected, targets, lastMove, history, redoStack, status, hintMove } = state;
 
   const checkSide = X.inCheck(board, turn) ? turn : null;
   const checkPos = checkSide ? X.findGeneral(board, checkSide) : null;
@@ -404,6 +459,33 @@ export function useXiangqiGame(config: GameConfig = {}) {
     [clearReveal, state.history],
   );
 
+  /**
+   * Redo previously taken-back plies. Replays `count` plies from `redoStack`
+   * in a single dispatch (atomic) — no intermediate React state with
+   * `turn === aiSide`, so the opponent-move effect never fires. Never calls
+   * `onMove` and never issues an opponent API call. Safe no-op when there
+   * are fewer than `count` plies on the stack.
+   */
+  const redoLast = useCallback(
+    (count = 1) => {
+      const safeCount = Math.max(0, Math.floor(count));
+      const replayCount = Math.min(safeCount, state.redoStack.length);
+      if (replayCount === 0) return;
+      const reapply = state.redoStack.slice(state.redoStack.length - replayCount);
+      dispatch({ type: 'REDO', count: safeCount });
+      setAiThinking(false);
+      clearReveal();
+      const cfg = cfgRef.current;
+      // Restore the "Computer's last move" card from the restored history.
+      // Search the EXTENDED history so we prefer the just-redone opponent
+      // reply (if any) over older ones.
+      if (cfg.aiSide) {
+        setLastOpponentMoveText(lastAiMoveText([...state.history, ...reapply], cfg.aiSide));
+      }
+    },
+    [clearReveal, state.history, state.redoStack],
+  );
+
   const showHint = useCallback(
     (depth = 2) => {
       const h = Coach.hint(board, turn, depth);
@@ -456,6 +538,9 @@ export function useXiangqiGame(config: GameConfig = {}) {
     applyAndAdvance,
     reset,
     undoLast,
+    redoLast,
+    /** Number of plies currently on the redo stack — pair-aligned (even) in Play. */
+    redoCount: redoStack.length,
     showHint,
     revealHint,
     clearHint,

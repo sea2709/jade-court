@@ -250,6 +250,13 @@
     @apply opacity-45 cursor-not-allowed;
   }
 
+  /* Visible keyboard focus for all buttons (WCAG 2.4.7). Mirrors the
+     .level-card focus ring so every actionable control on the page has one. */
+  .btn:focus-visible {
+    outline: 2px solid var(--jade);
+    outline-offset: 2px;
+  }
+
   .card {
     @apply bg-paper rounded-lg shadow-md border border-line-soft;
   }
