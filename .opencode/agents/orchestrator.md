@@ -4,64 +4,64 @@ mode: primary
 model: opencode/kimi-k3
 permissions:
   - action: edit
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: subagent
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: subagent
-    resource: "backend-developer"
+    resource: 'backend-developer'
     effect: allow
   - action: subagent
-    resource: "frontend-developer"
+    resource: 'frontend-developer'
     effect: allow
   - action: subagent
-    resource: "ui-ux-designer"
+    resource: 'ui-ux-designer'
     effect: allow
   - action: subagent
-    resource: "adversarial-reviewer"
+    resource: 'adversarial-reviewer'
     effect: allow
   - action: subagent
-    resource: "qa-engineer"
+    resource: 'qa-engineer'
     effect: allow
   - action: subagent
-    resource: "explore"
+    resource: 'explore'
     effect: allow
   - action: shell
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: shell
-    resource: "gh issue *"
+    resource: 'gh issue *'
     effect: allow
   - action: shell
-    resource: "gh pr view *"
+    resource: 'gh pr view *'
     effect: allow
   - action: shell
-    resource: "./scripts/issue-context.sh *"
+    resource: './scripts/issue-context.sh *'
     effect: allow
   - action: shell
-    resource: "./scripts/issue-worktree.sh *"
+    resource: './scripts/issue-worktree.sh *'
     effect: allow
   - action: shell
-    resource: "git status*"
+    resource: 'git status*'
     effect: allow
   - action: shell
-    resource: "git diff*"
+    resource: 'git diff*'
     effect: allow
   - action: shell
-    resource: "git log*"
+    resource: 'git log*'
     effect: allow
   - action: shell
-    resource: "git worktree list*"
+    resource: 'git worktree list*'
     effect: allow
   - action: shell
-    resource: "git commit *"
+    resource: 'git commit *'
     effect: deny
   - action: shell
-    resource: "git push *"
+    resource: 'git push *'
     effect: deny
   - action: shell
-    resource: "gh pr create *"
+    resource: 'gh pr create *'
     effect: deny
 ---
 

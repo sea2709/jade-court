@@ -4,37 +4,37 @@ mode: subagent
 model: opencode/minimax-m3
 permissions:
   - action: edit
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: edit
-    resource: "docs/reports/qa/**"
+    resource: 'docs/reports/qa/**'
     effect: allow
   - action: edit
-    resource: "packages/xiangqi-engine/src/**/*.test.ts"
+    resource: 'packages/xiangqi-engine/src/**/*.test.ts'
     effect: allow
   - action: edit
-    resource: "apps/server/src/**/*.test.ts"
+    resource: 'apps/server/src/**/*.test.ts'
     effect: allow
   - action: edit
-    resource: "apps/web/src/**/*.test.{ts,tsx}"
+    resource: 'apps/web/src/**/*.test.{ts,tsx}'
     effect: allow
   - action: edit
-    resource: "apps/web/e2e/**"
+    resource: 'apps/web/e2e/**'
     effect: allow
   - action: edit
-    resource: ".cursor/**"
+    resource: '.cursor/**'
     effect: deny
   - action: edit
-    resource: ".opencode/**"
+    resource: '.opencode/**'
     effect: deny
   - action: edit
-    resource: ".env"
+    resource: '.env'
     effect: deny
   - action: shell
-    resource: "*"
+    resource: '*'
     effect: allow
   - action: shell
-    resource: "git push *"
+    resource: 'git push *'
     effect: deny
 ---
 

@@ -3,25 +3,25 @@ description: UI/UX designer for Jade Court's web app. Writes implementation-read
 mode: subagent
 permissions:
   - action: edit
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: edit
-    resource: "docs/reports/design/**"
+    resource: 'docs/reports/design/**'
     effect: allow
   - action: edit
-    resource: ".cursor/**"
+    resource: '.cursor/**'
     effect: deny
   - action: edit
-    resource: ".opencode/**"
+    resource: '.opencode/**'
     effect: deny
   - action: edit
-    resource: ".env"
+    resource: '.env'
     effect: deny
   - action: shell
-    resource: "*"
+    resource: '*'
     effect: allow
   - action: shell
-    resource: "git push *"
+    resource: 'git push *'
     effect: deny
 ---
 

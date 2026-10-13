@@ -4,40 +4,40 @@ mode: subagent
 model: opencode/glm-5.3
 permissions:
   - action: edit
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: edit
-    resource: "apps/server/**"
+    resource: 'apps/server/**'
     effect: allow
   - action: edit
-    resource: "packages/xiangqi-engine/**"
+    resource: 'packages/xiangqi-engine/**'
     effect: allow
   - action: edit
-    resource: ".env.example"
+    resource: '.env.example'
     effect: allow
   - action: edit
-    resource: "apps/web/**"
+    resource: 'apps/web/**'
     effect: deny
   - action: edit
-    resource: ".cursor/**"
+    resource: '.cursor/**'
     effect: deny
   - action: edit
-    resource: ".github/**"
+    resource: '.github/**'
     effect: deny
   - action: edit
-    resource: ".opencode/**"
+    resource: '.opencode/**'
     effect: deny
   - action: edit
-    resource: "docs/reports/**"
+    resource: 'docs/reports/**'
     effect: deny
   - action: edit
-    resource: ".env"
+    resource: '.env'
     effect: deny
   - action: shell
-    resource: "*"
+    resource: '*'
     effect: allow
   - action: shell
-    resource: "git push *"
+    resource: 'git push *'
     effect: ask
 ---
 

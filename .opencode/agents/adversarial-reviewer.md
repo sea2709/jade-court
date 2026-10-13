@@ -4,31 +4,31 @@ mode: subagent
 model: opencode/deepseek-v4-pro
 permissions:
   - action: edit
-    resource: "*"
+    resource: '*'
     effect: deny
   - action: edit
-    resource: "docs/reports/adversarial-review/**"
+    resource: 'docs/reports/adversarial-review/**'
     effect: allow
   - action: shell
-    resource: "*"
+    resource: '*'
     effect: allow
   - action: shell
-    resource: "git commit *"
+    resource: 'git commit *'
     effect: deny
   - action: shell
-    resource: "git push *"
+    resource: 'git push *'
     effect: deny
   - action: shell
-    resource: "git checkout *"
+    resource: 'git checkout *'
     effect: deny
   - action: shell
-    resource: "git reset *"
+    resource: 'git reset *'
     effect: deny
   - action: shell
-    resource: "pnpm add *"
+    resource: 'pnpm add *'
     effect: deny
   - action: shell
-    resource: "pnpm install *"
+    resource: 'pnpm install *'
     effect: deny
 ---
 
