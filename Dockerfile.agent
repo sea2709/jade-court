@@ -5,16 +5,25 @@
 # docker-compose.yml (service `agent`).
 #
 # The base tag must match the installed @playwright/test version so Chromium is preinstalled
-# for the QA and designer agents (browser-automation skill, `pnpm test:e2e`).
+# for `pnpm test:e2e`.
 FROM mcr.microsoft.com/playwright:v1.64.0-noble
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends gh git ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && corepack enable \
- && npm install -g opencode-ai
+ && npm install -g opencode-ai \
+ && rm -rf /tmp/opencode
 
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+# The browser-automation skill (mounted from the host) drives Chromium through patchright, which
+# it normally loads from the CodeGPT editor extension. Install it in its own prefix with its own
+# Chromium build, and expose only that prefix via NODE_PATH so repo packages can't resolve it.
+# PLAYWRIGHT_SKIP_BROWSER_GC keeps the installer from deleting Playwright 1.64's Chromium.
+RUN npm install --prefix /opt/patchright patchright@1.63.0 \
+ && PLAYWRIGHT_SKIP_BROWSER_GC=1 /opt/patchright/node_modules/.bin/patchright install chromium
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    NODE_PATH=/opt/patchright/node_modules
 
 USER pwuser
 # Pre-create volume mount points so named volumes are owned by pwuser, not root.

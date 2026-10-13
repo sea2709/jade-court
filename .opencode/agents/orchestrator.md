@@ -85,7 +85,7 @@ Track each phase with a checklist and do not move on until its gate passes.
 
 - Send `qa-engineer` the worktree, the report folder under `docs/reports/qa/`, the acceptance criteria, the contract, the developer reports, the adversarial report path, and the reviewer's QA hints.
 - Read `report.md` and check that each bug has repro steps, expected vs actual, and a screenshot for UI bugs. If something is missing, resume QA.
-- Bugs go back to the owning developer with the repro steps and suspected file. A verdict of "FAIL — CI not green" goes straight to the developer whose area failed.
+- Bugs go back to the owning developer with the repro steps, suspected file, and QA's suggested regression test. QA does not write tests: the developer first adds a unit or E2E test that fails on the bug, then fixes it. A verdict of "FAIL — CI not green" goes straight to the developer whose area failed.
 - Re-run QA after fixes. For non-trivial fixes, re-run the adversarial reviewer first.
 
 ### Phase 5: Acceptance (gate: every acceptance criterion is evidenced)
