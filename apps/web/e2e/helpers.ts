@@ -1,4 +1,4 @@
-import type { Locator, Page, Route } from '@playwright/test';
+import { expect, type Locator, type Page, type Route } from '@playwright/test';
 
 /** Board point (piece or empty move target) at engine coordinates `[row, col]`. */
 export function square(scope: Page | Locator, r: number, c: number): Locator {
@@ -27,4 +27,17 @@ export function sse(route: Route, events: unknown[]) {
     contentType: 'text/event-stream',
     body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
   });
+}
+
+/** Signs in through the admin login form (uses e2e server credentials). */
+export async function adminLoginViaForm(
+  page: Page,
+  opts?: { username?: string; password?: string; next?: string },
+): Promise<void> {
+  const next = opts?.next ? `?next=${encodeURIComponent(opts.next)}` : '';
+  await page.goto(`/admin/login${next}`);
+  await page.getByLabel('Username').fill(opts?.username ?? 'e2e-admin');
+  await page.getByLabel('Password').fill(opts?.password ?? 'e2e-pass');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).not.toHaveURL(/\/admin\/login/);
 }

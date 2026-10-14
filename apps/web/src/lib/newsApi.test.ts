@@ -1,18 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ADMIN_SESSION_STORAGE_KEY, setAdminSession } from './adminApi';
 import {
-  clearStoredAdminToken,
   createAdminNewsItem,
   deleteAdminNewsItem,
   fetchAdminNews,
   fetchPublicNews,
   patchAdminNewsItem,
-  NEWS_ADMIN_TOKEN_STORAGE_KEY,
   NewsApiError,
   previewAdminNewsUrl,
-  setStoredAdminToken,
 } from './newsApi';
 
 const fetchMock = vi.fn<typeof fetch>();
+
+const futureExpiry = () => new Date(Date.now() + 60_000).toISOString();
+
+function storeAdminToken(token: string) {
+  setAdminSession({ token, username: 'admin', expiresAt: futureExpiry() });
+}
 
 beforeEach(() => {
   localStorage.setItem('jade-court-guest-id', 'guest-123');
@@ -46,17 +50,17 @@ describe('fetchPublicNews', () => {
     expect(fetchMock.mock.calls[0]![0]).toBe('/api/news?cursor=abc&limit=12');
   });
 
-  it('does not clear the admin token on 401', async () => {
-    setStoredAdminToken('keep-me');
+  it('does not clear the admin session on 401', async () => {
+    storeAdminToken('keep-me');
     fetchMock.mockResolvedValue(json({ error: 'unauthorized' }, 401));
     await expect(fetchPublicNews()).rejects.toBeInstanceOf(NewsApiError);
-    expect(sessionStorage.getItem(NEWS_ADMIN_TOKEN_STORAGE_KEY)).toBe('keep-me');
+    expect(sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).not.toBeNull();
   });
 });
 
 describe('admin news API', () => {
   it('sends Authorization bearer on admin requests', async () => {
-    setStoredAdminToken('secret-token');
+    storeAdminToken('secret-token');
     fetchMock.mockResolvedValue(json({ items: [], nextCursor: null }));
     await fetchAdminNews();
     expect(fetchMock.mock.calls[0]![1]?.headers).toMatchObject({
@@ -64,15 +68,15 @@ describe('admin news API', () => {
     });
   });
 
-  it('clears stored token on 401', async () => {
-    setStoredAdminToken('bad');
+  it('clears stored session on 401', async () => {
+    storeAdminToken('bad');
     fetchMock.mockResolvedValue(json({ error: 'unauthorized' }, 401));
     await expect(fetchAdminNews()).rejects.toBeInstanceOf(NewsApiError);
-    expect(sessionStorage.getItem(NEWS_ADMIN_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
   });
 
   it('throws NewsApiError with validation fields', async () => {
-    setStoredAdminToken('ok');
+    storeAdminToken('ok');
     fetchMock.mockResolvedValue(json({ error: 'validation', fields: { title: 'Too short' } }, 400));
     await expect(createAdminNewsItem({ sourceUrl: 'https://a.com/x' })).rejects.toMatchObject({
       code: 'validation',
@@ -81,14 +85,14 @@ describe('admin news API', () => {
   });
 
   it('PATCHes an admin item', async () => {
-    setStoredAdminToken('ok');
+    storeAdminToken('ok');
     fetchMock.mockResolvedValue(json({ id: 'id-1', status: 'published' }));
     await patchAdminNewsItem('id-1', { status: 'published' });
     expect(fetchMock.mock.calls[0]![1]?.method).toBe('PATCH');
   });
 
   it('DELETEs an admin item', async () => {
-    setStoredAdminToken('ok');
+    storeAdminToken('ok');
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
     await deleteAdminNewsItem('id-1');
     const [url, init] = fetchMock.mock.calls[0]!;
@@ -97,7 +101,7 @@ describe('admin news API', () => {
   });
 
   it('POSTs preview URL', async () => {
-    setStoredAdminToken('ok');
+    storeAdminToken('ok');
     fetchMock.mockResolvedValue(
       json({
         title: 'T',
@@ -112,13 +116,5 @@ describe('admin news API', () => {
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({ url: 'https://a.com' });
-  });
-});
-
-describe('token helpers', () => {
-  it('clearStoredAdminToken removes the key', () => {
-    setStoredAdminToken('x');
-    clearStoredAdminToken();
-    expect(sessionStorage.getItem(NEWS_ADMIN_TOKEN_STORAGE_KEY)).toBeNull();
   });
 });

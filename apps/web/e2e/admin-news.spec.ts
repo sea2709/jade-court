@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { json } from './helpers';
+import { adminLoginViaForm, json } from './helpers';
 
 test.describe('admin news', () => {
   test('token gate, preview, publish flow', async ({ page }) => {
@@ -30,9 +30,7 @@ test.describe('admin news', () => {
       return json(route, { error: 'not_found' }, 404);
     });
 
-    await page.goto('/admin/news');
-    await page.getByLabel('Admin token').fill('e2e-secret');
-    await page.getByRole('button', { name: 'Unlock' }).click();
+    await adminLoginViaForm(page, { next: '/admin/news' });
     await expect(page.getByRole('button', { name: 'Add item' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Add item' }).click();
@@ -43,11 +41,11 @@ test.describe('admin news', () => {
     await expect(page.getByRole('button', { name: 'Add item' })).toBeVisible();
   });
 
-  test('401 returns to token gate', async ({ page }) => {
+  test('401 from news API redirects to login', async ({ page }) => {
+    await adminLoginViaForm(page, { next: '/admin/news' });
     await page.route(/\/api\/admin\/news/, (route) => json(route, { error: 'unauthorized' }, 401));
-    await page.goto('/admin/news');
-    await page.getByLabel('Admin token').fill('bad');
-    await page.getByRole('button', { name: 'Unlock' }).click();
-    await expect(page.getByRole('heading', { name: 'Unlock news admin' })).toBeVisible();
+    await page.reload();
+    await expect(page).toHaveURL(/\/admin\/login\?next=/);
+    await expect(page.getByRole('heading', { name: 'Admin sign in' })).toBeVisible();
   });
 });

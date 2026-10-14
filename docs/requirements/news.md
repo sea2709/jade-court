@@ -13,7 +13,7 @@
 
 - **Public `/news`:** a list of curated Xiangqi news (tournaments, players, culture, learning resources, engines/AI). Each card shows a title, our own short summary, the publisher, the date and a thumbnail, and links to the **original source** in a new tab.
 - **Admin `/admin/news`:** curators paste a source URL. The server fetches the page's Open Graph metadata to prefill the form. The curator edits the fields, writes a summary, adds tags, and saves the item as a draft or publishes it.
-- **Storage:** MongoDB `news` collection, with new Hono routes. Access is protected by a server-side `ADMIN_TOKEN` for now; Clerk admin roles can replace it later.
+- **Storage:** MongoDB `news` collection, with new Hono routes. Admin access uses username/password login and HMAC session tokens (`ADMIN_USERS`, `ADMIN_SESSION_SECRET`); Clerk admin roles may replace this later.
 
 **Scope: P0 only.** Delivered as one PR containing this document and the implementation. **Design:** desktop prototype at [`docs/design/news/Main.dc.html`](../design/news/Main.dc.html) (public page only).
 
@@ -84,7 +84,7 @@ Requirement IDs: `NEWS-xx`. **P0** = this release; deferred IDs listed in §3.
 
 ### 5.2 Admin `/admin/news`
 
-- **NEWS-20 (P0)** Standalone layout (outside the public topbar/footer), not linked anywhere, `<meta name="robots" content="noindex">`. First visit shows a token form. The token is kept in `sessionStorage` and sent as `Authorization: Bearer <token>`. A 401 clears it and shows the form again. "Sign out" clears the token.
+- **NEWS-20 (P0)** Standalone layout (outside the public topbar/footer), not linked anywhere, `<meta name="robots" content="noindex">`. Admins sign in at `/admin/login`; the session `{ token, username, expiresAt }` is kept in `sessionStorage` and sent as `Authorization: Bearer <token>`. A 401 clears it and redirects to login. "Sign out" clears the session.
 - **NEWS-21 (P0)** List of all items (draft, published, archived) with a status filter and search by title/publisher. Row actions: edit, publish, unpublish (back to draft), archive; archived items can be re-published, or hard-deleted after a confirmation.
 - **NEWS-22 (P0)** "Add item" flow: paste URL → `POST /api/admin/news/preview` returns metadata from Open Graph, `twitter:*`, `<title>`, and `article:published_time`. Form prefilled; fields editable. Known normalized URL shows `duplicateOf` warning. Failed fetch → manual entry.
 - **NEWS-23 (P0)** Fields and validation — see §7 API validation rules.
@@ -166,12 +166,13 @@ When MongoDB is not configured, `GET /api/news` returns `{ items: [], nextCursor
 - Duplicate `normalizedUrl` → **409** `{ error: 'duplicate', existing: { id, title, status } }`.
 - No store → **503** `{ error: 'news_storage_unavailable' }` (after auth).
 
-### 7.3 `adminAuth`
+### 7.3 Admin auth (`POST /api/admin/login`, `GET /api/admin/me`, `adminAuth`)
 
-- `Authorization: Bearer <token>` vs `process.env.ADMIN_TOKEN` using `crypto.timingSafeEqual` (length mismatch handled safely).
-- Missing/wrong → **401** `{ error: 'unauthorized' }`.
-- Unset/empty `ADMIN_TOKEN` → **503** `{ error: 'admin_disabled' }`.
-- 10 failed attempts per remote IP within 15 minutes → **429** `{ error: 'rate_limited' }` (in-memory; remote address from `@hono/node-server/conninfo`, constant fallback in `app.request()` tests; `X-Forwarded-For` ignored).
+- **Login** (`POST /api/admin/login`, public): body `{ username, password }` checked against `ADMIN_USERS` (`user:pass,user2:pass2`, split on first `:`). Wrong user or password → **401** `{ error: 'invalid_credentials' }` (same response shape for both). After 10 failures per IP + username within 15 minutes → **429** `{ error: 'rate_limited' }`. Success → **200** `{ token, username, expiresAt }` (HMAC-signed Bearer token). All admin responses include `Cache-Control: no-store`.
+- **`GET /api/admin/me`:** Bearer session required (`adminAuth` per route); **200** `{ username }`.
+- **`adminAuth` on `/api/admin/news/*`:** verify HMAC session (`ADMIN_SESSION_SECRET`), expiry, and that `sub` is still in `ADMIN_USERS`. Missing/malformed/bad signature → **401** `{ error: 'unauthorized' }` (counts toward per-IP token bucket). Expired or revoked user → **401** without counting toward the IP bucket.
+- No configured users or blank `ADMIN_SESSION_SECRET` → **503** `{ error: 'admin_disabled' }` on login, `/me`, and news admin.
+- Bad Bearer tokens: 10 failures per remote IP within 15 minutes → **429** (in-memory; `@hono/node-server/conninfo`, constant fallback in tests).
 
 ### 7.4 Validation rules
 
@@ -187,11 +188,11 @@ SSRF-guarded: http(s) only; ports 80/443; DNS resolve and reject loopback/privat
 
 ### 7.6 Env
 
-- `.env.example`: `ADMIN_TOKEN=` (server only, no `VITE_` prefix).
+- `.env.example`: `ADMIN_USERS=`, `ADMIN_SESSION_SECRET=` (32+ random chars), `ADMIN_SESSION_TTL_HOURS=8` (server only, no `VITE_` prefix).
 
 ## 8. Web (`apps/web`)
 
-- `src/lib/newsApi.ts`: public and admin fetchers following `api<T>()` in `src/lib/api.ts`; Bearer for admin only; 401 clears stored token.
+- `src/lib/adminApi.ts` + `src/lib/newsApi.ts`: public and admin fetchers following `api<T>()` in `src/lib/api.ts`; Bearer session for admin; 401 clears stored session.
 - `src/lib/formatNewsDate.ts`, `src/screens/NewsScreen.tsx`, `src/components/NewsCard.tsx`, `src/screens/AdminNewsScreen.tsx`.
 - `/admin/news` route sibling of `<App />` layout (standalone).
 - Tailwind v4 utilities plus `.news-card` / skeleton / state-panel in `src/index.css` `@layer components`.
@@ -210,13 +211,13 @@ Desktop prototype: [`docs/design/news/Main.dc.html`](../design/news/Main.dc.html
 ## 9. Non-functional and legal
 
 - **Attribution:** always show publisher and link to source; store only title, our summary, and thumbnail URL — never article body. Hotlink OG images for v1; curator may clear `imageUrl`.
-- **Security:** admin token never in the web bundle; admin routes `Cache-Control: no-store`; reject non-http(s) URLs on save.
+- **Security:** admin credentials and session secret never in the web bundle; admin routes `Cache-Control: no-store`; reject non-http(s) URLs on save.
 - **Accessibility:** cards are real links with accessible name including "opens in new tab".
 - **Performance:** list endpoint < 200 ms p95 with indexes.
 
 ## 10. Open questions
 
-Resolved in #41: no detail page (link-out only); English-only UI; `ADMIN_TOKEN` until Clerk admin roles (see Learn spec ACC-01).
+Resolved in #41: no detail page (link-out only); English-only UI; env-based admin accounts until Clerk admin roles (see Learn spec ACC-01).
 
 ## 11. Acceptance criteria
 
@@ -226,7 +227,7 @@ Resolved in #41: no detail page (link-out only); English-only UI; `ADMIN_TOKEN` 
 - [ ] Curator can paste URL, prefill within 5 s (or manual fallback), publish, see item on `/news` without redeploy.
 - [ ] Draft saves with URL only; incomplete publish → 400.
 - [ ] Preview `duplicateOf` for known URL; same article with different `utm_` → 409.
-- [ ] Wrong/missing token → 401; unset `ADMIN_TOKEN` → 503; repeated failures → 429; token absent from web assets.
+- [ ] Wrong/missing session → 401; unset admin config → 503; repeated login/token failures → 429; secrets absent from web assets.
 - [ ] Preview refuses localhost, metadata IP, private ranges, redirects into private addresses.
 - [ ] `/news` empty state when MongoDB not configured (not an error).
 - [ ] CI clean: lint, format, typecheck, test:coverage, test:e2e.
@@ -239,7 +240,7 @@ Resolved in #41: no detail page (link-out only); English-only UI; `ADMIN_TOKEN` 
 - `news/metadata.test.ts` — OG/twitter fallbacks, relative images, SSRF, redirects, timeout, body cap, non-HTML.
 - `news/memoryStore.test.ts` — sort, cursor pagination, duplicates.
 - `news/validate.test.ts` — draft vs publish rules.
-- `middleware/adminAuth.test.ts` — 401/503/429, valid token.
+- `admin/users.test.ts`, `admin/session.test.ts`, `routes/admin.test.ts`, `middleware/adminAuth.test.ts` — login, sessions, 401/503/429.
 - `routes/news.test.ts` — full HTTP contract via `createApp({ newsStore })` + mocked metadata.
 
 **Web (Vitest + Playwright)** — per issue #41 (parallel frontend work).
