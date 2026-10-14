@@ -89,7 +89,7 @@ Do **not** edit:
   4. `pnpm test:coverage` (unit tests and coverage thresholds, as CI runs them)
   5. `pnpm typecheck`
   6. `pnpm test:e2e` when you change a user flow covered by `apps/web/e2e/` or add a new one (CI runs it)
-- For visible UI changes, start `pnpm dev` and check the affected screen at `http://localhost:5173` for layout, console errors, and failed network requests. The `browser-automation` skill can do this.
+- For visible UI changes, start `pnpm dev` and check the affected screen at `http://localhost:5173` for layout, console errors, and failed network requests. Use the `agent-browser` CLI for this (`agent-browser --session dev open <url>`, then `snapshot -i`, `errors`, and `screenshot <path>`, and `close` when done). Run `agent-browser skills get core` for more commands.
 
 ## Tests
 

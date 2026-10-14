@@ -13,17 +13,14 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && corepack enable \
  && npm install -g opencode-ai \
+ && npm install -g --allow-scripts=agent-browser agent-browser@0.39.1 \
  && rm -rf /tmp/opencode
 
-# The browser-automation skill (mounted from the host) drives Chromium through patchright, which
-# it normally loads from the CodeGPT editor extension. Install it in its own prefix with its own
-# Chromium build, and expose only that prefix via NODE_PATH so repo packages can't resolve it.
-# PLAYWRIGHT_SKIP_BROWSER_GC keeps the installer from deleting Playwright 1.64's Chromium.
-RUN npm install --prefix /opt/patchright patchright@1.63.0 \
- && PLAYWRIGHT_SKIP_BROWSER_GC=1 /opt/patchright/node_modules/.bin/patchright install chromium
-
+# agent-browser (the QA agent's browser CLI) reuses the base image's Chromium instead of
+# downloading its own. The path follows the base tag; the check fails the build if it moves.
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    NODE_PATH=/opt/patchright/node_modules
+    AGENT_BROWSER_EXECUTABLE_PATH=/ms-playwright/chromium-1248/chrome-linux64/chrome
+RUN test -x "$AGENT_BROWSER_EXECUTABLE_PATH"
 
 USER pwuser
 # Pre-create volume mount points so named volumes are owned by pwuser, not root.

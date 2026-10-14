@@ -22,7 +22,7 @@
 # branch/PR the agents push.
 #
 # With --env-file .env.agent, ${...} values come from that file instead of the app's .env;
-# only the JADE_AGENT_* and BROWSER_AUTOMATION_SKILL_DIR variables below are used.
+# only the JADE_AGENT_* variables below are used.
 
 services:
   agent:
@@ -58,7 +58,6 @@ services:
       - work:/home/pwuser/work
       # opencode session history (and any `opencode auth login` credentials).
       - opencode-data:/home/pwuser/.local/share/opencode
-      - ${BROWSER_AUTOMATION_SKILL_DIR:-~/.codegpt/skills/browser-automation}:/home/pwuser/.claude/skills/browser-automation:ro
       - ./opencode.yolo.json:/opt/jade-agent/opencode.yolo.json:ro
     command:
       - bash
