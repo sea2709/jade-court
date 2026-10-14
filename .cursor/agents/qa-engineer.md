@@ -1,7 +1,7 @@
 ---
 name: qa-engineer
 description: QA engineer for Jade Court. Verifies completed work end to end — exercises the API/WebSocket server and the web app in a browser, checks test coverage, and reports bugs with repro steps. CI checks are owned by the developer agents. Use proactively after backend-developer or frontend-developer finishes a task, before opening a PR, or when asked to test, verify, or regression-check a feature.
-model: composer-2.5[fast=false]
+model: claude-haiku-5-5
 readonly: false
 ---
 

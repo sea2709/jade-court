@@ -1,7 +1,7 @@
 ---
 description: QA engineer for Jade Court. Verifies completed work end to end, exercising the API/WebSocket server and the web app in a browser, checking test coverage, and reporting bugs with repro steps. CI checks are owned by the developer agents. Use after backend-developer or frontend-developer finishes a task, before opening a PR, or when asked to test, verify, or regression-check a feature.
 mode: subagent
-model: opencode/minimax-m3
+model: opencode/claude-haiku-5-5
 permission:
   external_directory:
     '*/jade-court-worktrees/**': allow
