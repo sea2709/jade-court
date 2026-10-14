@@ -6,6 +6,8 @@ import { HomeScreen } from './screens/HomeScreen';
 import { LearnScreen } from './screens/LearnScreen';
 import { MultiplayerScreen } from './screens/MultiplayerScreen';
 import { PlayScreen } from './screens/PlayScreen';
+import { NewsScreen } from './screens/NewsScreen';
+import { AdminNewsScreen } from './screens/AdminNewsScreen';
 import './index.css';
 import { applyTheme } from './lib/theme';
 
@@ -15,11 +17,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route path="/admin/news" element={<AdminNewsScreen />} />
         <Route path="/" element={<App />}>
           <Route index element={<HomeScreen />} />
           <Route path="learn" element={<LearnScreen />} />
           <Route path="play" element={<PlayScreen />} />
           <Route path="multiplayer" element={<MultiplayerScreen />} />
+          <Route path="news" element={<NewsScreen />} />
         </Route>
       </Routes>
     </BrowserRouter>

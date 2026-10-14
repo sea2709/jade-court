@@ -22,6 +22,10 @@ import aiRoutes from './routes/ai.js';
 import coachRoutes from './routes/coach.js';
 import engineRoutes from './routes/engine.js';
 import opponentRoutes from './routes/opponent.js';
+import { createAdminNewsRoutes } from './routes/adminNews.js';
+import { createNewsRoutes } from './routes/news.js';
+import { MongoNewsStore } from './news/mongoStore.js';
+import type { NewsStore } from './news/store.js';
 
 /** Open room sockets, shared by REST joins and WebSocket messages for broadcasts. */
 const sockets = new Map<WebSocket, { guestId: string; code?: string }>();
@@ -38,15 +42,28 @@ function setConnected(room: RoomState, guestId: string, connected: boolean) {
   if (room.black?.guestId === guestId) room.black.connected = connected;
 }
 
+export interface CreateAppDeps {
+  newsStore?: NewsStore | null;
+}
+
 /** Build the Hono app with CORS, guest auth, room REST endpoints, and API sub-routers. */
-export function createApp() {
+export function createApp(deps?: CreateAppDeps) {
   const app = new Hono();
+
+  let newsStore: NewsStore | null;
+  if (deps && 'newsStore' in deps) {
+    newsStore = deps.newsStore ?? null;
+  } else if (process.env.MONGODB_URI) {
+    newsStore = new MongoNewsStore();
+  } else {
+    newsStore = null;
+  }
 
   app.use(
     '*',
     cors({
       origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
-      allowHeaders: ['Content-Type', 'x-guest-id'],
+      allowHeaders: ['Content-Type', 'x-guest-id', 'Authorization'],
     }),
   );
 
@@ -79,6 +96,8 @@ export function createApp() {
   app.route('/api/coach', coachRoutes);
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
+  app.route('/api/news', createNewsRoutes(newsStore));
+  app.route('/api/admin/news', createAdminNewsRoutes(newsStore));
 
   return app;
 }
