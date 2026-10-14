@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { json } from './helpers';
 
 test.describe('home and navigation', () => {
   test('renders the landing page with a preview board', async ({ page }) => {
@@ -22,6 +23,11 @@ test.describe('home and navigation', () => {
     await nav.getByRole('link', { name: 'Learn with AI' }).click();
     await expect(page).toHaveURL(/\/learn$/);
     await expect(page.getByText('Learn mode')).toBeVisible();
+
+    await page.route('**/api/news**', (route) => json(route, { items: [], nextCursor: null }));
+    await nav.getByRole('link', { name: 'News' }).click();
+    await expect(page).toHaveURL(/\/news$/);
+    await expect(page.getByRole('heading', { name: 'Xiangqi news' })).toBeVisible();
 
     await page.getByRole('button', { name: /Jade Court/ }).click();
     await expect(page).toHaveURL(/\/$/);

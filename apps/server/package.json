@@ -20,7 +20,9 @@
     "dotenv": "^17.4.2",
     "hono": "^4.6.16",
     "mongodb": "^6.12.0",
+    "node-html-parser": "^9.0.4",
     "openai": "^6.42.0",
+    "undici": "^7.16.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

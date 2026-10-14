@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Xiangqi news</title>
+    <script src="./vendor/react.js"></script>
+    <script src="./vendor/react-dom.js"></script>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@600;700;800&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #fbf3e1;
+          }
+          a {
+            color: #157a63;
+          }
+          a:hover {
+            color: #0f5c4a;
+          }
+          .jc-nav-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            padding: 0 16px;
+            border-radius: 999px;
+            color: #5c5347;
+            font-weight: 800;
+            font-size: 15px;
+            text-decoration: none;
+          }
+          .jc-nav-link:hover {
+            background: #fff7e6;
+            color: #2b2622;
+          }
+          .jc-card {
+            display: flex;
+            flex-direction: column;
+            background: #fffdf6;
+            border: 1px solid #e7dabc;
+            border-radius: 24px;
+            box-shadow: 0 10px 26px -8px rgba(80, 55, 20, 0.3);
+            overflow: hidden;
+            text-decoration: none;
+            color: #2b2622;
+            transition:
+              transform 0.15s,
+              box-shadow 0.15s;
+          }
+          .jc-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 36px -12px rgba(21, 122, 99, 0.35);
+            color: #2b2622;
+          }
+          .jc-card:hover .jc-read {
+            text-decoration: underline;
+          }
+          .jc-card:focus-visible {
+            outline: 3px solid #1f9e81;
+            outline-offset: 3px;
+          }
+          .jc-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+            padding: 0 28px;
+            border-radius: 999px;
+            font:
+              800 16px 'Nunito',
+              system-ui,
+              sans-serif;
+            border: none;
+            cursor: pointer;
+          }
+          .jc-btn:focus-visible {
+            outline: 2px solid #1f9e81;
+            outline-offset: 2px;
+          }
+          .jc-sk {
+            background: linear-gradient(90deg, #f4e8ce 0%, #fbf3e1 50%, #f4e8ce 100%);
+            background-size: 200% 100%;
+            animation: jcsk 1.4s ease-in-out infinite;
+            border-radius: 8px;
+          }
+          @keyframes jcsk {
+            from {
+              background-position: 100% 0;
+            }
+            to {
+              background-position: -100% 0;
+            }
+          }
+          @media (max-width: 720px) {
+            .jc-hide-sm {
+              display: none;
+            }
+          }
+        </style>
+      </helmet>
+      <div
+        style="
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          background: #fbf3e1;
+          color: #2b2622;
+          font-family: 'Nunito', system-ui, sans-serif;
+        "
+      >
+        <header
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 30px;
+            border-bottom: 1px solid #e7dabc;
+            background: rgba(251, 243, 225, 0.9);
+          "
+        >
+          <a
+            href="#top"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              text-decoration: none;
+              color: #2b2622;
+            "
+          >
+            <span
+              style="
+                width: 42px;
+                height: 42px;
+                border-radius: 13px;
+                display: grid;
+                place-items: center;
+                font-family: 'Noto Serif SC', serif;
+                font-weight: 900;
+                font-size: 24px;
+                color: #fff;
+                background: #ae3119;
+              "
+              >象</span
+            >
+            <span style="display: flex; flex-direction: column">
+              <span
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 20px;
+                  line-height: 1;
+                "
+                >Jade Court</span
+              >
+              <span
+                style="
+                  font-size: 12px;
+                  font-weight: 800;
+                  letter-spacing: 0.14em;
+                  text-transform: uppercase;
+                  color: #7a6e56;
+                "
+                >Xiangqi</span
+              >
+            </span>
+          </a>
+          <nav
+            aria-label="Main"
+            style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px"
+          >
+            <a class="jc-nav-link" href="#home">Home</a>
+            <a class="jc-nav-link" href="#learn">Learn with AI</a>
+            <a class="jc-nav-link" href="#play">Play vs Computer</a>
+            <a class="jc-nav-link" href="#friends">Friends</a>
+            <a
+              class="jc-nav-link"
+              href="#news"
+              aria-current="page"
+              style="background: #2b2622; color: #fbf3e1"
+              >News</a
+            >
+          </nav>
+        </header>
+
+        <main
+          style="
+            flex: 1;
+            width: 100%;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 44px 30px 64px;
+            box-sizing: border-box;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              align-items: flex-end;
+              gap: 16px 32px;
+              margin-bottom: 30px;
+            "
+          >
+            <div style="flex: 1 1 520px; min-width: 0">
+              <span
+                style="
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 7px;
+                  font-weight: 800;
+                  font-size: 13px;
+                  padding: 6px 13px;
+                  border-radius: 999px;
+                  background: #fbeac4;
+                  color: #8a5c0c;
+                  margin-bottom: 14px;
+                "
+                >新聞 · From around the Xiangqi world</span
+              >
+              <h1
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 46px;
+                  line-height: 1.05;
+                  letter-spacing: -0.01em;
+                  margin: 0 0 10px;
+                "
+              >
+                Xiangqi news
+              </h1>
+              <p
+                style="
+                  margin: 0;
+                  max-width: 600px;
+                  font-size: 18px;
+                  line-height: 1.45;
+                  font-weight: 600;
+                  color: #5c5347;
+                "
+              >
+                Tournaments, players, culture and study resources, picked by our curators. Each
+                story opens on the publisher's own site.
+              </p>
+            </div>
+          </div>
+
+          <sc-if value="{{isLoading}}" hint-placeholder-val="{{false}}">
+            <div
+              aria-busy="true"
+              aria-label="Loading news"
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 24px;
+              "
+            >
+              <sc-for list="{{skeletons}}" as="s" hint-placeholder-count="6">
+                <div
+                  style="
+                    background: #fffdf6;
+                    border: 1px solid #e7dabc;
+                    border-radius: 24px;
+                    overflow: hidden;
+                  "
+                >
+                  <div class="jc-sk" style="aspect-ratio: 16 / 9; border-radius: 0"></div>
+                  <div
+                    style="
+                      padding: 20px 22px 24px;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 12px;
+                    "
+                  >
+                    <div
+                      class="jc-sk"
+                      style="width: 90px; height: 22px; border-radius: 999px"
+                    ></div>
+                    <div class="jc-sk" style="width: 92%; height: 22px"></div>
+                    <div class="jc-sk" style="width: 70%; height: 22px"></div>
+                    <div class="jc-sk" style="width: 100%; height: 14px"></div>
+                    <div class="jc-sk" style="width: 85%; height: 14px"></div>
+                    <div class="jc-sk" style="width: 55%; height: 14px; margin-top: 8px"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{isEmpty}}" hint-placeholder-val="{{false}}">
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 14px;
+                padding: 72px 24px;
+                background: #fffdf6;
+                border: 1px dashed #d8c69c;
+                border-radius: 24px;
+              "
+            >
+              <span
+                style="
+                  width: 84px;
+                  height: 84px;
+                  border-radius: 24px;
+                  display: grid;
+                  place-items: center;
+                  font-family: 'Noto Serif SC', serif;
+                  font-weight: 900;
+                  font-size: 46px;
+                  color: #157a63;
+                  background: #d6efe7;
+                "
+                >報</span
+              >
+              <h2
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 28px;
+                  margin: 0;
+                "
+              >
+                No news yet — check back soon
+              </h2>
+              <p
+                style="
+                  margin: 0;
+                  max-width: 440px;
+                  font-size: 16px;
+                  line-height: 1.5;
+                  font-weight: 600;
+                  color: #5c5347;
+                "
+              >
+                Our curators are gathering the first stories. In the meantime, sharpen your game
+                with Master Lin.
+              </p>
+              <a
+                href="#learn"
+                class="jc-btn"
+                style="background: #157a63; color: #fff; text-decoration: none; margin-top: 6px"
+                >Start learning →</a
+              >
+            </div>
+          </sc-if>
+
+          <sc-if value="{{isError}}" hint-placeholder-val="{{false}}">
+            <div
+              role="alert"
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 14px;
+                padding: 64px 24px;
+                background: #fffdf6;
+                border: 1px solid #f0c3b5;
+                border-radius: 24px;
+              "
+            >
+              <span
+                style="
+                  width: 84px;
+                  height: 84px;
+                  border-radius: 24px;
+                  display: grid;
+                  place-items: center;
+                  font-family: 'Noto Serif SC', serif;
+                  font-weight: 900;
+                  font-size: 46px;
+                  color: #ae3119;
+                  background: #f6d7cc;
+                "
+                >斷</span
+              >
+              <h2
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 28px;
+                  margin: 0;
+                "
+              >
+                We couldn't load the news
+              </h2>
+              <p
+                style="
+                  margin: 0;
+                  max-width: 440px;
+                  font-size: 16px;
+                  line-height: 1.5;
+                  font-weight: 600;
+                  color: #5c5347;
+                "
+              >
+                Something went wrong on our side. Give it another try in a moment.
+              </p>
+              <sc-if value="{{isOffline}}" hint-placeholder-val="{{false}}">
+                <p
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin: 0;
+                    padding: 10px 16px;
+                    border-radius: 12px;
+                    background: #fbeac4;
+                    color: #6b4708;
+                    font-weight: 800;
+                    font-size: 14px;
+                  "
+                >
+                  <svg
+                    aria-hidden="true"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 2l20 20"></path>
+                    <path d="M8.5 16.5a5 5 0 0 1 7 0"></path>
+                    <path d="M5 12.9a10 10 0 0 1 5.2-2.8"></path>
+                    <path d="M19 12.9a10 10 0 0 0-2.3-1.6"></path>
+                    <path d="M12 20h.01"></path>
+                  </svg>
+                  You're offline. News will load when you reconnect.
+                </p>
+              </sc-if>
+              <button
+                type="button"
+                class="jc-btn"
+                onClick="{{retry}}"
+                style="
+                  background: #fff;
+                  color: #2b2622;
+                  border: 1px solid #e7dabc;
+                  box-shadow: 0 2px 6px rgba(80, 55, 20, 0.12);
+                  margin-top: 6px;
+                "
+              >
+                <svg
+                  aria-hidden="true"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-2.6-6.4"></path>
+                  <path d="M21 4v5h-5"></path>
+                </svg>
+                Try again
+              </button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{isLoaded}}" hint-placeholder-val="{{true}}">
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 24px;
+              "
+            >
+              <sc-for list="{{visible}}" as="item" hint-placeholder-count="6">
+                <a
+                  class="jc-card"
+                  href="{{item.url}}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="{{item.aria}}"
+                >
+                  <div style="position: relative; aspect-ratio: 16 / 9; overflow: hidden">
+                    <sc-if value="{{item.isPlaceholder}}" hint-placeholder-val="{{false}}">
+                      <div
+                        style="
+                          position: absolute;
+                          inset: 0;
+                          display: grid;
+                          place-items: center;
+                          background: #1f9e81;
+                        "
+                      >
+                        <span
+                          style="
+                            font-family: 'Noto Serif SC', serif;
+                            font-weight: 900;
+                            font-size: 76px;
+                            color: rgba(255, 255, 255, 0.92);
+                          "
+                          >象</span
+                        >
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{item.isPhoto}}" hint-placeholder-val="{{true}}">
+                      <div
+                        role="img"
+                        aria-label="{{item.imgAlt}}"
+                        style="
+                          position: absolute;
+                          inset: 0;
+                          display: grid;
+                          place-items: center;
+                          background-color: #e3bc73;
+                          background-image:
+                            linear-gradient(#97632f 1px, transparent 1px),
+                            linear-gradient(90deg, #97632f 1px, transparent 1px);
+                          background-size: 38px 38px;
+                          background-position: 18px 18px;
+                        "
+                      >
+                        <span
+                          style="
+                            width: 64px;
+                            height: 64px;
+                            border-radius: 50%;
+                            display: grid;
+                            place-items: center;
+                            background: #fffaf0;
+                            border: 3px solid #ae3119;
+                            box-shadow: 0 6px 14px rgba(60, 40, 12, 0.35);
+                            font-family: 'Noto Serif SC', serif;
+                            font-weight: 900;
+                            font-size: 34px;
+                            color: #ae3119;
+                          "
+                          >{{item.glyph}}</span
+                        >
+                      </div>
+                    </sc-if>
+                    <span
+                      style="
+                        position: absolute;
+                        left: 12px;
+                        bottom: 12px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        padding: 5px 10px 5px 6px;
+                        border-radius: 999px;
+                        background: rgba(255, 253, 246, 0.94);
+                        font-size: 12px;
+                        font-weight: 800;
+                        color: #2b2622;
+                      "
+                    >
+                      <span
+                        style="
+                          width: 18px;
+                          height: 18px;
+                          border-radius: 5px;
+                          display: grid;
+                          place-items: center;
+                          background: #2b2622;
+                          color: #fff;
+                          font-size: 11px;
+                        "
+                        >{{item.initial}}</span
+                      >
+                      {{item.domain}}
+                    </span>
+                  </div>
+                  <div
+                    style="
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 10px;
+                      padding: 18px 22px 22px;
+                    "
+                  >
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                      <sc-for list="{{item.tags}}" as="tag" hint-placeholder-count="1">
+                        <span
+                          style="
+                            font-size: 12px;
+                            font-weight: 800;
+                            padding: 4px 10px;
+                            border-radius: 999px;
+                            background: #d6efe7;
+                            color: #0f6652;
+                          "
+                          >{{tag}}</span
+                        >
+                      </sc-for>
+                    </div>
+                    <h2
+                      style="
+                        font-family: 'Baloo 2', sans-serif;
+                        font-weight: 800;
+                        font-size: 21px;
+                        line-height: 1.2;
+                        margin: 0;
+                      "
+                    >
+                      {{item.title}}
+                    </h2>
+                    <p
+                      style="
+                        margin: 0;
+                        font-size: 15px;
+                        line-height: 1.5;
+                        font-weight: 600;
+                        color: #5c5347;
+                      "
+                    >
+                      {{item.summary}}
+                    </p>
+                    <div
+                      style="
+                        margin-top: auto;
+                        padding-top: 12px;
+                        border-top: 1px solid #efe3c6;
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: center;
+                        gap: 6px 12px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #6e634c;
+                      "
+                    >
+                      <span style="color: #2b2622; font-weight: 800">{{item.publisher}}</span>
+                      <span aria-hidden="true">·</span>
+                      <time datetime="{{item.iso}}" title="{{item.absDate}}">{{item.relDate}}</time>
+                      <span
+                        class="jc-read"
+                        style="
+                          margin-left: auto;
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 5px;
+                          color: #157a63;
+                          font-weight: 800;
+                        "
+                      >
+                        Read on {{item.publisher}}
+                        <svg
+                          aria-hidden="true"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M14 4h6v6"></path>
+                          <path d="M20 4l-9 9"></path>
+                          <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </sc-for>
+            </div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                margin-top: 36px;
+              "
+            >
+              <sc-if value="{{hasMore}}" hint-placeholder-val="{{true}}">
+                <button
+                  type="button"
+                  class="jc-btn"
+                  onClick="{{loadMore}}"
+                  style="
+                    background: #fff;
+                    color: #2b2622;
+                    border: 1px solid #e7dabc;
+                    box-shadow: 0 2px 6px rgba(80, 55, 20, 0.12);
+                  "
+                >
+                  Load more stories
+                </button>
+              </sc-if>
+              <sc-if value="{{noMore}}" hint-placeholder-val="{{false}}">
+                <p style="margin: 0; font-size: 14px; font-weight: 700; color: #6e634c">
+                  You're all caught up.
+                </p>
+              </sc-if>
+            </div>
+          </sc-if>
+        </main>
+
+        <footer
+          style="
+            border-top: 1px solid #e7dabc;
+            padding: 22px 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #6e634c;
+          "
+        >
+          <span
+            style="
+              width: 30px;
+              height: 30px;
+              border-radius: 9px;
+              display: grid;
+              place-items: center;
+              font-family: 'Noto Serif SC', serif;
+              font-weight: 900;
+              font-size: 17px;
+              color: #fff;
+              background: #ae3119;
+            "
+            >象</span
+          >
+          <span style="color: #5c5347">Jade Court · Learn &amp; play Xiangqi</span>
+          <nav aria-label="Footer" style="margin-left: auto; display: flex; gap: 20px">
+            <a href="#learn" style="color: #5c5347; text-decoration: none; font-weight: 800"
+              >Learn</a
+            >
+            <a href="#friends" style="color: #5c5347; text-decoration: none; font-weight: 800"
+              >Friends</a
+            >
+            <a href="#news" style="color: #157a63; text-decoration: none; font-weight: 800">News</a>
+          </nav>
+          <span style="width: 100%; font-weight: 600"
+            >© 2026 Jade Court · A teaching prototype</span
+          >
+        </footer>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"pageState":{"editor":"enum","options":["loaded","loading","empty","error","offline"],"default":"loaded","section":"State"},"$preview":{"width":1280,"height":1640}}'
+    >
+      class Component extends DCLogic {
+        constructor(props) {
+          super(props);
+          this.state = { shown: 6, retried: false };
+        }
+        renderVals() {
+          var mode = this.state.retried ? 'loaded' : (this.props.pageState ?? 'loaded');
+          var all = [
+            { title: 'National individual championship heads into its decisive final round', summary: 'Three players are level on points going into the last round. We look at the key games so far and what each contender needs from the final pairing.', publisher: 'Xiangqi Weekly', domain: 'xiangqiweekly.example', tags: ['tournament'], relDate: '2 hours ago', absDate: 'Wednesday, October 14, 2026, 9:40 AM', iso: '2026-10-14', glyph: '帥', photo: true },
+            { title: 'Why the cannon screen still decides most opening battles', summary: 'A clear, diagram-led walkthrough of the central cannon opening and the three replies beginners meet most often, with a short drill at the end.', publisher: 'River & Palace', domain: 'riverpalace.example', tags: ['learning'], relDate: 'Yesterday', absDate: 'Tuesday, October 13, 2026', iso: '2026-10-13', glyph: '炮', photo: true },
+            { title: 'Open-source engine release adds stronger endgame evaluation', summary: 'The new build plays measurably better in rook-and-pawn endings. The release notes also cover a smaller network for phones and older laptops.', publisher: 'Engine Notes', domain: 'enginenotes.example', tags: ['engines'], relDate: '3 days ago', absDate: 'Sunday, October 11, 2026', iso: '2026-10-11', photo: false },
+            { title: 'Park tables of the old quarter: a photo essay', summary: 'Every evening the same tables fill with players and onlookers. A gentle portrait of the street game and the regulars who keep it alive.', publisher: 'City Culture Desk', domain: 'cityculture.example', tags: ['culture', 'community'], relDate: '5 days ago', absDate: 'Friday, October 9, 2026', iso: '2026-10-09', glyph: '兵', photo: true },
+            { title: 'Rising junior player on study habits and handling pressure', summary: 'In a short interview the youngest qualifier this season talks about daily puzzles, reviewing losses, and staying calm when the clock runs low.', publisher: 'Xiangqi Weekly', domain: 'xiangqiweekly.example', tags: ['players'], relDate: 'Oct 6', absDate: 'Tuesday, October 6, 2026', iso: '2026-10-06', glyph: '將', photo: true },
+            { title: 'Club league adds an online division for new players', summary: 'The community league now runs a beginner division online, with weekly rounds and volunteer coaches reviewing games afterward.', publisher: 'Community Board', domain: 'communityboard.example', tags: ['community'], relDate: 'Oct 2', absDate: 'Friday, October 2, 2026', iso: '2026-10-02', photo: false },
+            { title: 'Five classic horse traps every club player should know', summary: 'Short positions where the horse is quietly lost, from the blocked leg to the edge squeeze, with the defensive idea that saves each one.', publisher: 'River & Palace', domain: 'riverpalace.example', tags: ['learning'], relDate: 'Sep 28', absDate: 'Monday, September 28, 2026', iso: '2026-09-28', glyph: '馬', photo: true },
+            { title: 'Team cup semifinals: upsets on the second board', summary: 'Two favorites dropped points on board two. A round-up of results and the standings heading into the final weekend.', publisher: 'Tournament Wire', domain: 'tournamentwire.example', tags: ['tournament'], relDate: 'Sep 24', absDate: 'Thursday, September 24, 2026', iso: '2026-09-24', glyph: '車', photo: true },
+            { title: 'How elephants and advisors shaped the palace rules', summary: 'A short history of the defensive pieces and why they never cross the river, told through old manuals and modern teaching.', publisher: 'City Culture Desk', domain: 'cityculture.example', tags: ['culture'], relDate: 'Sep 20', absDate: 'Sunday, September 20, 2026', iso: '2026-09-20', photo: false }
+          ];
+          var items = all.map(function (it, i) {
+            return Object.assign({}, it, {
+              url: 'https://' + it.domain + '/story-' + (i + 1),
+              initial: it.publisher.charAt(0),
+              isPhoto: !!it.photo,
+              isPlaceholder: !it.photo,
+              imgAlt: 'Thumbnail from ' + it.publisher,
+              aria: it.title + ' — ' + it.publisher + ' (opens in new tab)'
+            });
+          });
+          var self = this;
+          var visible = items.slice(0, this.state.shown);
+          var hasMore = this.state.shown < items.length;
+          return {
+            isLoading: mode === 'loading',
+            isEmpty: mode === 'empty',
+            isError: mode === 'error' || mode === 'offline',
+            isOffline: mode === 'offline',
+            isLoaded: mode === 'loaded',
+            skeletons: [1, 2, 3, 4, 5, 6],
+            visible: visible,
+            hasMore: hasMore,
+            noMore: !hasMore,
+            loadMore: function () { self.setState({ shown: self.state.shown + 3 }); },
+            retry: function () { self.setState({ retried: true }); }
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

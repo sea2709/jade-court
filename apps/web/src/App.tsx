@@ -5,6 +5,7 @@ const NAV = [
   ['/learn', 'Learn with AI'],
   ['/play', 'Play vs Computer'],
   ['/multiplayer', 'Friends'],
+  ['/news', 'News'],
 ] as const;
 
 function Topbar() {
@@ -61,6 +62,13 @@ export function App() {
             onClick={() => navigate('/multiplayer')}
           >
             Friends
+          </button>
+          <button
+            type="button"
+            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
+            onClick={() => navigate('/news')}
+          >
+            News
           </button>
         </nav>
         <span className="w-full text-left text-muted font-semibold">
