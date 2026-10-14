@@ -16,6 +16,7 @@ import {
   getRoom,
   joinRoom,
   publicRoomView,
+  resignRoom,
   type RoomState,
 } from './rooms.js';
 import aiRoutes from './routes/ai.js';
@@ -85,8 +86,9 @@ export function createApp() {
 
 /**
  * Attach the `/ws` room socket to an HTTP server.
- * Clients `subscribe` to a room code, then send `move`s; the server re-validates each move
- * with the engine and broadcasts the new room state to every subscriber.
+ * Clients `subscribe` to a room code, then send `move`s or `resign`; the server re-validates
+ * each move with the engine, applies resignations on any turn, and broadcasts the new room
+ * state to every subscriber.
  */
 export function attachRoomSockets(httpServer: Server) {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -102,7 +104,8 @@ export function attachRoomSockets(httpServer: Server) {
               guestId: string;
               from: [number, number];
               to: [number, number];
-            };
+            }
+          | { type: 'resign'; code?: string; guestId: string };
 
         if (msg.type === 'subscribe') {
           const code = msg.code.toUpperCase();
@@ -147,6 +150,41 @@ export function attachRoomSockets(httpServer: Server) {
               endedAt: new Date(),
             });
           }
+          return;
+        }
+
+        // --- Resign: seated player concedes; room resolution mirrors the move guards above ---
+        if (msg.type === 'resign') {
+          const meta = sockets.get(ws);
+          const code = (msg.code ?? meta?.code)?.toUpperCase();
+          if (!code) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Not in a room' }));
+            return;
+          }
+          const room = getRoom(code);
+          if (!room) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Room not found' }));
+            return;
+          }
+          const result = resignRoom(room, msg.guestId);
+          if (!result.ok) {
+            // Per the resign contract, failures reply with an `error` field to the requester only.
+            ws.send(JSON.stringify({ type: 'error', error: result.error }));
+            return;
+          }
+          broadcastRoom(room);
+          // Status is always 'resigned' here; the guard mirrors the move path for TypeScript.
+          if (room.status) {
+            await saveFinishedGame({
+              code: room.code,
+              redGuestId: room.red?.guestId,
+              blackGuestId: room.black?.guestId,
+              history: room.history,
+              status: room.status,
+              endedAt: new Date(),
+            });
+          }
+          return;
         }
       } catch {
         ws.send(JSON.stringify({ type: 'error', message: 'Invalid message' }));

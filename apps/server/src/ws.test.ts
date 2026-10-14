@@ -11,6 +11,8 @@ type RoomMsg = Msg & {
   room: {
     history: unknown[];
     turn: string;
+    status: string | null;
+    winner: string | null;
     redConnected: boolean;
     blackConnected: boolean;
   };
@@ -69,6 +71,14 @@ const isRoom =
   (pred: (r: RoomMsg['room']) => boolean = () => true) =>
   (m: Msg) =>
     m.type === 'room' && pred((m as RoomMsg).room);
+
+/** Resolves true when `p` stays pending for `ms` — proves no matching message was sent. */
+function silence(p: Promise<unknown>, ms = 150): Promise<boolean> {
+  return Promise.race([
+    p.then(() => false),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(true), ms)),
+  ]);
+}
 
 let seq = 0;
 function seatedRoom() {
@@ -155,5 +165,88 @@ describe('room WebSocket', () => {
     blackWs.ws.close();
     await redWs.next(isRoom((r) => !r.blackConnected));
     expect(getRoom(code)?.black?.connected).toBe(false);
+  });
+});
+
+describe('room WebSocket resign', () => {
+  it('broadcasts a resignation to both players with the opponent as winner', async () => {
+    const { code, red, redWs, blackWs } = await subscribedPair();
+    redWs.send({ type: 'resign', guestId: red });
+    const [a, b] = await Promise.all([
+      redWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+      blackWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+    ]);
+    expect(a.room.winner).toBe('b');
+    expect(b.room.winner).toBe('b');
+    const room = getRoom(code);
+    expect(room?.status).toBe('resigned');
+    expect(room?.winner).toBe('b');
+  });
+
+  it('rejects a resign from a spectator without broadcasting', async () => {
+    const { code, redWs, blackWs } = await subscribedPair();
+    const spectator = await connect();
+    spectator.send({ type: 'subscribe', code, guestId: 'watcher' });
+    await spectator.next(isRoom());
+    spectator.send({ type: 'resign', guestId: 'watcher' });
+    expect(await spectator.next((m) => m.type === 'error')).toEqual({
+      type: 'error',
+      error: 'Not a player in this room',
+    });
+    expect(getRoom(code)?.status).toBeNull();
+    expect(await silence(redWs.next(isRoom((r) => r.status === 'resigned')))).toBe(true);
+    expect(await silence(blackWs.next(isRoom((r) => r.status === 'resigned')))).toBe(true);
+  });
+
+  it('rejects a resign after the game has ended', async () => {
+    const { red, black, redWs, blackWs } = await subscribedPair();
+    redWs.send({ type: 'resign', guestId: red });
+    await Promise.all([
+      redWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+      blackWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+    ]);
+    blackWs.send({ type: 'resign', guestId: black });
+    expect(await blackWs.next((m) => m.type === 'error')).toEqual({
+      type: 'error',
+      error: 'Game is over',
+    });
+  });
+
+  it('rejects moves after a resignation', async () => {
+    const { red, black, redWs, blackWs } = await subscribedPair();
+    redWs.send({ type: 'resign', guestId: red });
+    await Promise.all([
+      redWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+      blackWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+    ]);
+    blackWs.send({ type: 'move', guestId: black, from: [0, 1], to: [2, 2] });
+    expect(await blackWs.next((m) => m.type === 'move_rejected')).toMatchObject({
+      error: 'Game is over',
+    });
+  });
+
+  it('returns the resigned result in the snapshot when re-subscribing', async () => {
+    const { code, red, redWs, blackWs } = await subscribedPair();
+    redWs.send({ type: 'resign', guestId: red });
+    await Promise.all([
+      redWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+      blackWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+    ]);
+    const reconnected = await connect();
+    reconnected.send({ type: 'subscribe', code, guestId: red });
+    const msg = await reconnected.next<RoomMsg>(isRoom((r) => r.status === 'resigned'));
+    expect(msg.room.winner).toBe('b');
+  });
+
+  it('rejects resigns from a socket that never subscribed', async () => {
+    const client = await connect();
+    client.send({ type: 'resign', guestId: 'nobody' });
+    expect(await client.next()).toEqual({ type: 'error', error: 'Not in a room' });
+  });
+
+  it('reports unknown rooms for resigns with an explicit bad code', async () => {
+    const client = await connect();
+    client.send({ type: 'resign', guestId: 'x', code: 'JADE-ZZZZ' });
+    expect(await client.next()).toEqual({ type: 'error', error: 'Room not found' });
   });
 });
