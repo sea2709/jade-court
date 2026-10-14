@@ -23,8 +23,23 @@
 #
 # With --env-file .env.agent, ${...} values come from that file instead of the app's .env;
 # only the JADE_AGENT_* variables below are used.
+#
+# A `mongo` service starts alongside the agent (data in the `mongo-data` volume, not published
+# to the host). The startup command adds MONGODB_URI=mongodb://mongo:27017 to the clone's .env,
+# so a server the agents start picks it up; unit tests and Playwright don't read .env, so they
+# keep running without a database.
 
 services:
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   agent:
     build:
       context: .
@@ -38,6 +53,9 @@ services:
     mem_limit: 8g
     cpus: 4
     pids_limit: 2048
+    depends_on:
+      mongo:
+        condition: service_healthy
     # Host ports default away from 5173/3001 so they don't clash with `pnpm dev` or other local
     # servers; inside the container the app still uses 5173 (web) and 3001 (server).
     ports:
@@ -70,6 +88,9 @@ services:
           (cd jade-court && pnpm install && pnpm build)
         fi
         cd jade-court
+        if ! grep -qs '^MONGODB_URI=' .env; then
+          echo 'MONGODB_URI=mongodb://mongo:27017' >> .env
+        fi
         if [ "$${JADE_AGENT_YOLO}" = true ]; then
           echo "opencode YOLO mode: ON (auto-approves everything not explicitly denied)"
         fi
@@ -78,3 +99,4 @@ services:
 volumes:
   work:
   opencode-data:
+  mongo-data:

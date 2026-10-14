@@ -1,0 +1,110 @@
+# Local dev stack — MongoDB + Hono server + Vite web, running your host checkout in containers.
+#
+#   pnpm dev:docker           # docker compose -f docker-compose.dev.yml up --build
+#   pnpm dev:docker:down      # stop and remove the containers (data volumes are kept)
+#
+# Web: http://localhost:5173 · Server: http://localhost:3001/health · Mongo from the host:
+# mongodb://localhost:27018 (override with JADE_DEV_MONGO_PORT). Stop host `pnpm dev` first;
+# both use 5173 and 3001.
+#
+# The checkout is bind-mounted at /app, so edits hot-reload (tsx watch, tsc --watch, Vite HMR)
+# and the server reads the repo-root .env as usual. Values set under `environment:` below win
+# over .env (dotenv never overrides existing variables), which is how MONGODB_URI and
+# PIKAFISH_PATH point at container paths instead of host ones. node_modules and the pnpm store
+# live in named volumes, so the container's install never touches the host's node_modules.
+#
+# Pikafish: set PIKAFISH_DIR in .env to the host folder holding the binary and pikafish.nnue
+# (mounted read-only at /opt/pikafish), and PIKAFISH_BIN if the binary isn't named `pikafish`.
+# Without PIKAFISH_DIR an empty volume is mounted instead and Play falls back to negamax.
+#
+# Run lint, typecheck, and tests on the host, not via `docker compose exec`: the server
+# container's MONGODB_URI would make unit tests that build the app talk to the real database.
+
+name: jade-court-dev
+
+x-node: &node
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+  image: jade-court-dev
+  init: true
+  volumes:
+    - .:/app
+    - root-node-modules:/app/node_modules
+    - web-node-modules:/app/apps/web/node_modules
+    - server-node-modules:/app/apps/server/node_modules
+    - engine-node-modules:/app/packages/xiangqi-engine/node_modules
+    - pnpm-store:/home/node/.local/share/pnpm/store
+    - ${PIKAFISH_DIR:-pikafish-none}:/opt/pikafish:ro
+
+services:
+  mongo:
+    image: mongo:8
+    ports:
+      - '127.0.0.1:${JADE_DEV_MONGO_PORT:-27018}:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot: install dependencies and build the engine so server and web start from a ready
+  # tree. Re-runs on every `up`, which is quick when the lockfile hasn't changed.
+  deps:
+    <<: *node
+    environment:
+      # Non-interactive pnpm: lets it recreate node_modules without a TTY prompt if needed.
+      CI: 'true'
+    command:
+      - bash
+      - -lc
+      - pnpm install --frozen-lockfile && pnpm --filter @jade-court/xiangqi-engine build
+
+  server:
+    <<: *node
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3001:3001'
+    environment:
+      PORT: '3001'
+      MONGODB_URI: mongodb://mongo:27017
+      PIKAFISH_PATH: /opt/pikafish/${PIKAFISH_BIN:-pikafish}
+    # The engine's tsc --watch runs here too, so engine edits rebuild dist/ for server and web.
+    command:
+      - pnpm
+      - --parallel
+      - --filter
+      - '@jade-court/xiangqi-engine'
+      - --filter
+      - '@jade-court/server'
+      - run
+      - dev
+
+  web:
+    <<: *node
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      server:
+        condition: service_started
+    ports:
+      - '127.0.0.1:5173:5173'
+    environment:
+      JADE_API_PROXY_TARGET: http://server:3001
+    command: ['pnpm', '--filter', '@jade-court/web', 'dev', '--host', '0.0.0.0']
+
+volumes:
+  mongo-data:
+  root-node-modules:
+  web-node-modules:
+  server-node-modules:
+  engine-node-modules:
+  pnpm-store:
+  # Empty stand-in mounted at /opt/pikafish when PIKAFISH_DIR is unset.
+  pikafish-none:

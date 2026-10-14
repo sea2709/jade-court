@@ -5,6 +5,8 @@
     "dev": "pnpm -r --parallel run dev",
     "dev:web": "pnpm --filter @jade-court/web dev",
     "dev:server": "pnpm --filter @jade-court/server dev",
+    "dev:docker": "docker compose -f docker-compose.dev.yml up --build",
+    "dev:docker:down": "docker compose -f docker-compose.dev.yml down",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "test:coverage": "pnpm -r run test:coverage",

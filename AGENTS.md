@@ -38,17 +38,19 @@ Full human + agent steps: [.cursor/docs/github-workflow.md](.cursor/docs/github-
 
 Run from the repo root:
 
-| Command                             | Purpose                                               |
-| ----------------------------------- | ----------------------------------------------------- |
-| `pnpm install`                      | Install all workspace dependencies                    |
-| `pnpm build`                        | Build engine, web, and server                         |
-| `pnpm test`                         | Vitest unit tests in engine, server, and web          |
-| `pnpm test:coverage`                | Vitest + v8 coverage; fails below thresholds (CI)     |
-| `pnpm test:e2e`                     | Playwright E2E (own server :3101 + Vite :5199)        |
-| `pnpm dev`                          | Web (:5173) + server (:3001) in parallel              |
-| `pnpm typecheck`                    | Typecheck all packages                                |
-| `pnpm lint` / `pnpm lint:fix`       | ESLint (`eslint.config.mjs`); any warning fails       |
-| `pnpm format` / `pnpm format:check` | Prettier (`.prettierrc.json`); CI runs `format:check` |
+| Command                             | Purpose                                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| `pnpm install`                      | Install all workspace dependencies                      |
+| `pnpm build`                        | Build engine, web, and server                           |
+| `pnpm test`                         | Vitest unit tests in engine, server, and web            |
+| `pnpm test:coverage`                | Vitest + v8 coverage; fails below thresholds (CI)       |
+| `pnpm test:e2e`                     | Playwright E2E (own server :3101 + Vite :5199)          |
+| `pnpm dev:docker`                   | Default: Mongo + server (:3001) + web (:5173) in Docker |
+| `pnpm dev:docker:down`              | Stop the Docker dev stack (volumes kept)                |
+| `pnpm dev`                          | Web (:5173) + server (:3001) on the host, no Docker     |
+| `pnpm typecheck`                    | Typecheck all packages                                  |
+| `pnpm lint` / `pnpm lint:fix`       | ESLint (`eslint.config.mjs`); any warning fails         |
+| `pnpm format` / `pnpm format:check` | Prettier (`.prettierrc.json`); CI runs `format:check`   |
 
 Build the engine before first dev run if needed: `pnpm build`.
 
@@ -81,7 +83,8 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 - **Web** reads `VITE_*` only (exposed in the browser if set).
 - **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `PORT`, `MONGODB_URI`, etc. **without** a `VITE_` prefix.
 - **LLM:** set `LLM_PROVIDER` (`gemini` \| `openai` \| `anthropic`) and the matching API key; server log shows `LLM: enabled (provider / model)`. Optional `LLM_HISTORY_LIMIT` (default `150`) caps opponent prompt history. Use `PLAY_OPPONENT_PROVIDER=llm` for Play vs Computer with the same backend.
-- Restart `pnpm dev` after editing `.env`.
+- Restart `pnpm dev` (or `pnpm dev:docker`) after editing `.env`.
+- **Docker dev stack** (`docker-compose.dev.yml`): the server container overrides `MONGODB_URI` (its own `mongo` service) and `PIKAFISH_PATH` (`PIKAFISH_DIR` from `.env` is mounted at `/opt/pikafish`). Run lint, typecheck, and tests on the host, not inside the containers.
 
 ## Conventions (summary)
 

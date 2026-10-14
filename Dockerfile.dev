@@ -1,0 +1,28 @@
+# Dev image for the containerized Jade Court stack (docker-compose.dev.yml).
+#
+# Holds only Node, pnpm, and Pikafish's runtime libraries: the repo is bind-mounted at /app and
+# dependencies live in named volumes, so nothing from the checkout is baked into the image.
+FROM node:22-bookworm-slim
+
+# libatomic1: Pikafish links against it and bookworm-slim doesn't ship it.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libatomic1 \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable \
+ && mkdir -p /app/node_modules /app/apps/web/node_modules /app/apps/server/node_modules \
+      /app/packages/xiangqi-engine/node_modules /opt/pikafish \
+ && chown -R node:node /app
+
+# An explicit pnpm store keeps pnpm from creating /app/.pnpm-store when the default store sits
+# on a different filesystem than node_modules (which live in named volumes).
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    npm_config_store_dir=/home/node/.local/share/pnpm/store
+
+# Runs as `node` (uid 1000) so files written into the bind-mounted checkout stay owned by the
+# host user. Mount points are pre-created above so named volumes start out owned by `node`.
+USER node
+RUN mkdir -p /home/node/.local/share/pnpm/store \
+ && corepack install -g pnpm@9.15.4
+WORKDIR /app
+
+CMD ["bash"]

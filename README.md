@@ -59,6 +59,17 @@ Or create the remote with `gh repo create` — see the full checklist in [.curso
 
 ## Quick start
 
+Run the app in Docker (the default way to start the server) — MongoDB, the Hono server, and Vite, all from your checkout with hot reload:
+
+```bash
+pnpm dev:docker       # docker compose -f docker-compose.dev.yml up --build
+pnpm dev:docker:down  # stop the containers (Mongo data and node_modules volumes are kept)
+```
+
+The server container always uses the bundled MongoDB (`mongodb://mongo:27017`, reachable from the host at `mongodb://localhost:27018`). To use Pikafish, set `PIKAFISH_DIR` in `.env` to the host folder holding the binary and `pikafish.nnue`. See the header of [`docker-compose.dev.yml`](docker-compose.dev.yml) for details. Keep running `pnpm lint`, `pnpm test`, etc. on the host; those need `pnpm install` on the host too.
+
+Without Docker:
+
 ```bash
 pnpm install
 pnpm build          # builds xiangqi-engine (required before first dev run)
@@ -128,7 +139,7 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 | `LLM_TIMEOUT_MS`                                          | `25000`              | Max wait for an LLM response                                                                           |
 | `LLM_HISTORY_LIMIT`                                       | `150`                | Max plies in opponent “Recent history” prompt                                                          |
 | `LLM_LOG_TOKENS`                                          | _(dev default)_      | `1` = log token usage; `0` = suppress                                                                  |
-| `MONGODB_URI`                                             | _(unset)_            | Optional MongoDB Atlas URI for finished-game persistence                                               |
+| `MONGODB_URI`                                             | _(unset)_            | Optional MongoDB URI for finished-game persistence; `pnpm dev:docker` sets it to its own container     |
 | `MONGODB_DB`                                              | `jade_court`         | Database name when Mongo is enabled                                                                    |
 
 **Web** (`VITE_*` only)
