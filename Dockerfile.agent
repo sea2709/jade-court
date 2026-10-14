@@ -8,8 +8,18 @@
 # for `pnpm test:e2e`.
 FROM mcr.microsoft.com/playwright:v1.64.0-noble
 
+# gh comes from GitHub's apt repo, not Ubuntu's: Ubuntu's 2.45 still queries Projects (classic)
+# fields that GitHub removed, so `gh issue view` and `gh pr edit` abort.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends gh git ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates curl git \
+ && install -d -m 755 /etc/apt/keyrings \
+ && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+ && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends gh \
  && rm -rf /var/lib/apt/lists/* \
  && corepack enable \
  && npm install -g opencode-ai \
