@@ -191,5 +191,235 @@ describe('useXiangqiGame: vs computer', () => {
     expect(result.current.board).toEqual(X.initialBoard());
     expect(result.current.turn).toBe('r');
     expect(result.current.lastOpponentMoveText).toBeNull();
+    expect(result.current.redoCount).toBe(2);
+  });
+});
+
+describe('useXiangqiGame: redo', () => {
+  const aiConfig: GameConfig = {
+    aiSide: 'b',
+    aiProvider: 'server',
+    difficulty: 'beginner',
+    aiThinkDelayMs: 0,
+    revealOpponentMoveMs: 0,
+  };
+  /**
+   * Play one human+computer pair, then wait for the FULL pair to land in
+   * history. `history.length > before` resolves as soon as the human move
+   * lands (length 1 > 0), so we explicitly wait for `targetLength` so tests
+   * can capture board/turn/history without racing the opponent fetch.
+   */
+  async function playComputerRound(
+    result: ReturnType<typeof setup>['result'],
+    targetLength: number,
+    reply: { from: [number, number]; to: [number, number] } = { from: [0, 1], to: [2, 2] },
+  ) {
+    const before = result.current.history.length;
+    fetchMock.mockResolvedValue(json({ move: reply, source: 'engine' }));
+    playCentralCannon(result);
+    await waitFor(() => expect(result.current.history.length).toBe(targetLength));
+    // Sanity check: the player move plus the awaited AI reply are both in.
+    expect(result.current.history.length).toBe(before + 2);
+  }
+
+  it('UNDO pushes the removed plies onto the redo stack', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+
+    expect(result.current.redoCount).toBe(0);
+    playCentralCannon(result);
+    await waitFor(() => expect(result.current.history).toHaveLength(2));
+    expect(result.current.redoCount).toBe(0);
+
+    act(() => result.current.undoLast(2));
+    expect(result.current.redoCount).toBe(2);
+  });
+
+  it('REDO restores board, turn, lastMove, status, and move count exactly', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+    playCentralCannon(result);
+    await waitFor(() => expect(result.current.history).toHaveLength(2));
+
+    const beforeBoard = X.cloneBoard(result.current.board) as ReturnType<typeof X.cloneBoard>;
+    const beforeTurn = result.current.turn;
+    const beforeLastMove = result.current.lastMove;
+    const beforeStatus = result.current.status;
+    const beforeComputerLastMove = result.current.computerLastMove;
+    const beforeOpponentText = result.current.lastOpponentMoveText;
+
+    act(() => result.current.undoLast(2));
+    expect(result.current.redoCount).toBe(2);
+
+    act(() => result.current.redoLast(2));
+    expect(result.current.board).toEqual(beforeBoard);
+    expect(result.current.turn).toBe(beforeTurn);
+    expect(result.current.lastMove).toEqual(beforeLastMove);
+    expect(result.current.status).toBe(beforeStatus);
+    expect(result.current.computerLastMove).toEqual(beforeComputerLastMove);
+    expect(result.current.lastOpponentMoveText).toBe(beforeOpponentText);
+    expect(result.current.history).toHaveLength(2);
+    expect(result.current.redoCount).toBe(0);
+  });
+
+  it('round-trips N× undoLast(2) then N× redoLast(2) back to the original position', async () => {
+    const { result } = setup(aiConfig);
+
+    // Two human+computer pairs total (4 plies). Different human moves so we
+    // actually reach the second pair (the cannon target square would be
+    // empty otherwise).
+    await playComputerRound(result, 2);
+    fetchMock.mockResolvedValue(json({ move: { from: [2, 1], to: [3, 1] }, source: 'engine' }));
+    act(() => result.current.onPoint(9, 1));
+    act(() => result.current.onPoint(7, 2));
+    await waitFor(() => expect(result.current.history).toHaveLength(4));
+    expect(result.current.history).toHaveLength(4);
+
+    const original = {
+      board: X.cloneBoard(result.current.board) as ReturnType<typeof X.cloneBoard>,
+      turn: result.current.turn,
+      history: [...result.current.history],
+    };
+
+    // Two consecutive undos.
+    act(() => result.current.undoLast(2));
+    act(() => result.current.undoLast(2));
+    expect(result.current.history).toHaveLength(0);
+    expect(result.current.turn).toBe('r');
+    expect(result.current.redoCount).toBe(4);
+
+    // Two consecutive redos replay the most recent batch first.
+    act(() => result.current.redoLast(2));
+    act(() => result.current.redoLast(2));
+    expect(result.current.board).toEqual(original.board);
+    expect(result.current.turn).toBe(original.turn);
+    expect(result.current.history).toHaveLength(4);
+    expect(result.current.redoCount).toBe(0);
+  });
+
+  it('a new human move after take-back clears the redo stack', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+    await playComputerRound(result, 2);
+
+    act(() => result.current.undoLast(2));
+    expect(result.current.redoCount).toBe(2);
+
+    // Any new human move after a take-back branches the line: the previously
+    // restored plies are no longer reachable, so the stack must reset.
+    await playComputerRound(result, 2);
+    expect(result.current.redoCount).toBe(0);
+  });
+
+  it('RESET clears the redo stack', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+    await playComputerRound(result, 2);
+    act(() => result.current.undoLast(2));
+    expect(result.current.redoCount).toBe(2);
+
+    act(() => result.current.reset());
+    expect(result.current.redoCount).toBe(0);
+    expect(result.current.history).toHaveLength(0);
+    expect(result.current.board).toEqual(X.initialBoard());
+  });
+
+  it('REDO makes zero opponent API calls and replays the original reply verbatim', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+    await playComputerRound(result, 2);
+    const callsAfterFirstReply = fetchMock.mock.calls.length;
+    const originalComputerReply = result.current.history[1]!;
+
+    act(() => result.current.undoLast(2));
+    expect(result.current.lastOpponentMoveText).toBeNull();
+
+    act(() => result.current.redoLast(2));
+    // No new opponent fetch was issued by the redo.
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirstReply);
+    // The restored computer reply equals the original one (same from/to/side).
+    expect(result.current.history[1]!.move.from).toEqual(originalComputerReply.move.from);
+    expect(result.current.history[1]!.move.to).toEqual(originalComputerReply.move.to);
+    expect(result.current.history[1]!.side).toBe(originalComputerReply.side);
+    // And the "Computer's last move" card text is restored.
+    expect(result.current.lastOpponentMoveText).toBe('Horse advances.');
+    // After redo, it is the human's turn — the opponent effect must not fire.
+    expect(result.current.turn).toBe('r');
+    expect(result.current.aiThinking).toBe(false);
+  });
+
+  it('REDO is a safe no-op when fewer plies are stacked than requested', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+    await playComputerRound(result, 2);
+
+    // Capture the post-pair state (the position REDO will restore).
+    const targetBoard = X.cloneBoard(result.current.board) as ReturnType<typeof X.cloneBoard>;
+    const targetTurn = result.current.turn;
+
+    act(() => result.current.undoLast(2));
+    expect(result.current.redoCount).toBe(2);
+
+    // Ask for more plies than are on the stack — should clamp and replay what we have.
+    act(() => result.current.redoLast(5));
+    expect(result.current.history).toHaveLength(2);
+    expect(result.current.redoCount).toBe(0);
+    expect(result.current.board).toEqual(targetBoard);
+    expect(result.current.turn).toBe(targetTurn);
+  });
+
+  it('REDOs ZERO plies when the stack is empty (safe no-op)', async () => {
+    const { result } = setup(aiConfig);
+    expect(result.current.redoCount).toBe(0);
+    fetchMock.mockClear();
+    act(() => result.current.redoLast(2));
+    expect(result.current.history).toHaveLength(0);
+    expect(result.current.redoCount).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('discards in-flight opponent requests when UNDO is called mid-fetch', async () => {
+    let resolveOpponent: (resp: Response) => void = () => {};
+    fetchMock.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveOpponent = resolve;
+      }),
+    );
+    const { result } = setup(aiConfig);
+    playCentralCannon(result); /* opponent fetch is now pending (deferred). */
+
+    // Take back while the opponent's first reply is still in flight.
+    act(() => result.current.undoLast(2));
+    expect(result.current.history).toHaveLength(0);
+    expect(result.current.turn).toBe('r');
+
+    // Late delivery of the opponent's original reply must NOT be applied —
+    // the cancelled-cleanup in the opponent effect short-circuits it.
+    await act(async () => {
+      resolveOpponent(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    });
+    expect(result.current.history).toHaveLength(0);
+    expect(result.current.board[7][4]).toBeNull(); /* human cannon still at [7,1] */
+    expect(result.current.board[7][1]).toEqual({ t: 'C', s: 'r' });
+    expect(result.current.turn).toBe('r');
+  });
+
+  it('does not let the opponent effect fire when REDO leaves turn on the human', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'engine' }));
+    const { result } = setup(aiConfig);
+    await playComputerRound(result, 2);
+    const callsBeforeUndo = fetchMock.mock.calls.length;
+
+    act(() => result.current.undoLast(2));
+    act(() => result.current.redoLast(2));
+
+    // Give a microtask flush: if the opponent effect had fired it would have
+    // incremented fetchMock (one synchronous poll is enough; the fetch is
+    // mocked to resolve immediately).
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.length).toBe(callsBeforeUndo);
+    });
+    expect(result.current.turn).toBe('r');
+    expect(result.current.aiThinking).toBe(false);
   });
 });
