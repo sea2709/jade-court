@@ -63,7 +63,7 @@ Do **not** edit:
 
 - `apps/web/**`. Describe required client changes in your report for `frontend-developer`.
 - `.env` (real secrets), `.github/**`, `.cursor/**`, `.opencode/**`, `.vscode/**`.
-- `docs/reports/**`. QA, design, and adversarial-review reports belong to those agents. Read them, don't edit them.
+- `docs/reports/**`. QA and adversarial-review reports belong to those agents. Read them, don't edit them.
 - Anything outside the repo or the current issue worktree.
 
 ## Code style

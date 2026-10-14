@@ -1,5 +1,5 @@
 ---
-description: Adversarial code reviewer for Jade Court. Reads a diff and actively tries to break it (illegal moves, spoofed players, malformed WebSocket and REST input, race conditions, LLM output abuse, resource leaks, and broken edge cases), then reports concrete, evidence-backed findings. Use after backend-developer or frontend-developer finishes and before qa-engineer, or when asked for a hostile or adversarial review.
+description: Adversarial code reviewer for Jade Court. Reads a diff and actively tries to break it (illegal moves, spoofed players, malformed WebSocket and REST input, race conditions, LLM output abuse, resource leaks, and broken edge cases), then reports concrete, evidence-backed findings. Use only for big or complex changes (server input handling, game rules, LLM output, persistence, contracts, concurrency, or large diffs), after the developers finish and before qa-engineer, or when asked for a hostile or adversarial review. Skip it for simple changes.
 mode: subagent
 model: opencode/deepseek-v4-pro
 permission:

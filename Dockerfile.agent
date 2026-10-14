@@ -29,6 +29,13 @@ USER pwuser
 # Pre-create volume mount points so named volumes are owned by pwuser, not root.
 RUN mkdir -p /home/pwuser/work /home/pwuser/.local/share/opencode \
  && corepack install -g pnpm@9.15.4
+
+# Turn on YOLO in .bashrc, not the compose command: shells opened with `docker exec` don't
+# inherit the command's environment, so opencode started there would silently run without it.
+RUN printf '%s\n' '' \
+      'if [ "$JADE_AGENT_YOLO" = true ]; then' \
+      '  export OPENCODE_CONFIG=/opt/jade-agent/opencode.yolo.json' \
+      'fi' >> /home/pwuser/.bashrc
 WORKDIR /home/pwuser/work
 
 CMD ["bash"]

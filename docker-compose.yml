@@ -10,7 +10,8 @@
 #
 # Both secrets are plain env vars inside the container, so agents can read them.
 #
-# JADE_AGENT_YOLO=true loads opencode.yolo.json (mounted read-only) via OPENCODE_CONFIG: every
+# JADE_AGENT_YOLO=true loads opencode.yolo.json (mounted read-only) via OPENCODE_CONFIG, which
+# the image's ~/.bashrc sets in every interactive shell, including `docker exec` ones: every
 # permission that isn't explicitly denied is auto-approved, like `opencode --auto`. Deny and ask
 # rules in .opencode/agents/*.md still apply, and .env files stay unreadable. opencode never
 # loads opencode.yolo.json on its own, so the host is unaffected. Edit the file to tune it.
@@ -71,7 +72,6 @@ services:
         fi
         cd jade-court
         if [ "$${JADE_AGENT_YOLO}" = true ]; then
-          export OPENCODE_CONFIG=/opt/jade-agent/opencode.yolo.json
           echo "opencode YOLO mode: ON (auto-approves everything not explicitly denied)"
         fi
         exec bash

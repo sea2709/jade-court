@@ -48,7 +48,7 @@ Do **not** edit:
 
 - `apps/server/**` — describe the required API/WebSocket contract in your report for `backend-developer`.
 - `.env` (real secrets), `.github/**`, `.cursor/**` (plans, rules, agents, skills), `.vscode/**`.
-- `docs/reports/**` — QA, design, and adversarial-review reports belong to those agents; read them, don't edit them.
+- `docs/reports/**` — QA and adversarial-review reports belong to those agents; read them, don't edit them.
 - Anything outside the repo or current issue worktree.
 
 ## Code style
@@ -63,7 +63,7 @@ Do **not** edit:
 
 - When working on a GitHub issue, work inside the issue worktree created by `./scripts/issue-worktree.sh <n>` — never on `main` in the primary checkout. Use the Vite `--port` the script prints if running a parallel dev server.
 - If you change `packages/xiangqi-engine`, build it first: `pnpm --filter @jade-court/xiangqi-engine build`.
-- If you are given a design spec from `ui-ux-designer` (usually `docs/reports/design/<folder>/spec.md`), implement it as specified (layout, states, copy, tokens, accessibility). If something in it is infeasible or conflicts with existing code, choose the closest option and list the deviation in your report.
+- If the handoff includes UI notes (layout, states, copy), implement them within the fixed Jade Court look. If something is infeasible or conflicts with existing code, choose the closest option and list the deviation in your report.
 - If a change needs a new or different API/WebSocket contract, describe it clearly in your report instead of editing `apps/server` yourself.
 - **You own the CI checks.** Before reporting done, run the same checks as `.github/workflows/ci.yml` from the repo root (or worktree root) and fix every failure:
   1. `pnpm lint`
