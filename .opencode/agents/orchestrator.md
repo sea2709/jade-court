@@ -65,7 +65,7 @@ Track each phase with a checklist and do not move on until its gate passes.
 - Write acceptance criteria as a numbered list. Mark each criterion as backend, frontend, or engine.
 - If the scope is ambiguous, ask the user. Don't guess.
 
-### Phase 1: Setup and plan (gate: user approves the plan)
+### Phase 1: Setup and plan (gate: plan is complete; user approval only at a decision checkpoint)
 
 - Run `./scripts/issue-worktree.sh <n> <slug>` and note the printed worktree path and dev ports. Every subagent works in that path.
 - Choose one report folder name for the whole issue: `<YYYY-MM-DD>-issue-<n>-<slug>`. Every review and QA pass uses it so re-runs update the same report.
@@ -73,7 +73,19 @@ Track each phase with a checklist and do not move on until its gate passes.
 - If both sides are involved, write the contract before delegating: REST endpoints (method, path, request and response JSON, error codes) and WebSocket messages (`type` and fields, both directions).
 - For visible UI changes, describe the expected layout, states, and copy in the plan, following the Jade Court look in `.cursor/rules/jade-court.mdc`.
 - Classify the issue as **simple** or **complex** (see [Simple or complex](#simple-or-complex)) and give the reason. Only complex issues get an adversarial review.
-- Show the user the plan, the contract, and the classification. Wait for approval.
+- Post the plan, the contract, and the classification to the user, then go straight to Phase 2. Don't wait for approval unless a [decision checkpoint](#decision-checkpoints) applies.
+
+#### Decision checkpoints
+
+Stop and ask the user before delegating only when the plan depends on a decision you can't settle from the issue, the code, or the repo conventions:
+
+- The issue allows two or more reasonable readings that lead to visibly different behavior or UI.
+- The plan reaches beyond the issue: changing behavior the issue doesn't mention, removing a feature, or a refactor outside the touched code.
+- It breaks an existing REST or WebSocket contract, or changes the shape of persisted data.
+- It adds a dependency or a new env var or secret, or changes CI, lint rules, or coverage thresholds.
+- It departs from the Jade Court look, or needs product copy or UX choices the issue leaves open.
+
+Ask only about the checkpoint itself, with options and your recommendation. Everything else in the plan stands without approval.
 
 ### Phase 2: Implement (gate: developers report CI green)
 
