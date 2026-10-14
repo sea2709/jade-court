@@ -9,6 +9,10 @@
 # or leave it empty and run `NO_OPEN_BROWSER=1 agent login` once, opening the printed URL on the
 # host. Login credentials (cursor-auth) and CLI config/chats (cursor-config) persist in volumes.
 #
+# Cursor CLI model: `agent` starts on JADE_AGENT_CURSOR_MODEL (default composer-2.5, set via a
+# ~/.bashrc alias). Override per run with `agent --model <id>`, or set it empty in .env.agent to
+# use the CLI's saved model (Auto). `agent --list-models` shows the ids.
+#
 # --service-ports publishes the app to http://localhost:15173 (web) and :13001 (server) so you
 # can watch it; override with JADE_AGENT_WEB_PORT / JADE_AGENT_SERVER_PORT, or drop the flag
 # if you don't need to reach the app from the host. Agents use localhost inside the container.
@@ -74,6 +78,8 @@ services:
       # picks a Go model as the default/title model and requests fail. Remove if you have Go.
       OPENCODE_CONFIG_CONTENT: '{"disabled_providers":["opencode-go"]}'
       CURSOR_API_KEY: ${JADE_AGENT_CURSOR_API_KEY:-}
+      # `-`, not `:-`: an empty JADE_AGENT_CURSOR_MODEL drops the --model default (back to Auto).
+      JADE_AGENT_CURSOR_MODEL: ${JADE_AGENT_CURSOR_MODEL-composer-2.5}
       JADE_AGENT_YOLO: ${JADE_AGENT_YOLO:-false}
       GIT_AUTHOR_NAME: ${JADE_AGENT_GIT_NAME:-Jade Court Agent}
       GIT_AUTHOR_EMAIL: ${JADE_AGENT_GIT_EMAIL:-jade-court-agent@users.noreply.github.com}

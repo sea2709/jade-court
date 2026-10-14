@@ -47,13 +47,20 @@ ENV PATH=/home/pwuser/.local/bin:$PATH
 # Turn on YOLO in .bashrc, not the compose command: shells opened with `docker exec` don't
 # inherit the command's environment, so opencode started there would silently run without it.
 # An empty CURSOR_API_KEY is unset so the Cursor CLI falls back to `agent login` credentials.
+# The Cursor CLI has no env var for its default model and ~/.cursor is a volume, so the
+# JADE_AGENT_CURSOR_MODEL default is passed as --model; a later --model on the command line wins.
 RUN printf '%s\n' '' \
       '[ -z "$CURSOR_API_KEY" ] && unset CURSOR_API_KEY' \
+      'cursor_flags=' \
       'if [ "$JADE_AGENT_YOLO" = true ]; then' \
       '  export OPENCODE_CONFIG=/opt/jade-agent/opencode.yolo.json' \
-      "  alias agent='agent --force'" \
-      "  alias cursor-agent='cursor-agent --force'" \
-      'fi' >> /home/pwuser/.bashrc
+      '  cursor_flags=" --force"' \
+      'fi' \
+      '[ -n "$JADE_AGENT_CURSOR_MODEL" ] && cursor_flags="$cursor_flags --model \"$JADE_AGENT_CURSOR_MODEL\""' \
+      'if [ -n "$cursor_flags" ]; then' \
+      '  alias agent="agent$cursor_flags" cursor-agent="cursor-agent$cursor_flags"' \
+      'fi' \
+      'unset cursor_flags' >> /home/pwuser/.bashrc
 WORKDIR /home/pwuser/work
 
 CMD ["bash"]
