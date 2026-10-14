@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { X } from '@jade-court/xiangqi-engine';
 import { CoachAvatar } from '../components/CoachAvatar';
-import { XQBoard } from '../components/XQBoard';
+import { HomeDemoBoard } from '../components/HomeDemoBoard';
 
 function ModeCard({
   tag,
@@ -90,7 +89,7 @@ export function HomeScreen() {
           </div>
         </div>
         <div className="pop grid place-items-center">
-          <XQBoard board={X.initialBoard()} cell={42} interactive={false} />
+          <HomeDemoBoard />
         </div>
       </div>
 

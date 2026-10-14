@@ -1,7 +1,8 @@
 import { X } from '@jade-court/xiangqi-engine';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useXiangqiGame, type GameConfig } from './useXiangqiGame';
+import { buildStateFromInitialMoves, useXiangqiGame, type GameConfig } from './useXiangqiGame';
+import checkmateFixture from '../test/fixtures/home-demo-checkmate.json';
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -101,6 +102,55 @@ describe('useXiangqiGame: two-player (no AI)', () => {
     act(() => result.current.reset());
     expect(result.current.history).toEqual([]);
     expect(result.current.board).toEqual(X.initialBoard());
+  });
+
+  it('replays valid initialMoves with turn, lastMove, and status', () => {
+    const initialMoves: { from: [number, number]; to: [number, number] }[] = [
+      { from: [7, 1], to: [7, 4] },
+      { from: [0, 1], to: [2, 2] },
+    ];
+    const { result } = setup({ initialMoves });
+    expect(result.current.initialMovesRejected).toBe(false);
+    expect(result.current.turn).toBe('r');
+    expect(result.current.lastMove).toEqual({ from: [0, 1], to: [2, 2] });
+    expect(result.current.history).toHaveLength(2);
+    expect(result.current.status).toBeNull();
+  });
+
+  it('rejects illegal initialMoves and starts fresh', () => {
+    const { result } = setup({ initialMoves: [{ from: [7, 1], to: [0, 0] }] });
+    expect(result.current.initialMovesRejected).toBe(true);
+    expect(result.current.board).toEqual(X.initialBoard());
+    expect(result.current.history).toHaveLength(0);
+  });
+
+  it('starts from the initial position when initialMoves is an empty array', () => {
+    const { result } = setup({ initialMoves: [] });
+    expect(result.current.initialMovesRejected).toBe(false);
+    expect(result.current.board).toEqual(X.initialBoard());
+  });
+
+  it('rejects a move after the game is already over', () => {
+    const finished = buildStateFromInitialMoves(
+      checkmateFixture as { from: [number, number]; to: [number, number] }[],
+    );
+    expect(finished.rejected).toBe(false);
+    expect(finished.state.status).toBe('checkmate');
+    const extra: { from: [number, number]; to: [number, number] }[] = [
+      ...(checkmateFixture as { from: [number, number]; to: [number, number] }[]),
+      { from: [0, 0], to: [1, 0] },
+    ];
+    const { result } = setup({ initialMoves: extra });
+    expect(result.current.initialMovesRejected).toBe(true);
+  });
+
+  it('replays a saved checkmate line from the start position', () => {
+    const { result } = setup({
+      initialMoves: checkmateFixture as { from: [number, number]; to: [number, number] }[],
+    });
+    expect(result.current.initialMovesRejected).toBe(false);
+    expect(result.current.status).toBe('checkmate');
+    expect(result.current.turn).toBe('b');
   });
 
   it('showHint returns an engine move and highlights it', () => {

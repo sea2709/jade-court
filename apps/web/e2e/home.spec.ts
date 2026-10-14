@@ -33,6 +33,38 @@ test.describe('home and navigation', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test('hero demo board is playable and persists across reload', async ({ page }) => {
+    await page.goto('/');
+    const board = page.locator('[data-testid="home-demo-board"] [data-testid="board"]');
+    await expect(page.getByTestId('home-demo-turn')).toHaveText('Red 帥 to move');
+    await expect(page.getByTestId('home-demo-restart')).toBeDisabled();
+
+    await board.locator('[data-square="7-1"]').click();
+    await expect(board.locator('[data-square="7-1"]')).toHaveClass(/selected/);
+    await expect(board.locator('.point').first()).toBeVisible();
+
+    await board.locator('[data-square="7-4"]').click();
+    await expect(page.getByTestId('home-demo-turn')).toHaveText('Black 將 to move');
+    await expect(page.getByTestId('home-demo-restart')).toBeEnabled();
+
+    await board.locator('[data-square="0-1"]').click();
+    await board.locator('[data-square="2-2"]').click();
+    await expect(page.getByTestId('home-demo-turn')).toHaveText('Red 帥 to move');
+
+    const saved = await page.evaluate(() => localStorage.getItem('jade-court-home-demo'));
+    expect(saved).toContain('"v":1');
+
+    await page.reload();
+    await expect(page.getByTestId('home-demo-turn')).toHaveText('Red 帥 to move');
+    await expect(board.locator('[data-square="7-4"]')).toContainText('炮');
+    await expect(board.locator('[data-square="2-2"]')).toContainText('馬');
+
+    await page.getByTestId('home-demo-restart').click();
+    await expect(page.getByTestId('home-demo-restart')).toBeDisabled();
+    const cleared = await page.evaluate(() => localStorage.getItem('jade-court-home-demo'));
+    expect(cleared).toBeNull();
+  });
+
   test('home call-to-action buttons open Learn and Play', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Start learning →' }).click();
