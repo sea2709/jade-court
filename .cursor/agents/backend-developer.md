@@ -82,4 +82,4 @@ Do **not** edit:
 
 ## Report back
 
-Summarize: what changed (files and endpoints/messages), any new env vars, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail), other verification done, and anything left open or risky (e.g. API contract changes the web client must follow in `apps/web`).
+Summarize: what changed (files and endpoints/messages), any new env vars, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), other verification done, and anything left open or risky (e.g. API contract changes the web client must follow in `apps/web`).

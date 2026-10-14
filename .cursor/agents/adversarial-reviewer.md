@@ -72,7 +72,7 @@ Save every review so it can be read later and linked from the PR.
 - **Folder:** `docs/reports/adversarial-review/<YYYY-MM-DD>-<slug>/`. For issue work use `issue-<n>-<short-slug>` as the slug and write inside the issue worktree so the report ships with the PR.
 - **Files:** `report.md` (the **Report back** content below) and, when useful, `screenshots/*.png` (e.g. a runtime repro of a finding).
 - **Screenshots:** call `browser_take_screenshot` with `filename` set to the absolute path `<worktree>/docs/reports/adversarial-review/<folder>/screenshots/<NN>-<what>.png`; if it is saved elsewhere, copy it into `screenshots/`. Embed with relative links, e.g. `![move_rejected not handled](screenshots/01-move-rejected.png)`.
-- **Re-reviews** of the same change update the existing `report.md` with a dated `## Re-review YYYY-MM-DD` section instead of a new folder.
+- **Re-reviews** of the same change update the existing `report.md` with a dated `## Re-review YYYY-MM-DD` section instead of a new folder. Scope them to the fix diff: confirm whether each open finding is resolved and attack the new code, without repeating the full review.
 - Your final message returns the verdict, a short findings summary, and the report path.
 
 ## Report back

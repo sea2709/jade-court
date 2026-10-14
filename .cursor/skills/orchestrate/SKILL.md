@@ -4,8 +4,9 @@ description: >-
   Orchestrates Jade Court feature and issue work across the backend-developer,
   frontend-developer, adversarial-reviewer, and qa-engineer subagents: plans the
   split, agrees the API/WebSocket contract, delegates implementation, runs a
-  hostile review and QA, and loops findings back to the right developer. Use as a Custom Mode when implementing an
-  issue or a multi-part feature end to end.
+  hostile review (complex tasks only) and QA, and loops findings back to the
+  right developer. Use as a Custom Mode when implementing an issue or a
+  multi-part feature end to end.
 disable-model-invocation: true
 ---
 
@@ -67,27 +68,33 @@ Track progress with this checklist:
 
 ### 5. Adversarial review (complex tasks only)
 
-Only start once the developers report CI green. For a simple task, check `git diff --stat` in the worktree first: if the change turned out to hit a complex trigger, reclassify it, tell the user why, and run the review. Otherwise skip to step 6.
+Only start once the developers report CI green. For a simple task, check the change against [Simple or complex](#simple-or-complex) first: `git status` to list changed and new files, `git diff --stat` for size, then read `git diff` and every new untracked file. If it hits a complex trigger, reclassify it, tell the user why, and run the review. Otherwise skip to step 6.
 
-- Send `adversarial-reviewer` the worktree path, report folder (`docs/reports/adversarial-review/<folder>/`), acceptance criteria, contract, and both developer reports.
-- When it returns, **read `report.md`** from that folder and confirm it exists and matches the returned verdict. If it is missing, resume the reviewer to write it before continuing.
-- **Blocker / major findings:** resume the owning developer (by agent ID) with the report path plus each finding's location, attack, and suggested fix. Then re-run the reviewer on the updated diff; it adds a `## Re-review` section to the same report.
+If the user explicitly asks to skip the review, skip it (including the step 7 re-reviews) and list that as an open item in the hand-back.
+
+- Send `adversarial-reviewer` the worktree path, report folder (`docs/reports/adversarial-review/<folder>/`), acceptance criteria, contract, and the paths to both developer reports (don't paste their contents).
+- When it returns, **read `report.md`** from that folder and confirm it exists and matches the returned verdict. If it is missing, resume the reviewer to write it before continuing. On later rounds, read only the newest `## Re-review` section.
+- **Blocker / major findings:** resume each owning developer once (by agent ID) with the report path plus all of its findings' locations, attacks, and suggested fixes. Then **resume** the reviewer (by agent ID) to re-review only the fix diff against its open findings; it adds a `## Re-review` section to the same report.
 - Keep the reviewer's **QA hints** for step 6.
 - **Minor findings and nits:** don't loop on them; carry them into the hand-back as open items.
 - Maximum **2 rounds**. If blockers or majors remain, stop and escalate to the user.
 
 ### 6. QA
 
-Send `qa-engineer` the worktree path, report folder (`docs/reports/qa/<folder>/`), acceptance criteria, contract, both developer reports (including their CI results), and, for complex tasks, the adversarial report path and the reviewer's QA hints. Mention the dev ports from step 2 if the defaults are in use.
+Send `qa-engineer` the worktree path, report folder (`docs/reports/qa/<folder>/`), acceptance criteria, contract, the paths to both developer reports (including their CI results), and, for complex tasks, the adversarial report path and the reviewer's QA hints. Mention the dev ports from step 2 if the defaults are in use.
 
 When it returns, **read `report.md`** and check that every bug has repro steps and a screenshot (for UI bugs) in `screenshots/`. If the report is missing or incomplete, resume QA to finish it.
 
 ### 7. Fix loop
 
-- For each bug in the QA report, **resume** the owning developer (by agent ID) with the QA report path plus the bug's repro steps, expected vs actual, screenshot, and suspected file. Then re-run QA on the fixes; it adds a `## Re-test` section to the same report.
+- Group the QA report's bugs by owning developer and **resume** each developer once per round (by agent ID) with the QA report path plus, for every bug, its repro steps, expected vs actual, screenshot, and suspected file.
+- Then **resume** QA (by agent ID) to re-test only the fixed bugs plus a short regression check of the screens or endpoints the fixes touched; it adds a `## Re-test` section to the same report. Read only that new section.
 - Maximum **2 fix rounds**. If QA still fails, stop and escalate to the user with the open bugs.
 - A QA verdict of "FAIL — CI not green" goes straight back to the developer whose area failed.
-- On complex tasks, if a fix is non-trivial (new logic, not a one-line correction), re-run `adversarial-reviewer` on it before re-running QA.
+- Before each QA re-test, check the fix against [Simple or complex](#simple-or-complex), using the developer's list of changed files: read `git diff` on those files and any new untracked files directly:
+  - **Simple task whose fix hits a complex trigger:** reclassify, tell the user why, and run step 5 on the full diff before re-running QA.
+  - **Complex task with a non-trivial fix** (new logic, not a one-line correction): resume `adversarial-reviewer` (by agent ID) to review the fix diff before re-running QA.
+- **Round limits:** the review and fix-loop caps are counted separately. Developer rounds that address review findings don't count toward the 2 fix rounds here, and each review started from this step gets its own 2 rounds under step 5. Whichever cap runs out first with blockers, majors, or QA bugs still open, stop and escalate to the user.
 
 ### 8. Hand back to the user
 
@@ -112,6 +119,7 @@ A task is **complex** if any of these apply. Otherwise it is **simple**.
 - It adds or changes a backend-frontend contract.
 - It adds timers, reconnects, or other concurrent or async state.
 - It is large: many files across areas, or several hundred changed lines.
+- The user asks for an adversarial review.
 
 Simple examples: layout, styling, or copy changes; a change confined to one component; a small bug fix with a regression test; docs-only or test-only changes. If you are unsure, treat the task as complex.
 
@@ -139,7 +147,7 @@ Subagents start with a fresh context — every prompt must be self-contained:
 - <criterion>
 
 **Contract:** <endpoints/messages, or "none">
-**Context:** <relevant files, prior reports, decisions already made>
+**Context:** <relevant files, paths to prior reports (not their contents), decisions already made>
 **Out of scope:** <what not to touch>
 **Report folder:** <docs/reports/<kind>/<folder>/ — reviewer and QA only>
 **Return:** your standard report (including CI results for developers); reviewer and QA also save it to the report folder and return its path.

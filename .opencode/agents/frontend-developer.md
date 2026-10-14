@@ -106,4 +106,4 @@ Do **not** edit:
 
 Save the report as `docs/reports/dev/<folder>/frontend-report.md` in the worktree, using the report folder the orchestrator gives you, and update it after each fix round. It ships in the PR. Return the same content as your final message.
 
-Summarize: what changed (screens, components, hooks, styles), any API or WebSocket contract the server must support, tests added or updated (and anything left untested, with why), CI check results (each command with pass or fail), browser check results, and anything left open (e.g. mobile layout not checked, PWA cache implications).
+Summarize: what changed (screens, components, hooks, styles), any API or WebSocket contract the server must support, tests added or updated (and anything left untested, with why), CI check results (each command with pass or fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), browser check results, and anything left open (e.g. mobile layout not checked, PWA cache implications).

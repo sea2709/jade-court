@@ -101,4 +101,4 @@ Do **not** edit:
 
 Save the report as `docs/reports/dev/<folder>/backend-report.md` in the worktree, using the report folder the orchestrator gives you, and update it after each fix round. It ships in the PR. Return the same content as your final message.
 
-Summarize: what changed (files and endpoints or messages), any new env vars, tests added or updated (and anything left untested, with why), CI check results (each command with pass or fail), other verification done, and anything left open or risky (e.g. API contract changes the web client must follow in `apps/web`).
+Summarize: what changed (files and endpoints or messages), any new env vars, tests added or updated (and anything left untested, with why), CI check results (each command with pass or fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), other verification done, and anything left open or risky (e.g. API contract changes the web client must follow in `apps/web`).

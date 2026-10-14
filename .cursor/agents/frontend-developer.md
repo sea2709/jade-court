@@ -87,4 +87,4 @@ Do **not** edit:
 
 ## Report back
 
-Summarize: what changed (screens, components, hooks, styles), any API/WebSocket contract the server must support, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail), browser check results, and anything left open (e.g. mobile layout not checked, PWA cache implications).
+Summarize: what changed (screens, components, hooks, styles), any API/WebSocket contract the server must support, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), browser check results, and anything left open (e.g. mobile layout not checked, PWA cache implications).

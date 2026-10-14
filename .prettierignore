@@ -7,3 +7,5 @@ pnpm-lock.yaml
 reference/
 chinese-chess.html
 .cursor/plans/
+# Agent-written review/QA reports, saved after the developers' format check
+docs/reports/
