@@ -152,3 +152,199 @@ Both must be stopped before the worktree is left idle to avoid port conflicts:
 ```
 kill $(cat $HOME/qa-logs/server.pid) $(cat $HOME/qa-logs/web.pid)
 ```
+
+---
+
+# Follow-up QA: button row (2026-10-13)
+
+**Date:** 2026-10-13 (same worktree, re-test)
+**Worktree:** `/home/pwuser/work/jade-court-worktrees/issue-37-redo-moves` (branch `issue-37-redo-moves`, uncommitted)
+**Scope of change under test:** `apps/web/src/screens/PlayScreen.tsx` — "↶ Take back move" + "↷ Redo move" wrapped in `<div className="flex gap-2">`, each carries `btn btn-ghost btn-sm flex-1 px-2`. Restart / New game unchanged below. **No behavior change claimed.**
+**Environment:** dev web on `:5210` (proxy `/api` → server `:3038`), server `PLAY_OPPONENT_PROVIDER=engine` (Pikafish unconfigured → negamax fallback per `AGENTS.md`).
+**Browser:** Headless Chromium via `agent-browser` CLI, viewport toggled between 1280×720 and 375×812.
+
+## Verdict: **PASS WITH ISSUES (non-blocking environment exclusions)**
+
+Both hands-on behavior and visual layout regression pass. The known accepted nit (pills Δ ≈ 2px width) is present and within the design-review amendment's tolerance. CI is green for everything related to the source diff; the only non-green signals are **reviewer-authored artifacts** outside the change scope (see §B below) and pre-existing page-level horizontal overflow below ~1100px (excluded per task spec).
+
+## A. CI status (re-run from the worktree root)
+
+| Command                                                     | Result        | Notes                                                                                                                                                                                                                          |
+| ----------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm install`                                              | ✅            | Already up to date.                                                                                                                                                                                                            |
+| `pnpm build`                                                | ✅            | engine + server + web: 76 modules, web bundle 290.29 kB JS / 37.71 kB CSS.                                                                                                                                                     |
+| `pnpm typecheck`                                            | ✅            | engine + server + web — all `tsc --noEmit` clean.                                                                                                                                                                              |
+| `pnpm test:coverage`                                        | ✅            | 77 engine + 95 server + 65 web tests pass. Web 36.75 / 79.61 / 73.21 (s/b/f), server 72.62 / 75.13 / 69.87. Same thresholds as the original QA.                                                                                |
+| `pnpm test:e2e` (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`) | ✅            | **21/21** including the four redo specs (`Redo is disabled until a take-back…`, `making a new move after a take-back disables Redo`, `keyboard Ctrl+Shift+Z restores the position without any API call`, `Ctrl+Z is a no-op`). |
+| `pnpm lint`                                                 | ⚠ Environment | See §B. Every file in `git diff --name-only` (only `apps/web/src/screens/PlayScreen.tsx`) passes lint.                                                                                                                         |
+| `pnpm format:check`                                         | ⚠ Environment | See §B. Every file in `git diff --name-only` passes prettier.                                                                                                                                                                  |
+
+### B. Two non-source lint / format failures — exclusion
+
+Both failures hit files the **UI/UX designer agent** authored for its own design review (not source, not Playwright, not hooks, not engine). Confirmed by inspecting `.gitignore` / untracked status:
+
+```
+modified:   apps/web/src/screens/PlayScreen.tsx
+Untracked (authored by reviewer agents, NOT part of the source diff):
+  docs/reports/design/2026-10-13-issue-37-redo-moves/review-amendment-button-row.md   ← Prettier
+  docs/reports/design/2026-10-13-issue-37-redo-moves/review-driver.mjs                ← Prettier + ESLint no-undef
+  docs/reports/design/2026-10-13-issue-37-redo-moves/review-screenshots/row-0[1..10]-…png
+  docs/reports/design/2026-10-13-issue-37-redo-moves/spec-amendment-button-row.md
+```
+
+`pnpm lint` exits non-zero on `docs/reports/design/.../review-driver.mjs` (22 errors: `document`, `window`, `getComputedStyle` `no-undef`). `pnpm format:check` exits non-zero on the same `.mjs` plus `review-amendment-button-row.md`.
+
+The previous QA report (2026-10-13, above) listed `docs/reports/design/2026-10-13-issue-37-redo-moves/review.md` as an environmental prettier drift. This follow-up adds two more reviewer-authored artifacts in the same folder. Neither is touched by, nor does it touch, the layout diff under test.
+
+Per task spec ("`.opencode/agents/*.md` prettier drift (already fixed on branch tip f2c097d)") the agent-prompt fix landed last cycle; this follow-up's CI noise is the next reviewer artifact set. Treat as **environment**, not product, per AGENTS.md review-scope separation.
+
+## C. Per-check results (hands-on at 1280×720 unless noted)
+
+### C1. Round-trip undo/redo with API-call accounting — **PASS**
+
+Repro: start Intermediate Red → Restart → play cannon `[7,1]→[7,4]` (computer: Cannon advances.) → play cannon `[7,7]→[7,5]` (computer: Cannon captures the Horse.) → Take back ×2 via Ctrl+Z (focus on Take back button) → Redo ×2 via Ctrl+Shift+Z (focus on Redo button).
+
+Measured (from `agent-browser eval`, `window.fetch` wrapped to count requests to `/api/opponent/move`):
+
+| State                    | Moves played | Board pieces (selection)                             | `/api/opponent/move` req count (running) |
+| ------------------------ | ------------ | ---------------------------------------------------- | ---------------------------------------- |
+| After Restart            | 0            | 32 (initial)                                         | 0                                        |
+| After pair 1             | 2            | 31 (bC moved `[2,1]→[4,1]`)                          | 1                                        |
+| After pair 2             | 4            | 31 (bC moved to `[9,7]` capturing rH at `[9,7]`)     | 2                                        |
+| After Ctrl+Z             | 2            | 32 (rH at `[9,7]` restored)                          | **2 (Δ=0)**                              |
+| After Ctrl+Z again       | 0            | **32 — byte-for-byte same as initial**               | **2 (Δ=0)**                              |
+| After Ctrl+Shift+Z       | 2            | 31 (bC back at `[4,1]`)                              | **2 (Δ=0)**                              |
+| After Ctrl+Shift+Z again | 4            | **31 — byte-for-byte same as the post-pair-2 state** | **2 (Δ=0)**                              |
+
+Conclusion: round-trip position and counter are reproduced exactly, and **zero extra `/api/opponent/move` requests** were observed during the 4 undo/redo operations. "Computer advances" / "Cannon captures the Horse." message text was restored verbatim on Redo.
+
+Evidence: `screenshots/row-qa-01-1280-after-2-pairs-mixed-state.png` (moves=4 mixed state), `screenshots/row-qa-02-1280-after-round-trip.png` (post round-trip).
+
+### C2. Mixed state at 1280px — **PASS** (with known nit)
+
+Repro: after Restart + 2 pairs at 1280px. Button states: Take back enabled, Redo disabled.
+
+Measured layout (getBoundingClientRect):
+
+- Take back pill: x=775, w=139.98px, h=38px, y=442.5
+- Redo pill: x=922.98, w=138.02px, h=38px, y=442.5 (same y → row)
+- Gap between pills: 8px (`Redo.x − TakeBack.right = 8`)
+- Restart button: x=775, y=488.5, w=286px (full card content width)
+- New game button: x=775, y=534.5, w=286px
+- Vertical rhythm: row → Restart = 8px, Restart → New game = 8px (`gap-2`)
+
+Conclusion: both buttons on **one row**, equal-height pills, equal-width (within Δ ≈ 2px), correct enabled/disabled opacities, correct tooltips (`"Take back your last move (Ctrl+Z)"` / `"Nothing to redo"`).
+
+The width delta (139.98 vs 138.02 = Δ 1.97px) matches the design reviewer's `doc/reports/design/.../review-amendment-button-row.md` **Finding 1 (nit)**, which is **known and accepted** per task spec.
+
+Evidence: `screenshots/row-qa-01-1280-after-2-pairs-mixed-state.png`, `screenshots/row-qa-07-1280-initial-both-disabled.png` (both disabled at game start).
+
+### C3. Both enabled at 1280px — **PASS**
+
+Repro: take back once after the 2-pair game → moves=2, both buttons enabled.
+
+Measured tooltips / disabled flags:
+
+- Take back `disabled=false`, `title="Take back your last move (Ctrl+Z)"`
+- Redo `disabled=false`, `title="Redo the moves you took back (Ctrl+Shift+Z)"`
+
+Evidence: `screenshots/row-qa-08-1280-row-both-enabled.png`.
+
+### C4. Layout at 375px (mobile) — **PASS**
+
+Repro: same game state, viewport `375×812`.
+
+Measured (375px):
+
+- Take back pill: x=322.5, w=139.98px, h=38px, y=601.56
+- Redo pill: x=470.48, w=138.02px, h=38px, y=601.56 (same y)
+- Row: `scrollWidth 286 = clientWidth 286` → no row-level overflow
+- Each pill: Take back `scrollWidth 140 = clientWidth 140`, Redo `scrollWidth 138 = clientWidth 138` → **no text clipped**
+- Restart, New game: x=71.5, w=286px, stacked below with 8px gaps
+
+Conclusion: both labels fit fully inside their pills; no clipped text; the row is one line at 375px.
+
+**Environment note (not a finding):** the buttons sit at x≈322.5 — outside the 375px viewport. Page-level horizontal overflow exists below ~1100px independent of this row. The row itself does **not** add new overflow (`row.scrollWidth === row.clientWidth`). Per task spec ("page-level horizontal overflow below ~1100px viewport") this is the pre-existing page overflow, not a regression.
+
+Evidence: `screenshots/row-qa-03-375-both-buttons-one-row.png`, `screenshots/row-qa-04-375-row-closeup.png`, `screenshots/row-qa-05-375-both-buttons-enabled.png`.
+
+### C5. Buttons clickable in the row arrangement — **PASS**
+
+Repro at 375px: with moves=4 (Take back enabled, Redo disabled).
+
+1. Click `button[aria-label="Take back move"]`: moves 4→2, both buttons enabled after.
+2. Click `button[aria-label="Redo move"]`: moves 2→4, Redo disabled again, board restored to the post-pair-2 state.
+3. Click `button[aria-label="Take back move"]` again: moves 4→2 again, both buttons enabled.
+
+Both pills are reachable and fire the corresponding `undoLast(2)` / `redoLast(2)` callback. Click target is the whole pill; the row layout does not shrink them below the recommended 24px-style hit area.
+
+### C6. Keyboard shortcuts from row layout — **PASS**
+
+Repro at 1280px after a fresh 2-pair game:
+
+| Shortcut                  | Focus target              | Before → After                                                                                                                          |
+| ------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `Control+Z`               | `Take back move` (in row) | moves 4 → 2, both buttons enabled after, opReq count unchanged                                                                          |
+| `Control+Z`               | `Take back move` (in row) | moves 2 → 0, Take back disabled, Redo enabled, opReq count unchanged (board byte-identical to initial)                                  |
+| `Control+Shift+Z`         | `Redo move` (in row)      | moves 0 → 2, both enabled, opReq count unchanged                                                                                        |
+| `Control+Shift+Z`         | `Redo move` (in row)      | moves 2 → 4, board byte-identical to post-pair-2, "Computer: Cannon captures the Horse." restored, Redo disabled. opReq count unchanged |
+| `Control+Z` + `Control+Y` | `Take back` then `Redo`   | moves 4 → 2 → 4, `Ctrl+Y` correctly replays the stack                                                                                   |
+
+Conclusion: all keyboard shortcuts work from the row layout. No regression vs. the prior stacked layout.
+
+### C7. Restart and New game stacked below, functional — **PASS**
+
+Measured (1280px):
+
+- Restart sits 8px below the row at full card-content width (286px).
+- New game sits 8px below Restart at the same 286px width.
+- Both use the unchanged `btn btn-ghost btn-sm` class (no `flex-1`); they remain full-width as required.
+
+Functional checks:
+
+- Click ↻ Restart mid-game: `Moves played: 0`, board restored to 32 pieces, Redo disabled (`title="Nothing to redo"`).
+- Click New game mid-game: popup returns to the "Pick your challenge" setup screen with Intermediate selected; `Start game →` builds a fresh game.
+
+Evidence: `screenshots/row-qa-06-1280-after-newgame-setup.png`.
+
+## D. Console / network observations (not regressions)
+
+- **No `pageerror`s** at any point during the hands-on run.
+- **`console.warn` entries:** several `[server] opponent move failed, using local AI: {message: "Failed to execute 'json' on 'Response': Unexpected end of JSON input"}` prints appear in the browser console while the dev-proxy / server pair races occasionally during Vite HMR. Each is followed by the local negamax fallback (per `useXiangqiGame.ts:428`) and the resulting game state matches the **server-trusted** state — i.e. the server replayed/returned the same move via negamax. Since the warnings do **not** affect undo/redo correctness (verified by byte-identical board before/after in C1) and are not produced by the row-layout diff, they are out of scope.
+- Documented as environment noise, identical to the original QA's "Pikafish unconfigured" / "LLM disabled" entries.
+
+## E. Acceptance vs. spec (checklist from task)
+
+| Task item                                                                     | Result   | Evidence                                                                                                                              |
+| ----------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 4a — One row at 1280px in mixed state + after take-back                       | **PASS** | C2 / C3; `row-qa-01`, `row-qa-07`, `row-qa-08`                                                                                        |
+| 4b — One row at 375px, labels fully inside pills, no clipped text             | **PASS** | C4; `row-qa-03..05`                                                                                                                   |
+| 4c — Both buttons remain clickable in the row arrangement                     | **PASS** | C5 (C1 partial)                                                                                                                       |
+| 4d — Keyboard shortcuts still work from the row layout (Ctrl+Z, Ctrl+Shift+Z) | **PASS** | C6 (also covers `Ctrl+Y` as Redo alias)                                                                                               |
+| 4e — Restart and New game still stacked full-width below, functional          | **PASS** | C7; `row-qa-06`                                                                                                                       |
+| 5 — Known nit: pills Δ ≈ 2px width accepted                                   | Accepted | Measured Δ = 1.97px; matches design review Finding 1, not flagged.                                                                    |
+| 6 — Pre-existing: page overflow <1100px, `.opencode/agents/*.md` prettier     | Excluded | Not appearing on `git diff --name-only`; `format:check` shows only 2 reviewer-authored files (see §B); page overflow not in this row. |
+
+## F. Bug list
+
+**None.** No blockers, majors, or minors found via the hands-on browser run. The known accepted nit (≈ 2px pill width delta) is documented in the design-review amendment and is **not** reported here.
+
+## G. Tests added (none)
+
+No automated test code written — the developer's existing 4 Playwright specs (`Redo is disabled until a take-back…`, etc.) and 10 unit tests continue to pass under `pnpm test:e2e` and `pnpm test:coverage` without modification. Visual regression is captured in the 8 new screenshots only.
+
+## H. Artifacts added in this follow-up
+
+- `report.md` — appended this section.
+- `screenshots/row-qa-01-1280-after-2-pairs-mixed-state.png` — 1280px, after 2 pairs: Take back enabled / Redo disabled (mixed state).
+- `screenshots/row-qa-02-1280-after-round-trip.png` — 1280px, after round-trip (moves = 4, board restored).
+- `screenshots/row-qa-03-375-both-buttons-one-row.png` — 375px, both buttons on one row, no clipped text.
+- `screenshots/row-qa-04-375-row-closeup.png` — 375px scrolled-in view of the row.
+- `screenshots/row-qa-05-375-both-buttons-enabled.png` — 375px, both buttons enabled (after take-back).
+- `screenshots/row-qa-06-1280-after-newgame-setup.png` — 1280px, post-New game setup screen.
+- `screenshots/row-qa-07-1280-initial-both-disabled.png` — 1280px, fresh game, both buttons disabled (moves=0).
+- `screenshots/row-qa-08-1280-row-both-enabled.png` — 1280px, both buttons enabled (after take-back).
+
+## I. Cleanup
+
+Dev servers were started with `PORT=3038 pnpm --filter @jade-court/server dev` and `pnpm --filter @jade-court/web exec vite --port 5210`. Both killed before this worktree was left idle. Ports `5210` and `3038` confirmed free (`ss -tlnp` returns nothing).
