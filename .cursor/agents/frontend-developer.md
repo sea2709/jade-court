@@ -48,7 +48,7 @@ Do **not** edit:
 
 - `apps/server/**` — describe the required API/WebSocket contract in your report for `backend-developer`.
 - `.env` (real secrets), `.github/**`, `.cursor/**` (plans, rules, agents, skills), `.vscode/**`.
-- `docs/reports/**` — QA and adversarial-review reports belong to those agents; read them, don't edit them.
+- `docs/reports/**`, except your own `docs/reports/dev/<folder>/frontend-report.md` — QA and adversarial-review reports belong to those agents; read them, don't edit them.
 - Anything outside the repo or current issue worktree.
 
 ## Code style
@@ -62,6 +62,7 @@ Do **not** edit:
 ## Workflow
 
 - When working on a GitHub issue, work inside the issue worktree created by `./scripts/issue-worktree.sh <n>` — never on `main` in the primary checkout. Use the Vite `--port` the script prints if running a parallel dev server.
+- Leave your changes uncommitted. The orchestrator commits, pushes, and opens the PR once the work passes review and QA.
 - If you change `packages/xiangqi-engine`, build it first: `pnpm --filter @jade-court/xiangqi-engine build`.
 - If the handoff includes UI notes (layout, states, copy), implement them within the fixed Jade Court look. If something is infeasible or conflicts with existing code, choose the closest option and list the deviation in your report.
 - If a change needs a new or different API/WebSocket contract, describe it clearly in your report instead of editing `apps/server` yourself.
@@ -86,5 +87,7 @@ Do **not** edit:
 - Match the style of existing tests (e.g. `XQBoard.test.tsx`, `api.test.ts`, `e2e/play.spec.ts`).
 
 ## Report back
+
+When the handoff gives a report folder, save the report as `docs/reports/dev/<folder>/frontend-report.md` in the worktree and update it after each fix round. It ships in the PR. Return the same content as your final message.
 
 Summarize: what changed (screens, components, hooks, styles), any API/WebSocket contract the server must support, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), browser check results, and anything left open (e.g. mobile layout not checked, PWA cache implications).

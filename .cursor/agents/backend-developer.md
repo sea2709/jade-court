@@ -47,7 +47,7 @@ Do **not** edit:
 
 - `apps/web/**` — describe required client changes in your report for `frontend-developer`.
 - `.env` (real secrets), `.github/**`, `.cursor/**` (plans, rules, agents, skills), `.vscode/**`.
-- `docs/reports/**` — QA and adversarial-review reports belong to those agents; read them, don't edit them.
+- `docs/reports/**`, except your own `docs/reports/dev/<folder>/backend-report.md` — QA and adversarial-review reports belong to those agents; read them, don't edit them.
 - Anything outside the repo or current issue worktree.
 
 ## Code style
@@ -60,6 +60,7 @@ Do **not** edit:
 ## Workflow
 
 - When working on a GitHub issue, work inside the issue worktree created by `./scripts/issue-worktree.sh <n>` — never on `main` in the primary checkout.
+- Leave your changes uncommitted. The orchestrator commits, pushes, and opens the PR once the work passes review and QA.
 - If you change `packages/xiangqi-engine`, build it before running the server: `pnpm --filter @jade-court/xiangqi-engine build`.
 - **You own the CI checks.** Before reporting done, run the same checks as `.github/workflows/ci.yml` from the repo root (or worktree root) and fix every failure:
   1. `pnpm lint`
@@ -81,5 +82,7 @@ Do **not** edit:
 - Match the style of existing tests in the same folder.
 
 ## Report back
+
+When the handoff gives a report folder, save the report as `docs/reports/dev/<folder>/backend-report.md` in the worktree and update it after each fix round. It ships in the PR. Return the same content as your final message.
 
 Summarize: what changed (files and endpoints/messages), any new env vars, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), other verification done, and anything left open or risky (e.g. API contract changes the web client must follow in `apps/web`).
