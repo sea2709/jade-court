@@ -14,7 +14,10 @@ export interface RoomState {
   board: Board;
   turn: Side;
   history: Move[];
-  status: GameStatus;
+  /** Null while in progress; 'resigned' is a room-level extension for conceded online games. */
+  status: GameStatus | 'resigned';
+  /** Winning side once the game ends (opponent of the loser); null while in progress. */
+  winner: Side | null;
   red?: RoomPlayer;
   black?: RoomPlayer;
   createdAt: number;
@@ -39,6 +42,7 @@ export function createRoom(hostGuestId: string): RoomState {
     turn: 'r',
     history: [],
     status: null,
+    winner: null,
     createdAt: Date.now(),
     red: { guestId: hostGuestId, side: 'r', connected: false },
   };
@@ -95,7 +99,26 @@ export function applyRoomMove(
   room.history.push(valid);
   room.turn = X.X.opp(room.turn);
   room.status = X.X.gameStatus(room.board, room.turn);
+  // Loser is the side to move after the flip (checkmate or Xiangqi stalemate), so the winner is the opposite.
+  room.winner = room.status ? X.X.opp(room.turn) : null;
   return { ok: true, room };
+}
+
+/**
+ * Resign: a seated player concedes on any turn and the opponent wins immediately.
+ * Deliberately turn-agnostic — resigning must not wait for your move.
+ */
+export function resignRoom(
+  room: RoomState,
+  guestId: string,
+): { ok: true } | { ok: false; error: string } {
+  if (room.status) return { ok: false, error: 'Game is over' };
+  const player =
+    room.red?.guestId === guestId ? room.red : room.black?.guestId === guestId ? room.black : null;
+  if (!player) return { ok: false, error: 'Not a player in this room' };
+  room.status = 'resigned';
+  room.winner = X.X.opp(player.side);
+  return { ok: true };
 }
 
 export function publicRoomView(room: RoomState) {
@@ -105,6 +128,7 @@ export function publicRoomView(room: RoomState) {
     turn: room.turn,
     history: room.history,
     status: room.status,
+    winner: room.winner ?? null,
     redJoined: !!room.red,
     blackJoined: !!room.black,
     redConnected: room.red?.connected ?? false,

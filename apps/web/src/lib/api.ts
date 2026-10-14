@@ -17,12 +17,20 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
+/**
+ * Public room view pushed by the server over `/ws` and returned by `/api/rooms*`.
+ * `status` widens to include `'resigned'` for online concessions; `winner` is
+ * `null` while in progress and set from the server once the game ends
+ * (loser on checkmate/stalemate = side to move; on resign = opponent of the
+ * resigning player).
+ */
 export interface PublicRoom {
   code: string;
   board: Board;
   turn: Side;
   history: Move[];
-  status: GameStatus;
+  status: GameStatus | 'resigned';
+  winner: Side | null;
   redJoined: boolean;
   blackJoined: boolean;
   redConnected: boolean;

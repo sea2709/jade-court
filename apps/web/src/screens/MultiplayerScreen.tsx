@@ -5,6 +5,7 @@ import { XQBoard } from '../components/XQBoard';
 import { createRoom, joinRoom } from '../lib/api';
 import { useRoomGame } from '../hooks/useRoomGame';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
+import { didSideWin, onlineGameOverSubtitle, type OnlineRoomStatus } from './multiplayerGameOver';
 
 function PassPlay({ onExit }: { onExit: () => void }) {
   const [autoFlip, setAutoFlip] = useState(true);
@@ -96,8 +97,15 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
   const game = useRoomGame(code, side);
   const flip = side === 'b';
   const yourTurn = game.turn === side && !game.status;
-  const won = game.status && game.turn === X.opp(side);
+  // Prefer the server's reported winner; fall back to the old inference
+  // (loser = side to move) for snapshots that don't yet carry `winner`.
+  const won = didSideWin(game.status as OnlineRoomStatus, game.winner, side, game.turn, X.opp);
   const turnName = game.turn === 'r' ? 'Red 帥' : 'Black 將';
+  // Confirmation overlay for the destructive Resign action. Only openable
+  // while the game is still live and the opponent is seated — once the game
+  // is over, the button disappears so the overlay can't re-open.
+  const [confirmResign, setConfirmResign] = useState(false);
+  const inProgress = !game.status && game.opponentJoined;
 
   return (
     <div className="game-layout">
@@ -126,13 +134,42 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
           interactive={yourTurn}
         />
         {game.status && (
-          <div className="pop game-overlay">
+          <div className="pop game-overlay" data-testid="online-game-over">
             <div className="card px-8 py-7 text-center">
-              <div className="text-[42px]">🏆</div>
+              <div className="text-[42px]">{won ? '🏆' : '🎯'}</div>
               <h2 className="my-1.5 mb-1 text-[26px]">{won ? 'You win!' : 'You lose'}</h2>
               <p className="text-ink-soft font-semibold m-0 mb-4">
-                {game.status === 'stalemate' ? 'Stalemate.' : 'Checkmate!'}
+                {onlineGameOverSubtitle(game.status as OnlineRoomStatus, won, game.winner)}
               </p>
+            </div>
+          </div>
+        )}
+        {confirmResign && (
+          <div className="pop game-overlay" data-testid="resign-confirm">
+            <div className="card px-8 py-7 text-center max-w-[320px]">
+              <h2 className="m-0 mb-1.5 text-[22px]">Resign this game?</h2>
+              <p className="text-ink-soft font-semibold m-0 mb-4 text-[14.5px] leading-normal">
+                Your opponent will be declared the winner. This cannot be undone.
+              </p>
+              <div className="flex gap-2.5 justify-center">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setConfirmResign(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-red btn-sm"
+                  onClick={() => {
+                    setConfirmResign(false);
+                    game.resign();
+                  }}
+                >
+                  Resign
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -147,10 +184,20 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
             {game.error && <div className="mt-2 text-red-deep">{game.error}</div>}
           </div>
         </div>
-        <div className="card p-4">
+        <div className="card p-4 flex flex-col gap-2">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onExit}>
             ← Leave room
           </button>
+          {inProgress && (
+            <button
+              type="button"
+              className="btn btn-red btn-sm"
+              data-testid="resign-button"
+              onClick={() => setConfirmResign(true)}
+            >
+              Resign
+            </button>
+          )}
         </div>
       </div>
     </div>

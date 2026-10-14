@@ -8,6 +8,7 @@ import {
   joinRoom,
   publicRoomView,
   randomCode,
+  resignRoom,
 } from './rooms.js';
 
 let n = 0;
@@ -124,6 +125,7 @@ describe('applyRoomMove', () => {
     const res = applyRoomMove(room, red, { from: [5, 0], to: [0, 0] });
     expect(res.ok).toBe(true);
     expect(room.status).toBe('checkmate');
+    expect(room.winner).toBe('r');
     expect(applyRoomMove(room, black, { from: [0, 4], to: [1, 4] })).toEqual({
       ok: false,
       error: 'Game is over',
@@ -131,11 +133,64 @@ describe('applyRoomMove', () => {
   });
 });
 
+describe('resignRoom', () => {
+  it("lets Red resign on Black's turn and awards Black the win", () => {
+    const { room, red } = seatedRoom();
+    applyRoomMove(room, red, { from: [9, 1], to: [7, 2] }); // pass the turn to Black
+    expect(resignRoom(room, red)).toEqual({ ok: true });
+    expect(room.status).toBe('resigned');
+    expect(room.winner).toBe('b');
+    expect(room.turn).toBe('b'); // resigning leaves the turn untouched
+  });
+
+  it("lets Black resign on Red's turn and awards Red the win", () => {
+    const { room, black } = seatedRoom();
+    expect(resignRoom(room, black)).toEqual({ ok: true });
+    expect(room.status).toBe('resigned');
+    expect(room.winner).toBe('r');
+  });
+
+  it('rejects guests who are not seated without changing state', () => {
+    const { room } = seatedRoom();
+    expect(resignRoom(room, 'intruder')).toEqual({ ok: false, error: 'Not a player in this room' });
+    expect(room.status).toBeNull();
+    expect(room.winner).toBeNull();
+  });
+
+  it('rejects resigning after the game is already over', () => {
+    const { room, red, black } = seatedRoom();
+    room.board = boardWith(
+      [9, 3, { t: 'G', s: 'r' }],
+      [0, 4, { t: 'G', s: 'b' }],
+      [5, 0, { t: 'R', s: 'r' }],
+      [1, 8, { t: 'R', s: 'r' }],
+    );
+    applyRoomMove(room, red, { from: [5, 0], to: [0, 0] }); // checkmate
+    expect(resignRoom(room, black)).toEqual({ ok: false, error: 'Game is over' });
+    expect(room.status).toBe('checkmate');
+    expect(room.winner).toBe('r');
+  });
+});
+
 describe('publicRoomView', () => {
   it('exposes seats without guest ids', () => {
     const { room } = seatedRoom();
     const view = publicRoomView(room);
-    expect(view).toMatchObject({ redJoined: true, blackJoined: true, turn: 'r', status: null });
+    expect(view).toMatchObject({
+      redJoined: true,
+      blackJoined: true,
+      turn: 'r',
+      status: null,
+      winner: null,
+    });
+    expect(JSON.stringify(view)).not.toContain('guestId');
+  });
+
+  it('exposes the resigned status and winner without guest ids', () => {
+    const { room, red } = seatedRoom();
+    resignRoom(room, red);
+    const view = publicRoomView(room);
+    expect(view).toMatchObject({ status: 'resigned', winner: 'b' });
     expect(JSON.stringify(view)).not.toContain('guestId');
   });
 });
