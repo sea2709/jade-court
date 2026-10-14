@@ -3,6 +3,11 @@
 #   # fill in JADE_AGENT_GH_TOKEN and JADE_AGENT_OPENCODE_API_KEY in .env.agent (git-ignored)
 #   docker compose --env-file .env.agent run --rm --service-ports agent
 #   opencode                                     # pick the orchestrator agent
+#   agent                                        # or the Cursor CLI (subagents in .cursor/agents)
+#
+# Cursor CLI auth: set JADE_AGENT_CURSOR_API_KEY (Cursor Dashboard -> API Keys) in .env.agent,
+# or leave it empty and run `NO_OPEN_BROWSER=1 agent login` once, opening the printed URL on the
+# host. Login credentials (cursor-auth) and CLI config/chats (cursor-config) persist in volumes.
 #
 # --service-ports publishes the app to http://localhost:15173 (web) and :13001 (server) so you
 # can watch it; override with JADE_AGENT_WEB_PORT / JADE_AGENT_SERVER_PORT, or drop the flag
@@ -15,6 +20,7 @@
 # permission that isn't explicitly denied is auto-approved, like `opencode --auto`. Deny and ask
 # rules in .opencode/agents/*.md still apply, and .env files stay unreadable. opencode never
 # loads opencode.yolo.json on its own, so the host is unaffected. Edit the file to tune it.
+# It also aliases the Cursor CLI's `agent` / `cursor-agent` to `--force` in those shells.
 #
 # The repo is cloned into the `work` volume on first start, so the host checkout, ~/.ssh,
 # ~/.config/gh, ~/.config/opencode, and the repo-root .env are never visible to agents.
@@ -67,6 +73,7 @@ services:
       # OpenCode Go shares OPENCODE_API_KEY but needs its own subscription; without this, opencode
       # picks a Go model as the default/title model and requests fail. Remove if you have Go.
       OPENCODE_CONFIG_CONTENT: '{"disabled_providers":["opencode-go"]}'
+      CURSOR_API_KEY: ${JADE_AGENT_CURSOR_API_KEY:-}
       JADE_AGENT_YOLO: ${JADE_AGENT_YOLO:-false}
       GIT_AUTHOR_NAME: ${JADE_AGENT_GIT_NAME:-Jade Court Agent}
       GIT_AUTHOR_EMAIL: ${JADE_AGENT_GIT_EMAIL:-jade-court-agent@users.noreply.github.com}
@@ -76,6 +83,8 @@ services:
       - work:/home/pwuser/work
       # opencode session history (and any `opencode auth login` credentials).
       - opencode-data:/home/pwuser/.local/share/opencode
+      - cursor-config:/home/pwuser/.cursor
+      - cursor-auth:/home/pwuser/.config/cursor
       - ./opencode.yolo.json:/opt/jade-agent/opencode.yolo.json:ro
     command:
       - bash
@@ -99,4 +108,6 @@ services:
 volumes:
   work:
   opencode-data:
+  cursor-config:
+  cursor-auth:
   mongo-data:

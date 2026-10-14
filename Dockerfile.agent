@@ -35,13 +35,24 @@ RUN test -x "$AGENT_BROWSER_EXECUTABLE_PATH"
 USER pwuser
 # Pre-create volume mount points so named volumes are owned by pwuser, not root.
 RUN mkdir -p /home/pwuser/work /home/pwuser/.local/share/opencode \
+      /home/pwuser/.cursor /home/pwuser/.config/cursor \
  && corepack install -g pnpm@9.15.4
+
+# Cursor CLI (`agent` / `cursor-agent`). Installed as pwuser into ~/.local so its auto-update
+# can write to the install directory.
+RUN curl -fsS https://cursor.com/install | bash \
+ && /home/pwuser/.local/bin/agent --version
+ENV PATH=/home/pwuser/.local/bin:$PATH
 
 # Turn on YOLO in .bashrc, not the compose command: shells opened with `docker exec` don't
 # inherit the command's environment, so opencode started there would silently run without it.
+# An empty CURSOR_API_KEY is unset so the Cursor CLI falls back to `agent login` credentials.
 RUN printf '%s\n' '' \
+      '[ -z "$CURSOR_API_KEY" ] && unset CURSOR_API_KEY' \
       'if [ "$JADE_AGENT_YOLO" = true ]; then' \
       '  export OPENCODE_CONFIG=/opt/jade-agent/opencode.yolo.json' \
+      "  alias agent='agent --force'" \
+      "  alias cursor-agent='cursor-agent --force'" \
       'fi' >> /home/pwuser/.bashrc
 WORKDIR /home/pwuser/work
 
