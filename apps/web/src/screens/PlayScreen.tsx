@@ -279,26 +279,28 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
           <div className="font-extrabold text-sm text-ink-soft mb-0.5">
             Moves played: {game.history.length}
           </div>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={game.history.length < 2 || !yourTurn}
-            aria-label="Take back move"
-            title={undoTitle}
-            onClick={() => game.undoLast(2)}
-          >
-            ↶ Take back move
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={game.redoCount < 2 || !yourTurn || game.aiThinking}
-            aria-label="Redo move"
-            title={redoTitle}
-            onClick={() => game.redoLast(2)}
-          >
-            ↷ Redo move
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm flex-1 px-2"
+              disabled={game.history.length < 2 || !yourTurn}
+              aria-label="Take back move"
+              title={undoTitle}
+              onClick={() => game.undoLast(2)}
+            >
+              ↶ Take back move
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm flex-1 px-2"
+              disabled={game.redoCount < 2 || !yourTurn || game.aiThinking}
+              aria-label="Redo move"
+              title={redoTitle}
+              onClick={() => game.redoLast(2)}
+            >
+              ↷ Redo move
+            </button>
+          </div>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => game.reset()}>
             ↻ Restart
           </button>
