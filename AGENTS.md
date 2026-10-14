@@ -93,4 +93,7 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 
 Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `issue-worktree.mdc`, `code-comments.mdc`, `testing.mdc`).
 
-**Project skills:** [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md) — git worktree per issue for parallel agents.
+**Project skills:**
+
+- [.cursor/skills/issue-worktree/SKILL.md](.cursor/skills/issue-worktree/SKILL.md) — git worktree per issue for parallel agents.
+- [.cursor/skills/requirements-interview/SKILL.md](.cursor/skills/requirements-interview/SKILL.md) — interview the user until requirements are clear, then confirm a summary before implementing.
