@@ -1,0 +1,38 @@
+# Sandbox image for running opencode agents against Jade Court.
+#
+# The container is the security boundary: agents get full shell access inside it, but no
+# access to the host repo, SSH keys, or host gh/opencode credentials. Use with
+# docker-compose.yml (service `agent`).
+#
+# The base tag must match the installed @playwright/test version so Chromium is preinstalled
+# for `pnpm test:e2e`.
+FROM mcr.microsoft.com/playwright:v1.64.0-noble
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gh git ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable \
+ && npm install -g opencode-ai \
+ && npm install -g --allow-scripts=agent-browser agent-browser@0.39.1 \
+ && rm -rf /tmp/opencode
+
+# agent-browser (the QA agent's browser CLI) reuses the base image's Chromium instead of
+# downloading its own. The path follows the base tag; the check fails the build if it moves.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    AGENT_BROWSER_EXECUTABLE_PATH=/ms-playwright/chromium-1248/chrome-linux64/chrome
+RUN test -x "$AGENT_BROWSER_EXECUTABLE_PATH"
+
+USER pwuser
+# Pre-create volume mount points so named volumes are owned by pwuser, not root.
+RUN mkdir -p /home/pwuser/work /home/pwuser/.local/share/opencode \
+ && corepack install -g pnpm@9.15.4
+
+# Turn on YOLO in .bashrc, not the compose command: shells opened with `docker exec` don't
+# inherit the command's environment, so opencode started there would silently run without it.
+RUN printf '%s\n' '' \
+      'if [ "$JADE_AGENT_YOLO" = true ]; then' \
+      '  export OPENCODE_CONFIG=/opt/jade-agent/opencode.yolo.json' \
+      'fi' >> /home/pwuser/.bashrc
+WORKDIR /home/pwuser/work
+
+CMD ["bash"]

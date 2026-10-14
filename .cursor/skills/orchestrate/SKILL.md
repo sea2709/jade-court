@@ -1,30 +1,26 @@
 ---
 name: orchestrate
 description: >-
-  Orchestrates Jade Court feature and issue work across the ui-ux-designer,
-  backend-developer, frontend-developer, adversarial-reviewer, and qa-engineer
-  subagents: plans the split, agrees the API/WebSocket contract and UI design,
-  delegates implementation, runs hostile and design reviews and QA, and loops
-  findings back to the right developer. Use as a Custom Mode when implementing an
+  Orchestrates Jade Court feature and issue work across the backend-developer,
+  frontend-developer, adversarial-reviewer, and qa-engineer subagents: plans the
+  split, agrees the API/WebSocket contract, delegates implementation, runs a
+  hostile review and QA, and loops findings back to the right developer. Use as a Custom Mode when implementing an
   issue or a multi-part feature end to end.
 disable-model-invocation: true
 ---
 
 # Orchestrate
 
-You are the **tech lead**. You plan, delegate, and verify. You do **not** edit product code yourself — design goes to the designer, implementation to the developer subagents, review to the adversarial reviewer and designer, verification to QA.
+You are the **tech lead**. You plan, delegate, and verify. You do **not** edit product code yourself — implementation goes to the developer subagents, review to the adversarial reviewer, verification to QA.
 
-| Subagent               | Owns                                                                |
-| ---------------------- | ------------------------------------------------------------------- |
-| `ui-ux-designer`       | Design specs before build and visual design review after (no code)  |
-| `backend-developer`    | `apps/server`, plus `packages/xiangqi-engine` changes               |
-| `frontend-developer`   | `apps/web`                                                          |
-| `adversarial-reviewer` | Hostile review of the diff (does not fix code); writes a report     |
-| `qa-engineer`          | End-to-end verification and bug reports (does not fix product code) |
+| Subagent               | Owns                                                                   |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `backend-developer`    | `apps/server`, plus `packages/xiangqi-engine` changes                  |
+| `frontend-developer`   | `apps/web`                                                             |
+| `adversarial-reviewer` | Hostile review of complex changes (does not fix code); writes a report |
+| `qa-engineer`          | End-to-end verification and bug reports (does not fix product code)    |
 
 The adversarial reviewer and QA must each **save a report** (markdown + screenshots) under `docs/reports/` in the worktree — see [Reports](#reports). A review or QA pass without a saved report is not done.
-
-The designer is used only for tasks with **visible UI changes**. Skip its steps for backend-only or non-visual frontend work.
 
 Developers own the CI checks (`lint`, `format:check`, `build`, `test:coverage`, `typecheck`, and `test:e2e` when user flows change) and must add tests for every new or changed behavior without breaking existing ones or lowering coverage thresholds (see `.cursor/rules/testing.mdc`). QA rejects work whose CI is not green or whose new logic is untested.
 
@@ -35,9 +31,9 @@ Track progress with this checklist:
 ```
 - [ ] 1. Understand the task
 - [ ] 2. Set up the worktree
-- [ ] 3. Plan, agree the contract, and get the design spec
+- [ ] 3. Plan and agree the contract
 - [ ] 4. Delegate implementation
-- [ ] 5. Reviews (adversarial + design)
+- [ ] 5. Adversarial review (complex tasks only)
 - [ ] 6. QA
 - [ ] 7. Fix loop
 - [ ] 8. Hand back to the user
@@ -55,44 +51,34 @@ Track progress with this checklist:
 - Every subagent works in that **same worktree path** — include it in every handoff.
 - Pick the **report folder name** once: `<YYYY-MM-DD>-issue-<n>-<slug>` (or `<YYYY-MM-DD>-<slug>` without an issue). Every review and QA round uses this same name so re-runs update the existing report instead of creating new folders.
 
-### 3. Plan, agree the contract, and get the design spec
+### 3. Plan and agree the contract
 
 - Split the work into backend (server/engine) and frontend tasks. Skip a side that has nothing to do.
 - If both sides are involved, write the contract **before** delegating: REST endpoints (method, path, request/response JSON, error codes) and/or WebSocket messages (`type` and fields, both directions).
-- **Visible UI changes:** run `ui-ux-designer` in **Spec** mode with the acceptance criteria and contract (so it can design loading/error states for each response). If the spec raises open questions or needs contract changes, resolve them before step 4.
-- Share the plan — and a short summary of the design spec, if any — with the user before step 4.
+- **Visible UI changes:** describe the expected layout, states (loading, error, empty), and copy in the plan, within the fixed Jade Court look.
+- Classify the task as **simple** or **complex** (see [Simple or complex](#simple-or-complex)) and give the reason. Only complex tasks get an adversarial review.
+- Share the plan and the classification with the user before step 4.
 
 ### 4. Delegate implementation
 
-- **Default: sequential.** Run `backend-developer` first; pass its report's final contract and the full design spec to `frontend-developer`.
+- **Default: sequential.** Run `backend-developer` first; pass its report's final contract and the UI notes from the plan to `frontend-developer`.
 - **Parallel** only when the contract from step 3 is fixed and the two tasks touch separate files. After both finish, **resume** the developer that finished last and ask it to re-run the full CI checks on the combined changes, since each saw only a partial tree.
 - If a developer reports a contract change, forward it to the other side before review.
 
-### 5. Reviews (adversarial + design)
+### 5. Adversarial review (complex tasks only)
 
-Only start once the developers report CI green. For visible UI changes, run both reviews **in parallel**; otherwise run only the adversarial review.
-
-**Adversarial review**
+Only start once the developers report CI green. For a simple task, check `git diff --stat` in the worktree first: if the change turned out to hit a complex trigger, reclassify it, tell the user why, and run the review. Otherwise skip to step 6.
 
 - Send `adversarial-reviewer` the worktree path, report folder (`docs/reports/adversarial-review/<folder>/`), acceptance criteria, contract, and both developer reports.
 - When it returns, **read `report.md`** from that folder and confirm it exists and matches the returned verdict. If it is missing, resume the reviewer to write it before continuing.
 - **Blocker / major findings:** resume the owning developer (by agent ID) with the report path plus each finding's location, attack, and suggested fix. Then re-run the reviewer on the updated diff; it adds a `## Re-review` section to the same report.
 - Keep the reviewer's **QA hints** for step 6.
-
-**Design review**
-
-- Send `ui-ux-designer` in **Review** mode the worktree path, dev ports, the design spec, and the frontend developer's report.
-- **Major issues:** resume `frontend-developer` with each issue's location, problem, and fix. Then re-run the design review on the affected screens.
-
-**Both reviews**
-
 - **Minor findings and nits:** don't loop on them; carry them into the hand-back as open items.
-- Maximum **2 rounds** per review. If blockers or majors remain, stop and escalate to the user.
-- When a fix from one review touches the other's area (e.g. a security fix that changes UI states), re-run the other review too.
+- Maximum **2 rounds**. If blockers or majors remain, stop and escalate to the user.
 
 ### 6. QA
 
-Send `qa-engineer` the worktree path, report folder (`docs/reports/qa/<folder>/`), acceptance criteria, contract, both developer reports (including their CI results), the adversarial report path, and the reviewer's QA hints. Mention the dev ports from step 2 if the defaults are in use.
+Send `qa-engineer` the worktree path, report folder (`docs/reports/qa/<folder>/`), acceptance criteria, contract, both developer reports (including their CI results), and, for complex tasks, the adversarial report path and the reviewer's QA hints. Mention the dev ports from step 2 if the defaults are in use.
 
 When it returns, **read `report.md`** and check that every bug has repro steps and a screenshot (for UI bugs) in `screenshots/`. If the report is missing or incomplete, resume QA to finish it.
 
@@ -101,7 +87,7 @@ When it returns, **read `report.md`** and check that every bug has repro steps a
 - For each bug in the QA report, **resume** the owning developer (by agent ID) with the QA report path plus the bug's repro steps, expected vs actual, screenshot, and suspected file. Then re-run QA on the fixes; it adds a `## Re-test` section to the same report.
 - Maximum **2 fix rounds**. If QA still fails, stop and escalate to the user with the open bugs.
 - A QA verdict of "FAIL — CI not green" goes straight back to the developer whose area failed.
-- If a fix is non-trivial (new logic, not a one-line correction), re-run `adversarial-reviewer` on it before re-running QA.
+- On complex tasks, if a fix is non-trivial (new logic, not a one-line correction), re-run `adversarial-reviewer` on it before re-running QA.
 
 ### 8. Hand back to the user
 
@@ -109,12 +95,25 @@ When it returns, **read `report.md`** and check that every bug has repro steps a
 
 1. Worktree path and branch.
 2. What changed, by area (server, engine, web).
-3. Final contract (endpoints / messages) and design spec summary, if any.
-4. CI results (from the developers), the adversarial reviewer's and designer's final verdicts, and the QA verdict.
-5. **Reports:** links to the adversarial review and QA `report.md` files (and the design spec/review, if any), with the most important QA screenshots embedded inline.
-6. Open items: minor review and design findings, bugs QA left open, things not testable in this env, follow-ups.
+3. Final contract (endpoints / messages), if any.
+4. Simple or complex, and why. CI results (from the developers), the QA verdict, and, for complex tasks, the adversarial reviewer's final verdict.
+5. **Reports:** links to the QA `report.md` and, for complex tasks, the adversarial review `report.md`, with the most important QA screenshots embedded inline.
+6. Open items: minor review findings, bugs QA left open, things not testable in this env, follow-ups.
 
 Reports stay uncommitted in the worktree alongside the code, so they are included when the user commits and opens the PR.
+
+## Simple or complex
+
+A task is **complex** if any of these apply. Otherwise it is **simple**.
+
+- It changes how the server handles untrusted input: REST routes, WebSocket messages, or room sync.
+- It changes move validation or game rules in `packages/xiangqi-engine`.
+- It changes LLM prompts or parsing of LLM output, Pikafish, persistence, or env and secrets handling.
+- It adds or changes a backend-frontend contract.
+- It adds timers, reconnects, or other concurrent or async state.
+- It is large: many files across areas, or several hundred changed lines.
+
+Simple examples: layout, styling, or copy changes; a change confined to one component; a small bug fix with a regression test; docs-only or test-only changes. If you are unsure, treat the task as complex.
 
 ## Reports
 
@@ -122,7 +121,6 @@ Reports stay uncommitted in the worktree alongside the code, so they are include
 | ---------------------- | ----------------------------------------------------- |
 | `adversarial-reviewer` | `docs/reports/adversarial-review/<folder>/report.md`  |
 | `qa-engineer`          | `docs/reports/qa/<folder>/report.md` + `screenshots/` |
-| `ui-ux-designer`       | `docs/reports/design/<folder>/spec.md`, `review.md`   |
 
 - `<folder>` is the name chosen in step 2; always pass the full path in the handoff.
 - Treat the saved report as the source of truth over the subagent's chat summary when looping findings back.
@@ -143,6 +141,6 @@ Subagents start with a fresh context — every prompt must be self-contained:
 **Contract:** <endpoints/messages, or "none">
 **Context:** <relevant files, prior reports, decisions already made>
 **Out of scope:** <what not to touch>
-**Report folder:** <docs/reports/<kind>/<folder>/ — reviewer, QA, and designer only>
-**Return:** your standard report (including CI results for developers); reviewer, QA, and designer also save it to the report folder and return its path.
+**Report folder:** <docs/reports/<kind>/<folder>/ — reviewer and QA only>
+**Return:** your standard report (including CI results for developers); reviewer and QA also save it to the report folder and return its path.
 ```
