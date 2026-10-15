@@ -24,9 +24,19 @@ export interface MoveMeta {
 
 export type AiProvider = 'llm' | 'server' | 'local';
 
+/** Saved move plies replayed once at hook mount (see `buildStateFromInitialMoves`). */
+export type InitialMovePlies = { from: Coord; to: Coord }[];
+
 export interface GameConfig {
   aiSide?: Side;
   difficulty?: Difficulty;
+  /**
+   * Legal plies from the start position, applied once at mount (no `onMove`).
+   * Read only on first hook init — not updated if the config changes later.
+   * Do not combine with `aiSide`: if replay leaves `turn === aiSide`, the opponent
+   * effect may run immediately on mount.
+   */
+  initialMoves?: InitialMovePlies;
   /** `llm` = Learn (/api/ai/move); `server` = Play (/api/opponent/move, server env); `local` = in-browser negamax. */
   aiProvider?: AiProvider;
   /** Minimum delay before the AI plays (ms). Default ~900–1400 random. */
@@ -88,6 +98,59 @@ function initialGameState(startBoard?: Board): GameState {
     status: null,
     hintMove: null,
   };
+}
+
+function isIntegerCoord(n: unknown): n is number {
+  return typeof n === 'number' && Number.isInteger(n);
+}
+
+function isOnBoard(r: number, c: number): boolean {
+  return r >= 0 && r <= 9 && c >= 0 && c <= 8;
+}
+
+/**
+ * Replays saved plies from the standard start through `APPLY_MOVE` logic.
+ * Returns a fresh start state when any ply is illegal or follows game over.
+ */
+export function buildStateFromInitialMoves(moves: InitialMovePlies): {
+  state: GameState;
+  rejected: boolean;
+} {
+  let state = initialGameState();
+  for (const ply of moves) {
+    if (state.status) {
+      return { state: initialGameState(), rejected: true };
+    }
+    const from = ply.from;
+    const to = ply.to;
+    if (
+      !Array.isArray(from) ||
+      !Array.isArray(to) ||
+      from.length !== 2 ||
+      to.length !== 2 ||
+      !isIntegerCoord(from[0]) ||
+      !isIntegerCoord(from[1]) ||
+      !isIntegerCoord(to[0]) ||
+      !isIntegerCoord(to[1]) ||
+      !isOnBoard(from[0], from[1]) ||
+      !isOnBoard(to[0], to[1])
+    ) {
+      return { state: initialGameState(), rejected: true };
+    }
+    const [fr, fc] = from;
+    const [tr, tc] = to;
+    const mover = state.board[fr][fc];
+    if (!mover || mover.s !== state.turn) {
+      return { state: initialGameState(), rejected: true };
+    }
+    const legal = X.movesFrom(state.board, fr, fc);
+    const match = legal.find((m) => m.to[0] === tr && m.to[1] === tc);
+    if (!match) {
+      return { state: initialGameState(), rejected: true };
+    }
+    state = gameReducer(state, { type: 'APPLY_MOVE', move: match });
+  }
+  return { state, rejected: false };
 }
 
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -233,8 +296,18 @@ function lastAiMoveText(history: HistoryEntry[], aiSide: Side): string | null {
 
 export function useXiangqiGame(config: GameConfig = {}) {
   const cfgRef = useRef(config);
+  const initialMoveList = config.initialMoves;
 
-  const [state, dispatch] = useReducer(gameReducer, undefined, () => initialGameState());
+  const [initialMovesRejected] = useState(() => {
+    if (!initialMoveList?.length) return false;
+    return buildStateFromInitialMoves(initialMoveList).rejected;
+  });
+
+  const [state, dispatch] = useReducer(gameReducer, undefined, () => {
+    if (!initialMoveList?.length) return initialGameState();
+    const built = buildStateFromInitialMoves(initialMoveList);
+    return built.rejected ? initialGameState() : built.state;
+  });
   const [aiThinking, setAiThinking] = useState(false);
   const [revealingOpponentMove, setRevealingOpponentMove] = useState(false);
   const [lastOpponentMoveText, setLastOpponentMoveText] = useState<string | null>(null);
@@ -526,6 +599,8 @@ export function useXiangqiGame(config: GameConfig = {}) {
     lastMove,
     computerLastMove,
     history,
+    /** True when `initialMoves` was present but failed validation at mount. */
+    initialMovesRejected,
     status,
     aiThinking,
     revealingOpponentMove,
