@@ -31,6 +31,10 @@ export interface RoomGameState {
   checkSide: Side | null;
   connected: boolean;
   opponentJoined: boolean;
+  redName: string | null;
+  blackName: string | null;
+  redConnected: boolean;
+  blackConnected: boolean;
   error: string | null;
 }
 
@@ -63,6 +67,10 @@ export function useRoomGame(code: string, side: Side) {
     checkSide: null,
     connected: false,
     opponentJoined: false,
+    redName: null,
+    blackName: null,
+    redConnected: false,
+    blackConnected: false,
     error: null,
   }));
 
@@ -82,6 +90,10 @@ export function useRoomGame(code: string, side: Side) {
       checkPos: checkSide ? X.findGeneral(room.board, checkSide) : null,
       checkSide,
       opponentJoined: room.redJoined && room.blackJoined,
+      redName: room.redName ?? null,
+      blackName: room.blackName ?? null,
+      redConnected: room.redConnected,
+      blackConnected: room.blackConnected,
       error: null,
     }));
     // The resigned snapshot also counts as "already resigned" so a stray

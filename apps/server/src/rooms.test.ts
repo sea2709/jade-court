@@ -6,6 +6,8 @@ import {
   createRoom,
   getRoom,
   joinRoom,
+  normalizeDisplayName,
+  parseDisplayNameField,
   publicRoomView,
   randomCode,
   resignRoom,
@@ -29,6 +31,42 @@ function seatedRoom() {
   return { room, red, black };
 }
 
+describe('normalizeDisplayName / parseDisplayNameField', () => {
+  it('trims and collapses internal whitespace', () => {
+    expect(normalizeDisplayName('  Alice   Bob  ')).toBe('Alice Bob');
+  });
+
+  it('returns null for empty or whitespace-only input', () => {
+    expect(normalizeDisplayName('')).toBeNull();
+    expect(normalizeDisplayName('   ')).toBeNull();
+    expect(normalizeDisplayName(null)).toBeNull();
+    expect(normalizeDisplayName(undefined)).toBeNull();
+  });
+
+  it('rejects non-strings and names over 20 characters', () => {
+    expect(parseDisplayNameField(42)).toEqual({ ok: false, error: 'Invalid display name' });
+    expect(parseDisplayNameField('a'.repeat(21))).toEqual({
+      ok: false,
+      error: 'Display name must be at most 20 characters',
+    });
+    expect(parseDisplayNameField(`  ${'x'.repeat(21)}  `)).toEqual({
+      ok: false,
+      error: 'Display name must be at most 20 characters',
+    });
+  });
+
+  it('accepts valid names up to 20 characters after normalise', () => {
+    expect(parseDisplayNameField('  Red Player  ')).toEqual({
+      ok: true,
+      displayName: 'Red Player',
+    });
+    expect(parseDisplayNameField('a'.repeat(20))).toEqual({
+      ok: true,
+      displayName: 'a'.repeat(20),
+    });
+  });
+});
+
 describe('randomCode', () => {
   it('uses the JADE- prefix and unambiguous characters', () => {
     for (let i = 0; i < 50; i++) expect(randomCode()).toMatch(/^JADE-[A-HJ-NP-Z2-9]{4}$/);
@@ -40,6 +78,7 @@ describe('createRoom / getRoom', () => {
     const host = guest('host');
     const room = createRoom(host);
     expect(room.red).toMatchObject({ guestId: host, side: 'r' });
+    expect(room.red?.displayName).toBeUndefined();
     expect(room.black).toBeUndefined();
     expect(room.turn).toBe('r');
     expect(room.board).toEqual(X.initialBoard());
@@ -50,6 +89,11 @@ describe('createRoom / getRoom', () => {
     expect(getRoom(room.code.toLowerCase())).toBe(room);
     expect(getRoom('JADE-NOPE')).toBeUndefined();
   });
+
+  it('stores a normalised display name for the host', () => {
+    const room = createRoom(guest('host'), '  Host  Name ');
+    expect(room.red?.displayName).toBe('Host Name');
+  });
 });
 
 describe('joinRoom', () => {
@@ -57,6 +101,23 @@ describe('joinRoom', () => {
     const room = createRoom(guest('host'));
     const res = joinRoom(room.code, guest('guest'));
     expect(res).toMatchObject({ side: 'b' });
+  });
+
+  it('stores display name when Black joins', () => {
+    const room = createRoom(guest('host'));
+    joinRoom(room.code, guest('guest'), '  Guest  ');
+    expect(room.black?.displayName).toBe('Guest');
+  });
+
+  it('keeps the original display name when a seated player rejoins', () => {
+    const red = guest('red');
+    const black = guest('black');
+    const room = createRoom(red, 'Red One');
+    joinRoom(room.code, black, 'Black One');
+    joinRoom(room.code, red, 'Red Two');
+    joinRoom(room.code, black, 'Black Two');
+    expect(room.red?.displayName).toBe('Red One');
+    expect(room.black?.displayName).toBe('Black One');
   });
 
   it('rejects a third guest', () => {
@@ -179,11 +240,21 @@ describe('publicRoomView', () => {
     expect(view).toMatchObject({
       redJoined: true,
       blackJoined: true,
+      redName: null,
+      blackName: null,
       turn: 'r',
       status: null,
       winner: null,
     });
     expect(JSON.stringify(view)).not.toContain('guestId');
+  });
+
+  it('includes player display names when set', () => {
+    const red = guest('red');
+    const black = guest('black');
+    const room = createRoom(red, 'Alpha');
+    joinRoom(room.code, black, 'Beta');
+    expect(publicRoomView(room)).toMatchObject({ redName: 'Alpha', blackName: 'Beta' });
   });
 
   it('exposes the resigned status and winner without guest ids', () => {

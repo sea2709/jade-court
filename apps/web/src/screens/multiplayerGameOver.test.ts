@@ -1,8 +1,5 @@
 /**
  * Unit tests for `apps/web/src/screens/multiplayerGameOver.ts`.
- *
- * Pure helper so this can be tested without a React renderer. Covers the
- * three status branches and both win/lose perspectives for `'resigned'`.
  */
 import { describe, expect, it } from 'vitest';
 import { didSideWin, onlineGameOverSubtitle } from './multiplayerGameOver';
@@ -20,12 +17,22 @@ describe('onlineGameOverSubtitle', () => {
     expect(onlineGameOverSubtitle('checkmate', false, null)).toBe('Checkmate!');
   });
 
-  it('says "Red resigned — Black wins." when Red resigns and Black wins', () => {
-    expect(onlineGameOverSubtitle('resigned', true, 'b')).toBe('Red resigned — Black wins.');
+  it('uses display names when the opponent resigned', () => {
+    expect(
+      onlineGameOverSubtitle('resigned', true, 'b', { redName: 'Minh', blackName: 'Lan' }),
+    ).toBe('Minh resigned.');
+    expect(
+      onlineGameOverSubtitle('resigned', true, 'r', { redName: 'Minh', blackName: 'Lan' }),
+    ).toBe('Lan resigned.');
   });
 
-  it('says "Black resigned — Red wins." when Black resigns and Red wins', () => {
-    expect(onlineGameOverSubtitle('resigned', true, 'r')).toBe('Black resigned — Red wins.');
+  it('falls back to Red player / Black player when names are missing', () => {
+    expect(onlineGameOverSubtitle('resigned', true, 'b', { redName: null, blackName: null })).toBe(
+      'Red player resigned.',
+    );
+    expect(onlineGameOverSubtitle('resigned', true, 'r', { redName: null, blackName: null })).toBe(
+      'Black player resigned.',
+    );
   });
 
   it('says "You resigned." to the resigning (losing) player', () => {
@@ -50,8 +57,7 @@ describe('didSideWin', () => {
   });
 
   it('falls back to "side to move lost" when winner is null', () => {
-    // Status set but no server winner — uses the original inference.
-    expect(didSideWin('checkmate', null, 'b', 'r', OPP)).toBe(true); // Red to move lost
+    expect(didSideWin('checkmate', null, 'b', 'r', OPP)).toBe(true);
     expect(didSideWin('checkmate', null, 'r', 'r', OPP)).toBe(false);
   });
 });

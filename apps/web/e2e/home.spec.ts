@@ -16,7 +16,7 @@ test.describe('home and navigation', () => {
     await expect(page).toHaveURL(/\/play$/);
     await expect(page.getByRole('heading', { name: 'Play vs Computer' })).toBeVisible();
 
-    await nav.getByRole('link', { name: 'Friends' }).click();
+    await nav.getByRole('link', { name: 'Play with Friends' }).click();
     await expect(page).toHaveURL(/\/multiplayer$/);
     await expect(page.getByRole('heading', { name: 'Play with a Friend' })).toBeVisible();
 

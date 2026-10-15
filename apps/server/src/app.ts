@@ -2,7 +2,7 @@
  * Hono app (REST routes) and the room WebSocket server.
  * Kept free of `listen()` and env loading so tests can import it directly.
  */
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import type { Server } from 'http';
 import type { WebSocket } from 'ws';
@@ -15,6 +15,7 @@ import {
   createRoom,
   getRoom,
   joinRoom,
+  parseDisplayNameField,
   publicRoomView,
   resignRoom,
   type RoomState,
@@ -44,6 +45,26 @@ function setConnected(room: RoomState, guestId: string, connected: boolean) {
   if (room.black?.guestId === guestId) room.black.connected = connected;
 }
 
+async function readDisplayNameFromBody(
+  c: Context,
+): Promise<{ displayName: string | null } | Response> {
+  const raw = await c.req.text();
+  let body: unknown = {};
+  if (raw.trim() !== '') {
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      return c.json({ error: 'invalid_json' }, 400);
+    }
+  }
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return c.json({ error: 'invalid_json' }, 400);
+  }
+  const parsed = parseDisplayNameField((body as { displayName?: unknown }).displayName);
+  if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+  return { displayName: parsed.displayName };
+}
+
 export interface CreateAppDeps {
   newsStore?: NewsStore | null;
 }
@@ -71,16 +92,20 @@ export function createApp(deps?: CreateAppDeps) {
 
   app.use('*', authMiddleware);
 
-  app.post('/api/rooms', (c) => {
+  app.post('/api/rooms', async (c) => {
+    const nameResult = await readDisplayNameFromBody(c);
+    if (nameResult instanceof Response) return nameResult;
     const guestId = getGuestId(c);
-    const room = createRoom(guestId);
+    const room = createRoom(guestId, nameResult.displayName);
     return c.json({ code: room.code, room: publicRoomView(room) });
   });
 
-  app.post('/api/rooms/:code/join', (c) => {
+  app.post('/api/rooms/:code/join', async (c) => {
+    const nameResult = await readDisplayNameFromBody(c);
+    if (nameResult instanceof Response) return nameResult;
     const guestId = getGuestId(c);
     const code = c.req.param('code').toUpperCase();
-    const result = joinRoom(code, guestId);
+    const result = joinRoom(code, guestId, nameResult.displayName);
     if ('error' in result) return c.json({ error: result.error }, 400);
     broadcastRoom(result.room);
     return c.json({ side: result.side, room: publicRoomView(result.room) });

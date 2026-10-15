@@ -23,29 +23,46 @@ export async function closeMultiplayerRoom(host: Page, guest: Page): Promise<voi
   }
 }
 
+async function fillDisplayName(page: Page, name: string) {
+  await page.getByLabel('Your name').fill(name);
+}
+
 /** Host creates a room; guest joins with the code in a separate browser context (own guest id). */
-async function openRoom(browser: Browser): Promise<MultiplayerRoom> {
+async function openRoom(
+  browser: Browser,
+  options?: { hostName?: string; guestName?: string },
+): Promise<MultiplayerRoom> {
   const hostContext = await browser.newContext();
   const guestContext = await browser.newContext();
   const host = await hostContext.newPage();
   const guest = await guestContext.newPage();
 
   await host.goto('/multiplayer');
+  if (options?.hostName) await fillDisplayName(host, options.hostName);
   await host.getByRole('button', { name: /Create a room/ }).click();
   await expect(host.getByRole('heading', { name: 'Invite your friend' })).toBeVisible();
   const code = (await host.locator('.room-link-input').inputValue()).split('room=')[1]!;
   expect(code).toMatch(/^JADE-/);
 
   await guest.goto('/multiplayer');
+  if (options?.guestName) await fillDisplayName(guest, options.guestName);
   await guest.getByRole('button', { name: /Join with a code/ }).click();
   await guest.getByPlaceholder('JADE-XXXX').fill(code);
   await guest.getByRole('button', { name: 'Join game →' }).click();
-  await expect(guest.getByText('You are playing as Black 將.')).toBeVisible();
+  const guestYouLabel = options?.guestName ? `${options.guestName} (you)` : 'Black player (you)';
+  await expect(guest.getByText(guestYouLabel)).toBeVisible();
 
-  await expect(host.getByText('✓ Opponent joined the room!')).toBeVisible();
+  const hostJoinedMsg = options?.guestName
+    ? `✓ ${options.guestName} joined the room!`
+    : '✓ Black player joined the room!';
+  await expect(host.getByText(hostJoinedMsg)).toBeVisible();
   await host.getByRole('button', { name: 'Start game →' }).click();
-  await expect(host.getByText('You are playing as Red 帥.')).toBeVisible();
-  await expect(host.getByText('Opponent connected ✓')).toBeVisible();
+  const hostYouLabel = options?.hostName ? `${options.hostName} (you)` : 'Red player (you)';
+  await expect(host.getByText(hostYouLabel)).toBeVisible();
+  if (options?.guestName) {
+    await expect(host.locator('.card').getByText(options.guestName, { exact: true })).toBeVisible();
+    await expect(host.getByText('connected')).toBeVisible();
+  }
 
   return {
     host,
@@ -56,18 +73,60 @@ async function openRoom(browser: Browser): Promise<MultiplayerRoom> {
 }
 
 test.describe('Play with Friends (online room)', () => {
+  test('host can copy invite link while waiting for opponent', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    await hostContext.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const host = await hostContext.newPage();
+    await host.goto('/multiplayer');
+    await host.getByRole('button', { name: /Create a room/ }).click();
+    await expect(host.getByTestId('room-invite-share')).toBeVisible();
+    await host.getByRole('button', { name: 'Start game (waiting for opponent)' }).click();
+    await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
+    await host.getByRole('button', { name: 'Copy link' }).click();
+    await expect(host.getByRole('button', { name: '✓ Copied' })).toBeVisible();
+    await host.close();
+    await hostContext.close();
+  });
+
+  test('two named players see each other in the room card', async ({ browser }) => {
+    const room = await openRoom(browser, { hostName: 'Minh', guestName: 'Lan' });
+    try {
+      const { host, guest } = room;
+      await expect(host.getByText('Minh (you)')).toBeVisible();
+      await expect(host.locator('.card').getByText('Lan', { exact: true })).toBeVisible();
+      await expect(guest.getByText('Lan (you)')).toBeVisible();
+      await expect(guest.locator('.card').getByText('Minh', { exact: true })).toBeVisible();
+      await expect(host.getByTestId('waiting-invite-panel')).toHaveCount(0);
+    } finally {
+      await room.close();
+    }
+  });
+
+  test('uses fallback labels when a player skips entering a name', async ({ browser }) => {
+    const room = await openRoom(browser, { hostName: 'Minh' });
+    try {
+      const { host, guest } = room;
+      await expect(host.getByText('Minh (you)')).toBeVisible();
+      await expect(host.getByText('Black player')).toBeVisible();
+      await expect(guest.getByText('Black player (you)')).toBeVisible();
+      await expect(guest.locator('.card').getByText('Minh', { exact: true })).toBeVisible();
+    } finally {
+      await room.close();
+    }
+  });
+
   test('a move by Red appears on Black’s board', async ({ browser }) => {
     const room = await openRoom(browser);
     try {
       const { host, guest } = room;
 
       await expect(host.getByText('Your move')).toBeVisible();
-      await expect(guest.getByText('Red 帥 to move')).toBeVisible();
+      await expect(guest.getByText('Red player to move')).toBeVisible();
 
       await playMove(host, [7, 1], [7, 4]);
       await expect(square(guest, 7, 4)).toHaveAttribute('data-piece', 'rC');
       await expect(guest.getByText('Your move')).toBeVisible();
-      await expect(host.getByText('Black 將 to move')).toBeVisible();
+      await expect(host.getByText('Black player to move')).toBeVisible();
 
       await playMove(guest, [0, 1], [2, 2]);
       await expect(square(host, 2, 2)).toHaveAttribute('data-piece', 'bH');
@@ -78,15 +137,12 @@ test.describe('Play with Friends (online room)', () => {
   });
 
   test('a legal move does not surface a rejection error', async ({ browser }) => {
-    // Known bug: useRoomGame sends the WebSocket move inside a setState updater, which React
-    // StrictMode (dev) runs twice; the duplicate is rejected with "Not your turn".
-    // Remove `test.fail` once the send moves out of the updater.
     test.fail();
     const room = await openRoom(browser);
     try {
       const { host } = room;
       await playMove(host, [7, 1], [7, 4]);
-      await expect(host.getByText('Black 將 to move')).toBeVisible();
+      await expect(host.getByText('Black player to move')).toBeVisible();
       await expect(host.getByText('Not your turn')).toHaveCount(0, { timeout: 2000 });
     } finally {
       await room.close();
@@ -123,36 +179,28 @@ test.describe('Play with Friends (online room)', () => {
     await expect(page.getByText('Room not found')).toBeVisible();
   });
 
-  // --- Issue #40: resign when playing with friends -----------------------
-
   test('either player can resign; both sides see the resolved game-over overlay', async ({
     browser,
   }) => {
-    const room = await openRoom(browser);
+    const room = await openRoom(browser, { hostName: 'Minh', guestName: 'Lan' });
     try {
       const { host, guest } = room;
 
-      // Host (Red) opens the confirmation overlay.
       await host.getByTestId('resign-button').click();
       await expect(host.getByTestId('resign-confirm')).toBeVisible();
       await expect(host.getByRole('heading', { name: 'Resign this game?' })).toBeVisible();
       await expect(host.getByText(/cannot be undone/)).toBeVisible();
 
-      // Confirms — both players should see the game-over overlay.
       await host.getByTestId('resign-confirm').getByRole('button', { name: 'Resign' }).click();
 
-      // Resigner: lost the game as a result of their concession.
       await expect(host.getByTestId('online-game-over')).toBeVisible();
       await expect(host.getByRole('heading', { name: 'You lose' })).toBeVisible();
       await expect(host.getByText('You resigned.')).toBeVisible();
 
-      // Opponent: won because Red conceded.
       await expect(guest.getByTestId('online-game-over')).toBeVisible();
       await expect(guest.getByRole('heading', { name: 'You win!' })).toBeVisible();
-      await expect(guest.getByText('Red resigned — Black wins.')).toBeVisible();
+      await expect(guest.getByText('Minh resigned.')).toBeVisible();
 
-      // Resign button disappears for both players; the board is no longer
-      // interactive for either side.
       await expect(host.getByTestId('resign-button')).toHaveCount(0);
       await expect(guest.getByTestId('resign-button')).toHaveCount(0);
     } finally {
@@ -168,14 +216,12 @@ test.describe('Play with Friends (online room)', () => {
       await host.getByTestId('resign-button').click();
       await expect(host.getByTestId('resign-confirm')).toBeVisible();
 
-      // Cancel: overlay should disappear; the game still says "Your move".
       await host.getByRole('button', { name: 'Cancel' }).click();
       await expect(host.getByTestId('resign-confirm')).toHaveCount(0);
       await expect(host.getByTestId('online-game-over')).toHaveCount(0);
       await expect(host.getByText('Your move')).toBeVisible();
-      await expect(guest.getByText('Red 帥 to move')).toBeVisible();
+      await expect(guest.getByText('Red player to move')).toBeVisible();
 
-      // And a legal move still works on this side.
       await playMove(host, [7, 1], [7, 4]);
       await expect(square(guest, 7, 4)).toHaveAttribute('data-piece', 'rC');
     } finally {
@@ -184,30 +230,24 @@ test.describe('Play with Friends (online room)', () => {
   });
 
   test('reloading after a resignation keeps the game-over overlay', async ({ browser }) => {
-    const room = await openRoom(browser);
+    const room = await openRoom(browser, { guestName: 'Lan' });
     try {
       const { host, guest } = room;
 
-      // Black resigns so the opponent-side snippet reads "Black resigned — Red wins."
       await guest.getByTestId('resign-button').click();
       await guest.getByTestId('resign-confirm').getByRole('button', { name: 'Resign' }).click();
 
       await expect(host.getByTestId('online-game-over')).toBeVisible();
-      await expect(host.getByText('Black resigned — Red wins.')).toBeVisible();
+      await expect(host.getByText('Lan resigned.')).toBeVisible();
       const offlineUrl = host.url();
 
-      // Reload the host page. The WebSocket subscription drops, the Lobby
-      // briefly owns the page, and the user re-joins with their existing
-      // guest id. The server returns the resigned snapshot, the hook mirrors
-      // `status: 'resigned'` + `winner: 'r'` into state, and the game-over
-      // overlay re-appears.
       await host.reload();
       await host.getByRole('button', { name: 'Join game →' }).click();
       await host.waitForURL(offlineUrl);
-      await expect(host.getByText('You are playing as Red 帥.')).toBeVisible();
+      await expect(host.getByText(/\(you\)/)).toBeVisible();
       await expect(host.getByTestId('online-game-over')).toBeVisible();
       await expect(host.getByRole('heading', { name: 'You win!' })).toBeVisible();
-      await expect(host.getByText('Black resigned — Red wins.')).toBeVisible();
+      await expect(host.getByText('Lan resigned.')).toBeVisible();
     } finally {
       await room.close();
     }

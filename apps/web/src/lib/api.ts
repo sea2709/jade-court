@@ -35,15 +35,26 @@ export interface PublicRoom {
   blackJoined: boolean;
   redConnected: boolean;
   blackConnected: boolean;
+  redName: string | null;
+  blackName: string | null;
 }
 
-export function createRoom() {
-  return api<{ code: string; room: PublicRoom }>('/api/rooms', { method: 'POST' });
+export function createRoom(options?: { displayName?: string }) {
+  const body =
+    options?.displayName !== undefined
+      ? JSON.stringify({ displayName: options.displayName })
+      : '{}';
+  return api<{ code: string; room: PublicRoom }>('/api/rooms', { method: 'POST', body });
 }
 
-export function joinRoom(code: string) {
+export function joinRoom(code: string, options?: { displayName?: string }) {
+  const body =
+    options?.displayName !== undefined
+      ? JSON.stringify({ displayName: options.displayName })
+      : '{}';
   return api<{ side: 'r' | 'b'; room: PublicRoom }>(`/api/rooms/${encodeURIComponent(code)}/join`, {
     method: 'POST',
+    body,
   });
 }
 
