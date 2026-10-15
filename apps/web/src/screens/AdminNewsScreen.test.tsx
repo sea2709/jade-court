@@ -3,10 +3,26 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PUBLISH_REQUIREMENTS_MESSAGE } from '../lib/adminNewsForm';
-import { NEWS_ADMIN_TOKEN_STORAGE_KEY, type AdminNewsItem } from '../lib/newsApi';
+import { setAdminSession } from '../lib/adminApi';
+import { type AdminNewsItem } from '../lib/newsApi';
 import { AdminNewsScreen } from './AdminNewsScreen';
 
+const onUnauthorizedMock = vi.fn();
+
+vi.mock('../admin/AdminSessionContext', () => ({
+  useAdminSession: () => ({
+    username: 'test-admin',
+    onUnauthorized: onUnauthorizedMock,
+  }),
+}));
+
 const fetchMock = vi.fn<typeof fetch>();
+
+const futureExpiry = () => new Date(Date.now() + 60_000).toISOString();
+
+function seedSession() {
+  setAdminSession({ token: 'tok', username: 'test-admin', expiresAt: futureExpiry() });
+}
 
 const adminItem: AdminNewsItem = {
   id: 'existing-1',
@@ -81,6 +97,8 @@ function renderAdmin() {
 beforeEach(() => {
   localStorage.setItem('jade-court-guest-id', 'guest');
   sessionStorage.clear();
+  onUnauthorizedMock.mockReset();
+  seedSession();
   vi.stubGlobal('fetch', fetchMock);
   vi.stubGlobal(
     'confirm',
@@ -94,30 +112,19 @@ afterEach(() => {
 });
 
 describe('AdminNewsScreen', () => {
-  it('shows token gate when not authenticated', async () => {
-    fetchMock.mockResolvedValue(json({ error: 'unauthorized' }, 401));
-    renderAdmin();
-    expect(await screen.findByRole('heading', { name: 'Unlock news admin' })).toBeInTheDocument();
-  });
-
-  it('unlocks with valid token and lists items', async () => {
+  it('lists items when authenticated', async () => {
     mockAdminFetch({ listItems: [adminItem] });
     renderAdmin();
-    await userEvent.type(screen.getByLabelText('Admin token'), 'good-token');
-    await userEvent.click(screen.getByRole('button', { name: 'Unlock' }));
     expect(await screen.findByText('Existing title')).toBeInTheDocument();
-    expect(sessionStorage.getItem(NEWS_ADMIN_TOKEN_STORAGE_KEY)).toBe('good-token');
   });
 
-  it('returns to gate on 401 from list', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'stale');
+  it('calls onUnauthorized on 401 from list', async () => {
     fetchMock.mockResolvedValue(json({ error: 'unauthorized' }, 401));
     renderAdmin();
-    expect(await screen.findByRole('heading', { name: 'Unlock news admin' })).toBeInTheDocument();
+    await waitFor(() => expect(onUnauthorizedMock).toHaveBeenCalled());
   });
 
   it('prefills from preview and shows duplicate warning', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({
       listItems: [],
       preview: {
@@ -142,7 +149,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('shows manual fallback when preview fails', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({ listItems: [], preview: 'fail' });
     renderAdmin();
     await waitFor(() =>
@@ -155,7 +161,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('validates draft vs publish client-side', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({ listItems: [] });
     renderAdmin();
     await waitFor(() =>
@@ -172,7 +177,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('shows server validation field errors inline', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({
       listItems: [],
       postError: { body: { error: 'validation', fields: { summary: 'Too short' } }, status: 400 },
@@ -194,7 +198,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('shows server field errors and 409 edit link', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({
       listItems: [adminItem],
       postError: {
@@ -220,7 +223,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('opens the editor when list-row Publish fails client validation', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     const urlOnlyDraft: AdminNewsItem = {
       ...adminItem,
       id: 'url-only',
@@ -241,7 +243,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('opens the editor with server validation fields when PATCH publish fails', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({
       listItems: [adminItem],
       patchError: {
@@ -260,7 +261,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('shows a row alert for non-validation row action failures', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     mockAdminFetch({
       listItems: [{ ...adminItem, status: 'published' }],
       patchError: { body: { error: 'news_storage_unavailable' }, status: 503 },
@@ -276,7 +276,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('disables row actions while a patch is in flight', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     let resolvePatch: (() => void) | undefined;
     fetchMock.mockImplementation((url, init) => {
       const method = init?.method ?? 'GET';
@@ -304,7 +303,6 @@ describe('AdminNewsScreen', () => {
   });
 
   it('confirms before delete on archived row', async () => {
-    sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, 'tok');
     const archived = { ...adminItem, status: 'archived' as const };
     mockAdminFetch({ listItems: [archived] });
     renderAdmin();

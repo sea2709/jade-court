@@ -5,6 +5,9 @@ import { attachRoomSockets, createApp } from './app.js';
 import { getDb } from './db.js';
 import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engine/config.js';
 import { isLlmConfigured, llmModel, llmProviderId, shouldLogLlmTokenUsage } from './llm/config.js';
+import { warnAdminConfigAtStartup } from './admin/startupWarnings.js';
+
+warnAdminConfigAtStartup();
 
 const app = createApp();
 
