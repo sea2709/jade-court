@@ -43,6 +43,9 @@ Thumbs.db
 # Extracted prototype decode (large, regenerable from chinese-chess.html)
 reference/extracted/
 
+# Agent reports (content goes into PR descriptions; screenshots to the pr-assets release)
+docs/reports/
+
 # E2E / local tooling
 .playwright/
 test-results/

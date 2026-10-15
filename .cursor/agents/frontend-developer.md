@@ -88,6 +88,6 @@ Do **not** edit:
 
 ## Report back
 
-When the handoff gives a report folder, save the report as `docs/reports/dev/<folder>/frontend-report.md` in the worktree and update it after each fix round. It ships in the PR. Return the same content as your final message.
+When the handoff gives a report folder, save the report as `docs/reports/dev/<folder>/frontend-report.md` in the worktree and update it after each fix round. It is git-ignored; the orchestrator pastes it into the PR description. Return the same content as your final message.
 
 Summarize: what changed (screens, components, hooks, styles), any API/WebSocket contract the server must support, tests added or updated (and anything left untested, with why), CI check results (each command with pass/fail plus counts such as tests passed and coverage vs thresholds; summarize, don't paste raw logs), browser check results, and anything left open (e.g. mobile layout not checked, PWA cache implications).

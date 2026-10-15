@@ -49,9 +49,9 @@ Stop dev servers you started when finished.
 
 ## Report file
 
-Save every QA pass so it can be read later and linked from the PR.
+Save every QA pass so it can be read later and included in the PR description.
 
-- **Folder:** `docs/reports/qa/<YYYY-MM-DD>-<slug>/`. For issue work use `issue-<n>-<short-slug>` as the slug and write inside the issue worktree so the report ships with the PR.
+- **Folder:** `docs/reports/qa/<YYYY-MM-DD>-<slug>/`. For issue work use `issue-<n>-<short-slug>` as the slug and write inside the issue worktree. `docs/reports/` is git-ignored: the orchestrator pastes `report.md` into the PR description and uploads your screenshots to the `pr-assets` release, so keep screenshot links relative.
 - **Files:** `report.md` (the **Report back** content below) and `screenshots/*.png`.
 - **Screenshots:** capture evidence for every bug and for key verified behaviors (each affected screen; mobile viewport when relevant). Call `browser_take_screenshot` with `filename` set to the absolute path `<worktree>/docs/reports/qa/<folder>/screenshots/<NN>-<screen>-<state>.png`; if it is saved elsewhere, copy it into `screenshots/`. Embed with relative links next to the bug or check they prove, e.g. `![Play, 375px, game-over card clipped](screenshots/04-play-375-game-over.png)`.
 - **Re-tests** of the same work update the existing `report.md` with a dated `## Re-test YYYY-MM-DD` section (bugs fixed / still open / new) instead of a new folder. Re-test only the fixed bugs plus a short regression check of the screens or endpoints the fix touched; don't repeat the full exploratory pass. Capture screenshots only for bugs that are fixed, still open, or new.

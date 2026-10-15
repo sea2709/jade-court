@@ -5,14 +5,14 @@ description: >-
   frontend-developer, adversarial-reviewer, and qa-engineer subagents:   plans the
   split, agrees the API/WebSocket contract, delegates implementation, runs a
   hostile review (complex tasks only) and QA, loops findings back to the right
-  developer, then commits, pushes, and opens a PR with every report linked. Use
+  developer, then commits, pushes, and opens a PR with every report included. Use
   as a Custom Mode when implementing an issue or a multi-part feature end to end.
 disable-model-invocation: true
 ---
 
 # Orchestrate
 
-You are the **tech lead**. You plan, delegate, verify, and ship. You do **not** edit product code, tests, or reports yourself — implementation goes to the developer subagents, review to the adversarial reviewer, verification to QA. The only file you write is the PR description in step 8.
+You are the **tech lead**. You plan, delegate, verify, and ship. You do **not** edit product code, tests, or reports yourself — implementation goes to the developer subagents, review to the adversarial reviewer, verification to QA. The only files you write are the PR description (and, when it is too long, PR comment files) in step 8.
 
 | Subagent               | Owns                                                                   |
 | ---------------------- | ---------------------------------------------------------------------- |
@@ -21,7 +21,7 @@ You are the **tech lead**. You plan, delegate, verify, and ship. You do **not** 
 | `adversarial-reviewer` | Hostile review of complex changes (does not fix code); writes a report |
 | `qa-engineer`          | End-to-end verification and bug reports (does not fix product code)    |
 
-Every subagent must **save a report** under `docs/reports/` in the worktree — developers in `dev/`, the reviewer and QA with screenshots — see [Reports](#reports). A pass without a saved report is not done. The reports are committed with the code and linked from the PR.
+Every subagent must **save a report** under `docs/reports/` in the worktree — developers in `dev/`, the reviewer and QA with screenshots — see [Reports](#reports). A pass without a saved report is not done. `docs/reports/` is git-ignored: reports stay in the worktree, their content goes into the PR description, and screenshots are uploaded to the `pr-assets` release.
 
 Developers own the CI checks (`lint`, `format:check`, `build`, `test:coverage`, `typecheck`, and `test:e2e` when user flows change) and must add tests for every new or changed behavior without breaking existing ones or lowering coverage thresholds (see `.cursor/rules/testing.mdc`). QA rejects work whose CI is not green or whose new logic is untested.
 
@@ -106,18 +106,24 @@ Run every command from the issue worktree.
 
 1. **Stage deliberately.** Run `git status --short`, then `git add` explicit paths — never `git add -A` or `git add .`:
    - Product code and tests the developers changed for this task.
-   - Reports for this task's folder: only `*.md` and `*.png` under `docs/reports/{dev,adversarial-review,qa}/<folder>/`.
    - Leave out scratch files (scripts, JSON, logs, `.txt`), anything outside the task scope, and unrelated fixes, even if they look harmless. List what you left out in the hand-back.
-2. **Commit** in two commits: code and tests as `feat: <summary> (#<n>)` (or `fix:`), then reports as `docs: add issue #<n> reports`. Check `git diff --cached --stat` before each commit.
+   - Never stage `docs/reports/`; it is git-ignored and goes into the PR description instead.
+2. **Commit** code and tests as `feat: <summary> (#<n>)` (or `fix:`). Check `git diff --cached --stat` first.
 3. **Push** with `git push -u origin <branch>`. If it fails on HTTPS auth, use the `gh auth token` pattern in `.cursor/rules/git-gh-auth.mdc`; if that fails too, stop and tell the user.
-4. **Write the PR description** to `/tmp/jade-court-pr-body-<n>.md`, following `.github/pull_request_template.md`:
+4. **Upload screenshots** linked from the reviewer and QA reports to the `pr-assets` prerelease. Asset names share one flat namespace across all PRs, so prefix each with the report folder and agent:
+   - Copy each PNG to `/tmp/jade-court-pr-assets-<folder>/<folder>-<qa|review>-<file>.png`.
+   - Upload: `gh release upload pr-assets /tmp/jade-court-pr-assets-<folder>/*.png --clobber`.
+   - If `gh release view pr-assets` fails, create the release once: `gh release create pr-assets --prerelease --title "PR assets" --notes "Screenshots embedded in PR descriptions. Not a product release."`.
+   - Each asset is served at `https://github.com/<owner>/<repo>/releases/download/pr-assets/<asset-name>` (get `<owner>/<repo>` from `gh repo view --json nameWithOwner`).
+5. **Write the PR description** to `/tmp/jade-court-pr-body-<n>.md`, following `.github/pull_request_template.md`:
    - **Summary:** what changed, by area.
    - **Linked issue:** `Closes #<n>`.
    - **Test plan:** check only the items the developers' CI results prove, with counts (tests added, E2E specs, coverage vs thresholds) and the manual checks QA ran.
-   - **Reports:** one line per report file with its verdict: developer reports, adversarial review (complex tasks), and QA. Link each as `https://github.com/<owner>/<repo>/blob/<branch>/<path>` (get `<owner>/<repo>` from `gh repo view --json nameWithOwner`). Embed the 3–5 most important screenshots as `![caption](https://github.com/<owner>/<repo>/blob/<branch>/<path>.png?raw=true)`.
+   - **Reports:** one line per report with its verdict, then the 3–5 most important screenshots embedded from their asset URLs. Below that, paste each report's full content — developer reports, adversarial review (complex tasks), and QA — in its own `<details><summary>QA report — PASS</summary>` block (blank line after `<summary>` so the Markdown renders). Rewrite every relative `screenshots/...` link to its asset URL.
    - **Known open items:** minor findings, open bugs, a skipped review, and things not testable in this environment.
-5. **Open the PR:** `gh pr create --base main --head <branch> --title "<code commit subject>" --body-file /tmp/jade-court-pr-body-<n>.md`. If `gh pr view <branch>` shows a PR already exists, update it with `gh pr edit <number> --body-file ...` instead.
-6. **Check CI once** with `gh pr checks <number>` and include the status in the hand-back. Don't wait on it or fix failures yourself; failures go back to the developer as a new round.
+   - GitHub rejects bodies over 65,536 characters. If the body is over ~60,000, keep the full reports out of it and, after step 6, post each one as a PR comment with `gh pr comment <number> --body-file <file>`.
+6. **Open the PR:** `gh pr create --base main --head <branch> --title "<code commit subject>" --body-file /tmp/jade-court-pr-body-<n>.md`. If `gh pr view <branch>` shows a PR already exists, update it with `gh pr edit <number> --body-file ...` instead.
+7. **Check CI once** with `gh pr checks <number>` and include the status in the hand-back. Don't wait on it or fix failures yourself; failures go back to the developer as a new round.
 
 ### 9. Hand back to the user
 
@@ -127,7 +133,7 @@ Report only after step 8 is done or you have escalated:
 2. What changed, by area (server, engine, web).
 3. Final contract (endpoints / messages), if any.
 4. Simple or complex, and why. CI results (from the developers), the QA verdict, and, for complex tasks, the adversarial reviewer's final verdict.
-5. **Reports:** links to the developer reports, the QA `report.md`, and, for complex tasks, the adversarial review `report.md`, with the most important QA screenshots embedded inline.
+5. **Reports:** local paths to the developer reports, the QA `report.md`, and, for complex tasks, the adversarial review `report.md`, with the most important QA screenshots embedded inline.
 6. Open items: minor review findings, bugs QA left open, things not testable in this env, follow-ups.
 7. PR CI status from `gh pr checks`, and any files you left out of the commits.
 

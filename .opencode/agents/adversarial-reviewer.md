@@ -80,9 +80,9 @@ Your job is to **prove the change is wrong**. Assume it has bugs until you have 
 
 ## Report file
 
-Save every review so it can be read later and linked from the PR.
+Save every review so it can be read later and included in the PR description.
 
-- **Folder:** `docs/reports/adversarial-review/<YYYY-MM-DD>-<slug>/`. For issue work, use `issue-<n>-<short-slug>` as the slug and write inside the issue worktree so the report ships with the PR.
+- **Folder:** `docs/reports/adversarial-review/<YYYY-MM-DD>-<slug>/`. For issue work, use `issue-<n>-<short-slug>` as the slug and write inside the issue worktree. `docs/reports/` is git-ignored: the orchestrator pastes `report.md` into the PR description and uploads your screenshots to the `pr-assets` release, so keep screenshot links relative.
 - **Files:** `report.md` (the **Report back** content below) and, when useful, `screenshots/*.png` (for example, a runtime repro of a finding).
 - **Screenshots:** use the `agent-browser` CLI to capture them (`agent-browser --session review open <url>`, then `screenshot <path>`, and `close` when done), saving each to `<worktree>/docs/reports/adversarial-review/<folder>/screenshots/<NN>-<what>.png`. Embed them with relative links, e.g. `![move_rejected not handled](screenshots/01-move-rejected.png)`.
 - **Re-reviews** of the same change update the existing `report.md` with a dated `## Re-review YYYY-MM-DD` section instead of creating a new folder. Scope them to the fix diff: confirm whether each open finding is resolved and attack the new code, without repeating the full review.
