@@ -49,17 +49,16 @@ ENV PATH=/home/pwuser/.local/bin:$PATH
 # An empty CURSOR_API_KEY is unset so the Cursor CLI falls back to `agent login` credentials.
 # The Cursor CLI has no env var for its default model and ~/.cursor is a volume, so the
 # JADE_AGENT_CURSOR_MODEL default is passed as --model; a later --model on the command line wins.
+# --trust skips the workspace trust prompt: the container, not the CLI, is the security boundary.
 RUN printf '%s\n' '' \
       '[ -z "$CURSOR_API_KEY" ] && unset CURSOR_API_KEY' \
-      'cursor_flags=' \
+      'cursor_flags=" --trust"' \
       'if [ "$JADE_AGENT_YOLO" = true ]; then' \
       '  export OPENCODE_CONFIG=/opt/jade-agent/opencode.yolo.json' \
-      '  cursor_flags=" --force"' \
+      '  cursor_flags="$cursor_flags --force"' \
       'fi' \
       '[ -n "$JADE_AGENT_CURSOR_MODEL" ] && cursor_flags="$cursor_flags --model \"$JADE_AGENT_CURSOR_MODEL\""' \
-      'if [ -n "$cursor_flags" ]; then' \
-      '  alias agent="agent$cursor_flags" cursor-agent="cursor-agent$cursor_flags"' \
-      'fi' \
+      'alias agent="agent$cursor_flags" cursor-agent="cursor-agent$cursor_flags"' \
       'unset cursor_flags' >> /home/pwuser/.bashrc
 WORKDIR /home/pwuser/work
 

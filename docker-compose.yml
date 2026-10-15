@@ -11,7 +11,8 @@
 #
 # Cursor CLI model: `agent` starts on JADE_AGENT_CURSOR_MODEL (default composer-2.5, set via a
 # ~/.bashrc alias). Override per run with `agent --model <id>`, or set it empty in .env.agent to
-# use the CLI's saved model (Auto). `agent --list-models` shows the ids.
+# use the CLI's saved model (Auto). `agent --list-models` shows the ids. The same alias adds
+# `--trust`, so the CLI never asks whether to trust the workspace.
 #
 # --service-ports publishes the app to http://localhost:15173 (web) and :13001 (server) so you
 # can watch it; override with JADE_AGENT_WEB_PORT / JADE_AGENT_SERVER_PORT, or drop the flag
@@ -28,6 +29,10 @@
 #
 # The repo is cloned into the `work` volume on first start, so the host checkout, ~/.ssh,
 # ~/.config/gh, ~/.config/opencode, and the repo-root .env are never visible to agents.
+# Every later start fast-forwards `main` from origin (the checkout if it's on main, otherwise
+# just the local branch) and reruns `pnpm install && pnpm build` when the checkout moved. It
+# never merges or resets: if main has diverged or local edits block the pull, it warns and
+# starts anyway.
 # Copy results out with `docker compose cp agent:/home/pwuser/work/<path> .` or review the
 # branch/PR the agents push.
 #
@@ -103,6 +108,19 @@ services:
           (cd jade-court && pnpm install && pnpm build)
         fi
         cd jade-court
+        # Fast-forward only, so commits or edits left in the clone are never overwritten.
+        before=$$(git rev-parse HEAD)
+        if [ "$$(git branch --show-current)" = main ]; then
+          git pull --ff-only origin main \
+            || echo "warning: could not fast-forward main; keeping the current checkout" >&2
+        else
+          git fetch origin main:main \
+            || echo "warning: could not fast-forward local main; keeping it as is" >&2
+        fi
+        if [ "$$(git rev-parse HEAD)" != "$$before" ]; then
+          pnpm install && pnpm build \
+            || echo "warning: pnpm install/build failed after pulling main" >&2
+        fi
         if ! grep -qs '^MONGODB_URI=' .env; then
           echo 'MONGODB_URI=mongodb://mongo:27017' >> .env
         fi
