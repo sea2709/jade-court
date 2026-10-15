@@ -6,6 +6,25 @@ import { getGuestId } from './guestId';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
+/** Max thumbnail size (matches server `NEWS_IMAGE_MAX_BYTES`). */
+export const NEWS_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+/** Curator upload path stored on news documents (must match server). */
+export const UPLOADED_IMAGE_PATH_RE =
+  /^\/api\/news\/images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/i;
+
+/** Absolute URL for display (`img` src); prefixes `VITE_API_URL` for server-relative paths. */
+export function resolveNewsImageUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith('/')) {
+    const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+    return `${base}${trimmed}`;
+  }
+  return trimmed;
+}
+
 export interface PublicNewsItem {
   id: string;
   sourceUrl: string;
@@ -195,4 +214,28 @@ export function deleteAdminNewsItem(id: string) {
     admin: true,
     expectEmpty: true,
   });
+}
+
+/** Upload a curator thumbnail; do not set `Content-Type` (browser sets multipart boundary). */
+export async function uploadAdminNewsImage(file: File): Promise<{ imageUrl: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const headers: Record<string, string> = {
+    'x-guest-id': getGuestId(),
+    ...adminAuthHeader(),
+  };
+  const res = await fetch(`${API_BASE}/api/admin/news/images`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  const data = (await parseJsonBody(res)) as Record<string, unknown>;
+  if (!res.ok) {
+    throwFromResponse(res.status, data, { admin: true });
+  }
+  const imageUrl = data.imageUrl;
+  if (typeof imageUrl !== 'string') {
+    throw new NewsApiError(res.status, 'request_failed');
+  }
+  return { imageUrl };
 }

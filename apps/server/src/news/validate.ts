@@ -9,7 +9,13 @@ import {
   type NewsTag,
   type UpdateNewsInput,
 } from './types.js';
+import { isUploadedImagePath } from './imageStorage.js';
 import { isHttpOrHttpsUrl, isHttpsUrl, normalizeNewsUrl } from './normalizeUrl.js';
+
+/** Optional thumbnail: https hotlink or curator upload path. */
+function isValidNewsImageUrl(img: string): boolean {
+  return isHttpsUrl(img) || isUploadedImagePath(img);
+}
 
 export const FIELD_LIMITS = {
   title: 160,
@@ -126,8 +132,8 @@ export function validateCreateInput(body: unknown): ValidationResult {
   let imageUrl: string | undefined;
   if (o.imageUrl !== undefined && o.imageUrl !== null && o.imageUrl !== '') {
     const img = trimCap(o.imageUrl, FIELD_LIMITS.imageUrl);
-    if (!isHttpsUrl(img)) {
-      fields.imageUrl = 'must be https';
+    if (!isValidNewsImageUrl(img)) {
+      fields.imageUrl = 'must be https or uploaded path';
       return { ok: false, fields };
     }
     imageUrl = img;
@@ -250,14 +256,14 @@ export function validateUpdateInput(
       imageUrl = undefined;
     } else {
       const img = trimCap(o.imageUrl, FIELD_LIMITS.imageUrl);
-      if (!isHttpsUrl(img)) {
-        fields.imageUrl = 'must be https';
+      if (!isValidNewsImageUrl(img)) {
+        fields.imageUrl = 'must be https or uploaded path';
         return { ok: false, fields };
       }
       imageUrl = img;
     }
-  } else if (imageUrl && !isHttpsUrl(imageUrl)) {
-    fields.imageUrl = 'must be https';
+  } else if (imageUrl && !isValidNewsImageUrl(imageUrl)) {
+    fields.imageUrl = 'must be https or uploaded path';
     return { ok: false, fields };
   }
 

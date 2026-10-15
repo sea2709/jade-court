@@ -203,4 +203,14 @@ export class MemoryNewsStore implements NewsStore {
   async remove(id: string): Promise<boolean> {
     return this.docs.delete(id);
   }
+
+  async countByImageUrl(imageUrl: string, excludeId?: string): Promise<number> {
+    let n = 0;
+    for (const doc of this.docs.values()) {
+      if (doc.imageUrl !== imageUrl) continue;
+      if (excludeId && doc.id === excludeId) continue;
+      n += 1;
+    }
+    return n;
+  }
 }

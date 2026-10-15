@@ -47,7 +47,7 @@ This feature adds server routes, a storage abstraction, and (in parallel web wor
 
 **Non-goals (v1)**
 
-- Automatic scraping or RSS ingestion, republishing full article text, comments, user submissions, LLM summaries, rehosting images, multiple admin accounts or roles, multi-language UI (English only), an on-site detail page (link-out only).
+- Automatic scraping or RSS ingestion, republishing full article text, comments, user submissions, LLM summaries, rehosting fetched OG images (hotlinks stay external; only manual curator uploads are stored), multiple admin accounts or roles, multi-language UI (English only), an on-site detail page (link-out only).
 
 **Deferred (P1/P2 — not in P0 PR)**
 
@@ -120,7 +120,9 @@ No `lang`, `featured`, or `clicks`.
 
 When MongoDB is not configured, `GET /api/news` returns `{ items: [], nextCursor: null }` and admin routes return `503 { error: 'news_storage_unavailable' }` after auth.
 
-**Storage abstraction:** `NewsStore` in `apps/server/src/news/store.ts` with `MongoNewsStore` and `MemoryNewsStore` (tests). `createApp(deps?: { newsStore?: NewsStore | null })` defaults to Mongo when `MONGODB_URI` is set, else `null`.
+**Storage abstraction:** `NewsStore` in `apps/server/src/news/store.ts` with `MongoNewsStore` and `MemoryNewsStore` (tests). `NewsImageStorage` in `news/imageStorage.ts` with `DiskNewsImageStorage` and `MemoryNewsImageStorage` (tests). `createApp(deps?: { newsStore?, newsImageStorage? })` defaults to Mongo when `MONGODB_URI` is set, else `null`; image storage defaults to disk under `NEWS_IMAGE_DIR` or `data/news-images`.
+
+**Public thumbnails:** `GET /api/news/images/:file` serves uploaded files (basename must match `<uuid>.(jpg|png|webp)`); `Cache-Control: public, max-age=31536000, immutable`; `X-Content-Type-Options: nosniff`. Replacing or deleting a saved item's uploaded `imageUrl` removes the file (best effort).
 
 ## 7. API (`apps/server`)
 
@@ -152,13 +154,14 @@ When MongoDB is not configured, `GET /api/news` returns `{ items: [], nextCursor
 
 ### 7.2 Admin — `/api/admin/news` (Bearer `adminAuth`, every response `Cache-Control: no-store`)
 
-| Method / path              | Response                                                                                                                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /?status=&q=&cursor=` | `{ items: AdminNewsItem[], nextCursor }`, 50 per page. `status` ∈ draft \| published \| archived (omit = all). `q` = case-insensitive substring on title or publisher (regex-escaped).                        |
-| `POST /preview` `{ url }`  | **200** `{ title, description, imageUrl, publisher, publishedAt, canonicalUrl, duplicateOf? }` (missing as `null`). **400** `{ error: 'invalid_url' \| 'blocked_url' }`. **502** `{ error: 'fetch_failed' }`. |
-| `POST /`                   | **201** `AdminNewsItem`                                                                                                                                                                                       |
-| `PATCH /:id`               | **200** `AdminNewsItem`; **404** `{ error: 'not_found' }`                                                                                                                                                     |
-| `DELETE /:id`              | **204** hard delete; **404** if missing                                                                                                                                                                       |
+| Method / path                   | Response                                                                                                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /?status=&q=&cursor=`      | `{ items: AdminNewsItem[], nextCursor }`, 50 per page. `status` ∈ draft \| published \| archived (omit = all). `q` = case-insensitive substring on title or publisher (regex-escaped).                        |
+| `POST /preview` `{ url }`       | **200** `{ title, description, imageUrl, publisher, publishedAt, canonicalUrl, duplicateOf? }` (missing as `null`). **400** `{ error: 'invalid_url' \| 'blocked_url' }`. **502** `{ error: 'fetch_failed' }`. |
+| `POST /images` multipart `file` | **201** `{ imageUrl: '/api/news/images/<uuid>.<ext>' }`. **400** `{ error: 'invalid_image' }`. **413** `{ error: 'image_too_large' }`. JPEG/PNG/WebP only, max 2 MB, magic-byte sniff.                        |
+| `POST /`                        | **201** `AdminNewsItem`                                                                                                                                                                                       |
+| `PATCH /:id`                    | **200** `AdminNewsItem`; **404** `{ error: 'not_found' }`                                                                                                                                                     |
+| `DELETE /:id`                   | **204** hard delete; **404** if missing                                                                                                                                                                       |
 
 `AdminNewsItem` = `PublicNewsItem` & `{ normalizedUrl, status, createdAt, updatedAt, publishedOnSiteAt? }` (dates ISO; drafts may have empty title/summary/publisher).
 
@@ -178,7 +181,7 @@ When MongoDB is not configured, `GET /api/news` returns `{ items: [], nextCursor
 
 - `sourceUrl`: required, http(s) only (reject `javascript:` etc.).
 - **Drafts** (status omitted or `draft`): only `sourceUrl` required.
-- **Published** (create, PATCH to publish, or edit while published): `title` 1–160 chars; `summary` 20–300 chars; `publisher` non-empty; `imageUrl` optional but https if present (validated on every save); `publishedAt` optional valid date; `tags` ⊆ `tournament`, `players`, `culture`, `learning`, `engines`, `community`.
+- **Published** (create, PATCH to publish, or edit while published): `title` 1–160 chars; `summary` 20–300 chars; `publisher` non-empty; `imageUrl` optional but **https** or a curator upload path `/api/news/images/<uuid>.(jpg|png|webp)` if present (validated on every save); `publishedAt` optional valid date; `tags` ⊆ `tournament`, `players`, `culture`, `learning`, `engines`, `community`.
 - `status: archived` from any state; archived → published allowed (full validation).
 - Trim and length-cap plain-text fields.
 
@@ -188,7 +191,7 @@ SSRF-guarded: http(s) only; ports 80/443; DNS resolve and reject loopback/privat
 
 ### 7.6 Env
 
-- `.env.example`: `ADMIN_USERS=`, `ADMIN_SESSION_SECRET=` (32+ random chars), `ADMIN_SESSION_TTL_HOURS=8` (server only, no `VITE_` prefix).
+- `.env.example`: `ADMIN_USERS=`, `ADMIN_SESSION_SECRET=` (32+ random chars), `ADMIN_SESSION_TTL_HOURS=8`, optional `NEWS_IMAGE_DIR=` (server only, no `VITE_` prefix; default `<repo>/data/news-images`).
 
 ## 8. Web (`apps/web`)
 

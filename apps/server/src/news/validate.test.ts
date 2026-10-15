@@ -48,6 +48,16 @@ describe('validateCreateInput', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.fields.imageUrl).toBeDefined();
   });
+
+  it('accepts curator upload path and rejects other relative URLs', () => {
+    const uploaded = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.webp';
+    const ok = validateCreateInput({ ...publishedPayload, imageUrl: uploaded });
+    expect(ok.ok).toBe(true);
+
+    const rel = validateCreateInput({ ...publishedPayload, imageUrl: '/static/evil.png' });
+    expect(rel.ok).toBe(false);
+    if (!rel.ok) expect(rel.fields.imageUrl).toBeDefined();
+  });
 });
 
 describe('validateUpdateInput', () => {

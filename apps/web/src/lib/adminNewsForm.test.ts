@@ -34,4 +34,18 @@ describe('adminNewsForm', () => {
     expect(next.sourceUrl).toBe('https://example.com/canonical');
     expect(next.title).toBe('New');
   });
+
+  it('preview overwrites an uploaded thumbnail when preview has imageUrl', () => {
+    const uploaded = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.webp';
+    const form = { ...emptyAdminForm(), imageUrl: uploaded };
+    const next = applyPreviewToForm(form, {
+      title: null,
+      description: null,
+      imageUrl: 'https://cdn.example/from-preview.jpg',
+      publisher: null,
+      publishedAt: null,
+      canonicalUrl: null,
+    });
+    expect(next.imageUrl).toBe('https://cdn.example/from-preview.jpg');
+  });
 });

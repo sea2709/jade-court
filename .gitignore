@@ -37,6 +37,9 @@ Thumbs.db
 # Vite / PWA dev
 *.local
 
+# Local news thumbnail uploads (NEWS_IMAGE_DIR default)
+data/
+
 # Cursor — keep plans/rules in git; ignore local scratch
 .cursor/tmp/
 

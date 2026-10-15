@@ -46,16 +46,31 @@ function adminListResponse(items: AdminNewsItem[] = [adminItem]) {
   return json({ items, nextCursor: null });
 }
 
+const uploadedThumbPath = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.png';
+
 function mockAdminFetch(handlers: {
   listItems?: AdminNewsItem[];
   preview?: unknown;
   postCreate?: unknown;
   postError?: { body: unknown; status: number };
   patchError?: { body: unknown; status: number };
+  imageUpload?: { imageUrl: string } | 'fail';
+  imageUploadError?: { body: unknown; status: number };
 }) {
   fetchMock.mockImplementation((url, init) => {
     const method = init?.method ?? 'GET';
     const path = String(url);
+    if (path.includes('/api/admin/news/images') && method === 'POST') {
+      if (handlers.imageUploadError) {
+        return Promise.resolve(
+          json(handlers.imageUploadError.body, handlers.imageUploadError.status),
+        );
+      }
+      if (handlers.imageUpload === 'fail') {
+        return Promise.resolve(json({ error: 'invalid_image' }, 400));
+      }
+      return Promise.resolve(json(handlers.imageUpload ?? { imageUrl: uploadedThumbPath }, 201));
+    }
     if (path.includes('/preview') && method === 'POST') {
       if (handlers.preview === 'fail') {
         return Promise.resolve(json({ error: 'fetch_failed' }, 502));
@@ -300,6 +315,114 @@ describe('AdminNewsScreen', () => {
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')).toHaveLength(1);
     resolvePatch?.();
     await waitFor(() => expect(publish).not.toBeDisabled());
+  });
+
+  it('uploads a thumbnail and sets imageUrl', async () => {
+    mockAdminFetch({ listItems: [] });
+    renderAdmin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }));
+    const file = new File([new Uint8Array([1, 2, 3])], 'thumb.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Upload thumbnail'), file);
+    expect(await screen.findByDisplayValue(uploadedThumbPath)).toBeInTheDocument();
+    const uploadCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url).includes('/api/admin/news/images') && init?.method === 'POST',
+    );
+    expect(uploadCall).toBeDefined();
+  });
+
+  it('shows upload error from server', async () => {
+    mockAdminFetch({
+      listItems: [],
+      imageUploadError: { body: { error: 'invalid_image' }, status: 400 },
+    });
+    renderAdmin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }));
+    const file = new File([new Uint8Array([1, 2, 3])], 'bad.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Upload thumbnail'), file);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Invalid image/);
+  });
+
+  it('disables save, fetch, and cancel while upload is in flight', async () => {
+    let resolveUpload: (() => void) | undefined;
+    fetchMock.mockImplementation((url, init) => {
+      const method = init?.method ?? 'GET';
+      const path = String(url);
+      if (path.includes('/api/admin/news/images') && method === 'POST') {
+        return new Promise<Response>((resolve) => {
+          resolveUpload = () => resolve(json({ imageUrl: uploadedThumbPath }, 201));
+        });
+      }
+      if (method === 'GET' && path.includes('/api/admin/news')) {
+        return Promise.resolve(adminListResponse([]));
+      }
+      return Promise.resolve(json({ error: 'not_found' }, 404));
+    });
+    renderAdmin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }));
+    await userEvent.type(screen.getByLabelText('Source URL'), 'https://example.com/x');
+    const file = new File([new Uint8Array([1, 2, 3])], 'thumb.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Upload thumbnail'), file);
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Fetch details' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+    resolveUpload?.();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Publish' })).not.toBeDisabled());
+  });
+
+  it('ignores upload completion after cancel', async () => {
+    let resolveUpload: (() => void) | undefined;
+    fetchMock.mockImplementation((url, init) => {
+      const method = init?.method ?? 'GET';
+      const path = String(url);
+      if (path.includes('/api/admin/news/images') && method === 'POST') {
+        return new Promise<Response>((resolve) => {
+          resolveUpload = () => resolve(json({ imageUrl: uploadedThumbPath }, 201));
+        });
+      }
+      if (method === 'GET' && path.includes('/api/admin/news')) {
+        return Promise.resolve(adminListResponse([]));
+      }
+      return Promise.resolve(json({ error: 'not_found' }, 404));
+    });
+    renderAdmin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }));
+    const file = new File([new Uint8Array([1, 2, 3])], 'thumb.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Upload thumbnail'), file);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument(),
+    );
+    resolveUpload?.();
+    await Promise.resolve();
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }));
+    expect(screen.getByLabelText('Image URL (https)')).toHaveValue('');
+  });
+
+  it('removes thumbnail from the form', async () => {
+    mockAdminFetch({ listItems: [] });
+    renderAdmin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }));
+    const file = new File([new Uint8Array([1, 2, 3])], 'thumb.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Upload thumbnail'), file);
+    expect(await screen.findByDisplayValue(uploadedThumbPath)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(screen.queryByDisplayValue(uploadedThumbPath)).not.toBeInTheDocument();
   });
 
   it('confirms before delete on archived row', async () => {

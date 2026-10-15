@@ -2,7 +2,7 @@
  * External-link card for a single curated news story on the public feed.
  */
 import { useState } from 'react';
-import type { PublicNewsItem } from '../lib/newsApi';
+import { resolveNewsImageUrl, type PublicNewsItem } from '../lib/newsApi';
 import { formatNewsDateAbsolute, formatNewsDateRelative, newsDateIso } from '../lib/formatNewsDate';
 
 function ExternalLinkIcon() {
@@ -31,7 +31,8 @@ export interface NewsCardProps {
 
 export function NewsCard({ item }: NewsCardProps) {
   const [imgFailed, setImgFailed] = useState(false);
-  const showPlaceholder = !item.imageUrl || imgFailed;
+  const thumbSrc = resolveNewsImageUrl(item.imageUrl);
+  const showPlaceholder = !thumbSrc || imgFailed;
   const iso = newsDateIso(item.publishedAt, item.sortAt);
   const relative = formatNewsDateRelative(item.publishedAt, item.sortAt);
   const absolute = formatNewsDateAbsolute(iso);
@@ -53,7 +54,7 @@ export function NewsCard({ item }: NewsCardProps) {
           </div>
         ) : (
           <img
-            src={item.imageUrl}
+            src={thumbSrc}
             alt={`Thumbnail from ${item.publisher}`}
             loading="lazy"
             referrerPolicy="no-referrer"

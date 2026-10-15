@@ -100,4 +100,14 @@ describe('MemoryNewsStore', () => {
     const cursor = encodeNewsCursor(sortAt, 'abc');
     expect(cursor.length).toBeGreaterThan(10);
   });
+
+  it('countByImageUrl excludes an id when requested', async () => {
+    const path = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.png';
+    const store = new MemoryNewsStore([
+      doc({ id: 'one', sortAt: new Date(), status: 'draft', imageUrl: path }),
+      doc({ id: 'two', sortAt: new Date(), status: 'draft', imageUrl: path }),
+    ]);
+    expect(await store.countByImageUrl(path)).toBe(2);
+    expect(await store.countByImageUrl(path, 'one')).toBe(1);
+  });
 });
