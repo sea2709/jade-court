@@ -23,6 +23,7 @@ import aiRoutes from './routes/ai.js';
 import coachRoutes from './routes/coach.js';
 import engineRoutes from './routes/engine.js';
 import opponentRoutes from './routes/opponent.js';
+import { createAdminRoutes } from './routes/admin.js';
 import { createAdminNewsRoutes } from './routes/adminNews.js';
 import { createNewsRoutes } from './routes/news.js';
 import { MongoNewsStore } from './news/mongoStore.js';
@@ -98,6 +99,7 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
   app.route('/api/news', createNewsRoutes(newsStore));
+  app.route('/api/admin', createAdminRoutes());
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore));
 
   return app;

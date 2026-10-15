@@ -1,5 +1,5 @@
 /**
- * Admin news curation API (`/api/admin/news/*`), Bearer-protected.
+ * Admin news curation API (`/api/admin/news/*`), Bearer session-protected.
  */
 import { Hono } from 'hono';
 import { adminAuth } from '../middleware/adminAuth.js';

@@ -1,27 +1,10 @@
 /**
  * REST client for public news feed and admin curation API.
  */
+import { adminAuthHeader, clearAdminSession } from './adminApi';
 import { getGuestId } from './guestId';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
-
-export const NEWS_ADMIN_TOKEN_STORAGE_KEY = 'jade-court-news-admin-token';
-
-export function getStoredAdminToken(): string | null {
-  try {
-    return sessionStorage.getItem(NEWS_ADMIN_TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setStoredAdminToken(token: string): void {
-  sessionStorage.setItem(NEWS_ADMIN_TOKEN_STORAGE_KEY, token);
-}
-
-export function clearStoredAdminToken(): void {
-  sessionStorage.removeItem(NEWS_ADMIN_TOKEN_STORAGE_KEY);
-}
 
 export interface PublicNewsItem {
   id: string;
@@ -103,7 +86,7 @@ function throwFromResponse(
 ): never {
   const code = typeof data.error === 'string' ? data.error : resStatusFallback(status);
   if (status === 401 && options?.admin) {
-    clearStoredAdminToken();
+    clearAdminSession();
   }
   const fields =
     data.fields && typeof data.fields === 'object'
@@ -132,8 +115,7 @@ async function newsRequest<T>(
     ...(init?.headers as Record<string, string> | undefined),
   };
   if (init?.admin) {
-    const token = getStoredAdminToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
+    Object.assign(headers, adminAuthHeader());
   }
 
   const { admin: _admin, expectEmpty: _expectEmpty, ...fetchInit } = init ?? {};
@@ -170,11 +152,6 @@ export function fetchAdminNews(params?: { status?: string; q?: string; cursor?: 
   return newsRequest<NewsListResponse<AdminNewsItem>>(`/api/admin/news${qs ? `?${qs}` : ''}`, {
     admin: true,
   });
-}
-
-/** Validates the admin token by loading the first page of items. */
-export function verifyAdminToken() {
-  return fetchAdminNews();
 }
 
 export function previewAdminNewsUrl(url: string) {

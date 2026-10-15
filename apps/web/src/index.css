@@ -715,6 +715,18 @@
   .news-inline-retry {
     @apply bg-transparent font-extrabold text-jade-deep underline;
   }
+
+  .admin-section-link {
+    @apply rounded-full px-4 py-2 text-sm font-bold text-ink-soft no-underline transition-[background,color] duration-150;
+  }
+
+  .admin-section-link:hover {
+    @apply bg-[#fff7e6] text-ink;
+  }
+
+  .admin-section-link-active {
+    @apply bg-ink text-cream;
+  }
 }
 
 @import './styles/board.css';

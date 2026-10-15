@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { MemoryNewsStore } from '../news/memoryStore.js';
 import type { NewsDocument } from '../news/types.js';
+import { createSessionToken } from '../admin/session.js';
 import { resetAdminAuthRateLimitsForTests } from '../middleware/adminAuth.js';
 import type * as Metadata from '../news/metadata.js';
 
@@ -17,7 +18,9 @@ vi.mock('../news/metadata.js', async (importOriginal) => {
   };
 });
 
-const ADMIN = 'admin-secret-token';
+const ADMIN_USER = 'news-admin';
+const ADMIN_PASS = 'news-admin-pass';
+const ADMIN_SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
 
 function seedDoc(overrides: Partial<NewsDocument> & { id: string }): NewsDocument {
   const sortAt = overrides.sortAt ?? new Date('2024-03-01T00:00:00Z');
@@ -37,9 +40,10 @@ function seedDoc(overrides: Partial<NewsDocument> & { id: string }): NewsDocumen
   };
 }
 
-function adminHeaders(token = ADMIN) {
+function adminHeaders(token?: string) {
+  const bearer = token ?? createSessionToken(ADMIN_USER).token;
   return {
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${bearer}`,
     'Content-Type': 'application/json',
     'x-guest-id': 'guest-news-test',
   };
@@ -47,14 +51,16 @@ function adminHeaders(token = ADMIN) {
 
 describe('news API routes', () => {
   beforeEach(() => {
-    process.env.ADMIN_TOKEN = ADMIN;
+    process.env.ADMIN_USERS = `${ADMIN_USER}:${ADMIN_PASS}`;
+    process.env.ADMIN_SESSION_SECRET = ADMIN_SECRET;
     resetAdminAuthRateLimitsForTests();
     metadata.fetchPageMetadata.mockReset();
     vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    delete process.env.ADMIN_TOKEN;
+    delete process.env.ADMIN_USERS;
+    delete process.env.ADMIN_SESSION_SECRET;
     vi.restoreAllMocks();
   });
 

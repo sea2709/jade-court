@@ -81,7 +81,8 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 | `.env` (repo root) | Vite / `apps/web` and Hono server | Copy from [`.env.example`](.env.example) |
 
 - **Web** reads `VITE_*` only (exposed in the browser if set).
-- **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `PORT`, `MONGODB_URI`, etc. **without** a `VITE_` prefix.
+- **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `PORT`, `MONGODB_URI`, `ADMIN_USERS`, `ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_HOURS`, etc. **without** a `VITE_` prefix.
+- **Admin panel:** `ADMIN_USERS` (`user:pass,user2:pass2`), required `ADMIN_SESSION_SECRET` (32+ chars recommended), optional `ADMIN_SESSION_TTL_HOURS` (default 8). Without users or secret, admin routes return `503 admin_disabled`.
 - **LLM:** set `LLM_PROVIDER` (`gemini` \| `openai` \| `anthropic`) and the matching API key; server log shows `LLM: enabled (provider / model)`. Optional `LLM_HISTORY_LIMIT` (default `150`) caps opponent prompt history. Use `PLAY_OPPONENT_PROVIDER=llm` for Play vs Computer with the same backend.
 - Restart `pnpm dev` (or `pnpm dev:docker`) after editing `.env`.
 - **Docker dev stack** (`docker-compose.dev.yml`): the server container overrides `MONGODB_URI` (its own `mongo` service) and `PIKAFISH_PATH` (`PIKAFISH_DIR` from `.env` is mounted at `/opt/pikafish`). Run lint, typecheck, and tests on the host, not inside the containers.
