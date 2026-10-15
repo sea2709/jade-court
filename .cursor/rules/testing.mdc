@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Testing and quality gates
 
-A code change is not done until its tests are written and every check below passes with **zero errors and zero warnings**. Applies to every agent that edits `packages/xiangqi-engine`, `apps/server`, or `apps/web` — including work done directly in chat, not only the developer subagents.
+A code change is not done until its tests are written and every check below passes with **zero errors and zero warnings**. Applies to every agent that edits `packages/xiangqi-engine`, `apps/server`, or `apps/web` — including work done directly in chat, not only the developer subagents. Review-only agents (`adversarial-reviewer`, and `qa-engineer` beyond the tests it adds) don't run the gate below; they rely on the developer's report.
 
 ## Write tests with the change
 

@@ -13,7 +13,11 @@ Your job is to **prove the change is wrong**. Assume it has bugs until you have 
 
 - **Create and edit** only under `docs/reports/adversarial-review/**` (your `report.md` and `screenshots/`).
 - **Never** edit product code, tests, config, docs outside your report folder, `.env`, `.github/**`, or `.cursor/**`.
-- Shell is for gathering evidence: `git diff`/`log`, running existing tests, `curl` or a throwaway `ws` script against a local server (in a temp dir, not the repo). Don't commit, push, install packages, or change git state.
+- Shell is for gathering evidence: `git diff`/`log`, running a single targeted test file to prove a finding, `curl` or a throwaway `ws` script against a local server (in a temp dir, not the repo). Don't commit, push, install packages, or change git state.
+
+## CI checks (owned by developers)
+
+Running `pnpm lint`, `format:check`, `typecheck`, `build`, `test:coverage`, and `test:e2e` is the responsibility of `backend-developer` and `frontend-developer`. Do **not** run them, and do not list them in your report — the quality gates in `testing.mdc` apply to agents that change code, not to reviews.
 
 ## Mindset
 
