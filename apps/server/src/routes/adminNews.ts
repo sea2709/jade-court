@@ -2,7 +2,15 @@
  * Admin news curation API (`/api/admin/news/*`), Bearer session-protected.
  */
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { adminAuth } from '../middleware/adminAuth.js';
+import {
+  NEWS_IMAGE_MAX_BYTES,
+  NEWS_IMAGE_UPLOAD_MAX_BODY_BYTES,
+  sniffImageType,
+  uploadedImageFilename,
+  type NewsImageStorage,
+} from '../news/imageStorage.js';
 import {
   BlockedUrlError,
   fetchPageMetadata,
@@ -11,9 +19,15 @@ import {
   normalizedUrlForPreview,
 } from '../news/metadata.js';
 import { InvalidCursorError, NotFoundError } from '../news/memoryStore.js';
-import type { NewsStore } from '../news/store.js';
+import type { NewsStore, NormalizedUpdateFields } from '../news/store.js';
 import { NewsDuplicateError, NEWS_STATUSES, toAdminNewsItem } from '../news/types.js';
-import { validateCreateInput, validatePreviewUrl, validateUpdateInput } from '../news/validate.js';
+import type { UpdateNewsInput } from '../news/types.js';
+import {
+  validateCreateInput,
+  validatePreviewUrl,
+  validateUpdateInput,
+  type NormalizedNewsPayload,
+} from '../news/validate.js';
 
 const ADMIN_PAGE_SIZE = 50;
 
@@ -21,8 +35,57 @@ function noStore(c: { header: (name: string, value: string) => void }) {
   c.header('Cache-Control', 'no-store');
 }
 
+/** Unlink only when no news item still references the hosted path (errors are logged, never thrown). */
+async function tryRemoveUploadedImageIfUnreferenced(
+  store: NewsStore,
+  storage: NewsImageStorage | null,
+  imageUrl: string | undefined,
+  excludeId?: string,
+): Promise<void> {
+  try {
+    if (!storage || !imageUrl) return;
+    const file = uploadedImageFilename(imageUrl);
+    if (!file) return;
+    const refs = await store.countByImageUrl(imageUrl, excludeId);
+    if (refs > 0) return;
+    await storage.remove(file);
+  } catch (err) {
+    console.warn('news image cleanup failed', err);
+  }
+}
+
+/** Map validated merge onto only fields present in the PATCH body. */
+function patchFieldsFromBody(
+  body: Record<string, unknown>,
+  data: NormalizedNewsPayload,
+): UpdateNewsInput & NormalizedUpdateFields {
+  const patch: UpdateNewsInput & NormalizedUpdateFields = {};
+
+  if (body.sourceUrl !== undefined) {
+    patch.sourceUrl = data.sourceUrl;
+    patch.normalizedUrl = data.normalizedUrl;
+    patch.sourceDomain = data.sourceDomain;
+  }
+  if (body.title !== undefined) patch.title = data.title;
+  if (body.summary !== undefined) patch.summary = data.summary;
+  if (body.publisher !== undefined) patch.publisher = data.publisher;
+  if (body.tags !== undefined) patch.tags = data.tags;
+  if (body.status !== undefined) patch.status = data.status;
+  if (body.publishedAt !== undefined) {
+    patch.publishedAt = data.publishedAt ?? null;
+  }
+  if (body.imageUrl !== undefined) {
+    patch.imageUrl = data.imageUrl ?? null;
+  }
+
+  return patch;
+}
+
 /** Build admin news routes; requires a configured store after auth. */
-export function createAdminNewsRoutes(newsStore: NewsStore | null) {
+export function createAdminNewsRoutes(
+  newsStore: NewsStore | null,
+  newsImageStorage: NewsImageStorage | null,
+) {
   const routes = new Hono();
 
   routes.use('*', async (c, next) => {
@@ -69,6 +132,47 @@ export function createAdminNewsRoutes(newsStore: NewsStore | null) {
       throw err;
     }
   });
+
+  routes.post(
+    '/images',
+    bodyLimit({
+      maxSize: NEWS_IMAGE_UPLOAD_MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: 'image_too_large' }, 413),
+    }),
+    async (c) => {
+      if (!newsImageStorage) {
+        return c.json({ error: 'news_storage_unavailable' }, 503);
+      }
+
+      let body: Record<string, unknown>;
+      try {
+        body = await c.req.parseBody({ all: false });
+      } catch {
+        return c.json({ error: 'invalid_image' }, 400);
+      }
+
+      const fileField = body.file;
+      if (!(fileField instanceof File)) {
+        return c.json({ error: 'invalid_image' }, 400);
+      }
+
+      const bytes = new Uint8Array(await fileField.arrayBuffer());
+      if (bytes.length > NEWS_IMAGE_MAX_BYTES) {
+        return c.json({ error: 'image_too_large' }, 413);
+      }
+      if (bytes.length === 0) {
+        return c.json({ error: 'invalid_image' }, 400);
+      }
+
+      const ext = sniffImageType(bytes);
+      if (!ext) {
+        return c.json({ error: 'invalid_image' }, 400);
+      }
+
+      const saved = await newsImageStorage.save(bytes, ext);
+      return c.json({ imageUrl: `/api/news/images/${saved}` }, 201);
+    },
+  );
 
   routes.post('/preview', async (c) => {
     const store = newsStore!;
@@ -174,19 +278,17 @@ export function createAdminNewsRoutes(newsStore: NewsStore | null) {
       return c.json({ error: 'validation', fields: validated.fields }, 400);
     }
 
+    const patchBody = body as Record<string, unknown>;
+    const patchInput = patchFieldsFromBody(patchBody, validated.data);
+    const imageUrlInPatch = patchBody.imageUrl !== undefined;
+    const prevImageUrl = existing.imageUrl;
+    const nextImageUrl = imageUrlInPatch ? validated.data.imageUrl : existing.imageUrl;
+
     try {
-      const doc = await store.update(id, {
-        sourceUrl: validated.data.sourceUrl,
-        normalizedUrl: validated.data.normalizedUrl,
-        sourceDomain: validated.data.sourceDomain,
-        title: validated.data.title,
-        summary: validated.data.summary,
-        publisher: validated.data.publisher,
-        publishedAt: validated.data.publishedAt ?? null,
-        imageUrl: validated.data.imageUrl ?? null,
-        tags: validated.data.tags,
-        status: validated.data.status,
-      });
+      const doc = await store.update(id, patchInput);
+      if (imageUrlInPatch && prevImageUrl && prevImageUrl !== nextImageUrl) {
+        await tryRemoveUploadedImageIfUnreferenced(store, newsImageStorage, prevImageUrl, id);
+      }
       return c.json(toAdminNewsItem(doc));
     } catch (err) {
       if (err instanceof NewsDuplicateError) {
@@ -202,10 +304,15 @@ export function createAdminNewsRoutes(newsStore: NewsStore | null) {
   routes.delete('/:id', async (c) => {
     const store = newsStore!;
     const id = c.req.param('id');
+    const existing = await store.get(id);
+    if (!existing) {
+      return c.json({ error: 'not_found' }, 404);
+    }
     const removed = await store.remove(id);
     if (!removed) {
       return c.json({ error: 'not_found' }, 404);
     }
+    await tryRemoveUploadedImageIfUnreferenced(store, newsImageStorage, existing.imageUrl);
     return c.body(null, 204);
   });
 

@@ -294,6 +294,38 @@ describe('MongoNewsStore', () => {
     );
   });
 
+  it('update $sets only patched fields, not a full document snapshot', async () => {
+    const selfId = new ObjectId();
+    const staleImage = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.png';
+    const self = makeDoc({
+      _id: selfId,
+      title: 'Before',
+      imageUrl: staleImage,
+    });
+
+    let capturedUpdate: { $set?: Record<string, unknown>; $unset?: Record<string, unknown> } = {};
+    mockCollection({
+      findOne: (filter) => {
+        const oid = filter._id as ObjectId | undefined;
+        if (oid?.equals(selfId)) return self;
+        return null;
+      },
+      updateOne: async (_filter, update) => {
+        capturedUpdate = update as typeof capturedUpdate;
+      },
+    });
+
+    const store = new MongoNewsStore();
+    const doc = await store.update(selfId.toHexString(), { title: 'After title only' });
+
+    expect(doc.title).toBe('After title only');
+    expect(doc.imageUrl).toBe(staleImage);
+    expect(capturedUpdate.$set?.title).toBe('After title only');
+    expect(capturedUpdate.$set?.updatedAt).toBeInstanceOf(Date);
+    expect(capturedUpdate.$set).not.toHaveProperty('imageUrl');
+    expect(Object.keys(capturedUpdate.$set ?? {}).sort()).toEqual(['title', 'updatedAt']);
+  });
+
   it('update throws NewsDuplicateError when normalizedUrl collides', async () => {
     const selfId = new ObjectId();
     const otherId = new ObjectId();

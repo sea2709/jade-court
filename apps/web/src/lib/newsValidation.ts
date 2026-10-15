@@ -37,6 +37,15 @@ function isHttpsUrl(value: string): boolean {
   }
 }
 
+/** Must match server `UPLOADED_IMAGE_PATH_RE` in `apps/server/src/news/imageStorage.ts`. */
+const UPLOADED_IMAGE_PATH_RE =
+  /^\/api\/news\/images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/i;
+
+function isValidNewsImageUrl(value: string): boolean {
+  const trimmed = value.trim();
+  return isHttpsUrl(trimmed) || UPLOADED_IMAGE_PATH_RE.test(trimmed);
+}
+
 /** Draft saves require only a valid http(s) source URL. */
 export function validateNewsDraft(
   fields: Pick<NewsFormFields, 'sourceUrl'>,
@@ -66,8 +75,8 @@ export function validateNewsPublish(fields: NewsFormFields): Record<string, stri
     errors.publisher = 'Publisher is required';
   }
   const image = fields.imageUrl.trim();
-  if (image && !isHttpsUrl(image)) {
-    errors.imageUrl = 'Image URL must use https';
+  if (image && !isValidNewsImageUrl(image)) {
+    errors.imageUrl = 'Image URL must use https or an uploaded thumbnail';
   }
   for (const tag of fields.tags) {
     if (!(NEWS_TAG_OPTIONS as readonly string[]).includes(tag)) {

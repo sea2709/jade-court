@@ -26,6 +26,11 @@ import opponentRoutes from './routes/opponent.js';
 import { createAdminRoutes } from './routes/admin.js';
 import { createAdminNewsRoutes } from './routes/adminNews.js';
 import { createNewsRoutes } from './routes/news.js';
+import {
+  defaultNewsImageDir,
+  DiskNewsImageStorage,
+  type NewsImageStorage,
+} from './news/imageStorage.js';
 import { MongoNewsStore } from './news/mongoStore.js';
 import type { NewsStore } from './news/store.js';
 
@@ -46,6 +51,7 @@ function setConnected(room: RoomState, guestId: string, connected: boolean) {
 
 export interface CreateAppDeps {
   newsStore?: NewsStore | null;
+  newsImageStorage?: NewsImageStorage | null;
 }
 
 /** Build the Hono app with CORS, guest auth, room REST endpoints, and API sub-routers. */
@@ -59,6 +65,13 @@ export function createApp(deps?: CreateAppDeps) {
     newsStore = new MongoNewsStore();
   } else {
     newsStore = null;
+  }
+
+  let newsImageStorage: NewsImageStorage | null;
+  if (deps && 'newsImageStorage' in deps) {
+    newsImageStorage = deps.newsImageStorage ?? null;
+  } else {
+    newsImageStorage = new DiskNewsImageStorage(defaultNewsImageDir());
   }
 
   app.use(
@@ -98,9 +111,9 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/coach', coachRoutes);
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
-  app.route('/api/news', createNewsRoutes(newsStore));
+  app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));
   app.route('/api/admin', createAdminRoutes());
-  app.route('/api/admin/news', createAdminNewsRoutes(newsStore));
+  app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
 
   return app;
 }

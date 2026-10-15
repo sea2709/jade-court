@@ -39,6 +39,13 @@ describe('NewsCard', () => {
     expect(screen.getByText('象')).toBeInTheDocument();
   });
 
+  it('resolves server-relative imageUrl for img src', () => {
+    const uploaded = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.webp';
+    render(<NewsCard item={{ ...baseItem, imageUrl: uploaded }} />);
+    const img = screen.getByRole('img', { name: 'Thumbnail from Xiangqi Weekly' });
+    expect(img).toHaveAttribute('src', uploaded);
+  });
+
   it('shows placeholder after image error', () => {
     render(<NewsCard item={baseItem} />);
     const img = screen.getByRole('img', { name: 'Thumbnail from Xiangqi Weekly' });

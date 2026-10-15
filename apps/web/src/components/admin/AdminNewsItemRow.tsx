@@ -2,6 +2,7 @@
  * Single row in the admin news list with status and actions.
  */
 import type { AdminNewsItem } from '../../lib/newsApi';
+import { resolveNewsImageUrl } from '../../lib/newsApi';
 
 const STATUS_CLASS: Record<AdminNewsItem['status'], string> = {
   draft: 'pill pill-gold',
@@ -36,13 +37,14 @@ export function AdminNewsItemRow({
 }: AdminNewsItemRowProps) {
   const busy = busyId === item.id;
   const title = item.title.trim() || 'Untitled draft';
+  const thumbSrc = resolveNewsImageUrl(item.imageUrl);
 
   return (
     <article className="card flex flex-wrap items-center gap-4 p-4">
       <div className="h-14 w-24 shrink-0 overflow-hidden rounded-xl bg-jade">
-        {item.imageUrl ? (
+        {thumbSrc ? (
           <img
-            src={item.imageUrl}
+            src={thumbSrc}
             alt=""
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"

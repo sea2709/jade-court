@@ -21,12 +21,30 @@ import {
   NewsApiError,
   patchAdminNewsItem,
   previewAdminNewsUrl,
+  NEWS_IMAGE_MAX_BYTES,
+  uploadAdminNewsImage,
   type AdminNewsItem,
   type DuplicateExisting,
 } from '../lib/newsApi';
 
 type AdminView = 'list' | 'create' | 'edit';
 type StatusFilter = 'all' | 'draft' | 'published' | 'archived';
+
+function imageUploadErrorMessage(err: unknown): string {
+  if (!(err instanceof NewsApiError)) {
+    return 'Upload failed. Try again.';
+  }
+  switch (err.code) {
+    case 'invalid_image':
+      return 'Invalid image — use JPEG, PNG, or WebP.';
+    case 'image_too_large':
+      return 'Image must be 2MB or smaller.';
+    case 'unauthorized':
+      return 'Session expired.';
+    default:
+      return adminErrorMessage(err);
+  }
+}
 
 function adminErrorMessage(err: unknown): string {
   if (!(err instanceof NewsApiError)) {
@@ -72,8 +90,18 @@ export function AdminNewsScreen() {
   const [listAlert, setListAlert] = useState<string | null>(null);
   const [duplicateLinkId, setDuplicateLinkId] = useState<string | null>(null);
   const [serviceMessage, setServiceMessage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Bumped when the editor context changes so in-flight uploads cannot mutate stale form state. */
+  const thumbnailUploadEpochRef = useRef(0);
+
+  const invalidateThumbnailUpload = useCallback(() => {
+    thumbnailUploadEpochRef.current += 1;
+    setUploadingImage(false);
+    setImageUploadError(null);
+  }, []);
 
   useEffect(() => {
     document.title = 'News · Jade Court Admin';
@@ -153,6 +181,7 @@ export function AdminNewsScreen() {
     setPreviewFallback(false);
     setDuplicateLinkId(null);
     setEditId(null);
+    invalidateThumbnailUpload();
     setView('create');
   };
 
@@ -179,6 +208,7 @@ export function AdminNewsScreen() {
     setPreviewFallback(false);
     setDuplicateLinkId(null);
     setEditId(id);
+    invalidateThumbnailUpload();
     setView('edit');
     clearRowError(id);
     setListAlert(null);
@@ -194,9 +224,41 @@ export function AdminNewsScreen() {
     setPreviewFallback(false);
     setDuplicateLinkId(null);
     setEditId(id);
+    invalidateThumbnailUpload();
     setView('edit');
     clearRowError(id);
     setListAlert(null);
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    if (file.size > NEWS_IMAGE_MAX_BYTES) {
+      setImageUploadError('Image must be 2MB or smaller.');
+      return;
+    }
+    const epoch = ++thumbnailUploadEpochRef.current;
+    setImageUploadError(null);
+    setUploadingImage(true);
+    try {
+      const { imageUrl } = await uploadAdminNewsImage(file);
+      if (epoch !== thumbnailUploadEpochRef.current) return;
+      setForm((f) => ({ ...f, imageUrl }));
+    } catch (err) {
+      if (epoch !== thumbnailUploadEpochRef.current) return;
+      if (err instanceof NewsApiError && err.code === 'unauthorized') {
+        onUnauthorized();
+        return;
+      }
+      setImageUploadError(imageUploadErrorMessage(err));
+    } finally {
+      if (epoch === thumbnailUploadEpochRef.current) {
+        setUploadingImage(false);
+      }
+    }
+  };
+
+  const handleRemoveThumbnail = () => {
+    setImageUploadError(null);
+    setForm((f) => ({ ...f, imageUrl: '' }));
   };
 
   const handleRowActionError = (id: string, err: unknown) => {
@@ -216,6 +278,7 @@ export function AdminNewsScreen() {
   };
 
   const fetchDetails = async () => {
+    if (uploadingImage) return;
     setFetchingPreview(true);
     setPreviewFallback(false);
     setDuplicateOf(null);
@@ -249,6 +312,7 @@ export function AdminNewsScreen() {
   });
 
   const saveWithStatus = async (status: 'draft' | 'published') => {
+    if (uploadingImage) return;
     const errors = status === 'draft' ? clientValidateDraft(form) : clientValidatePublish(form);
     setFieldErrors(errors);
     setFormError(null);
@@ -263,6 +327,7 @@ export function AdminNewsScreen() {
       } else {
         await createAdminNewsItem(body);
       }
+      invalidateThumbnailUpload();
       setView('list');
       setEditId(null);
       await loadList();
@@ -450,12 +515,17 @@ export function AdminNewsScreen() {
             formError={duplicateLinkId ? null : formError}
             saving={saving}
             fetchingPreview={fetchingPreview}
+            uploadingImage={uploadingImage}
+            imageUploadError={imageUploadError}
             onChange={setForm}
+            onUploadThumbnail={(file) => void handleThumbnailUpload(file)}
+            onRemoveThumbnail={handleRemoveThumbnail}
             onFetchDetails={() => void fetchDetails()}
             onOpenDuplicate={openEdit}
             onSaveDraft={() => void saveWithStatus('draft')}
             onPublish={() => void saveWithStatus('published')}
             onCancel={() => {
+              invalidateThumbnailUpload();
               setView('list');
               setEditId(null);
             }}

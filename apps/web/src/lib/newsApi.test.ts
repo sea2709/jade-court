@@ -8,6 +8,8 @@ import {
   patchAdminNewsItem,
   NewsApiError,
   previewAdminNewsUrl,
+  resolveNewsImageUrl,
+  uploadAdminNewsImage,
 } from './newsApi';
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -100,6 +102,26 @@ describe('admin news API', () => {
     expect(init?.method).toBe('DELETE');
   });
 
+  it('uploads thumbnail via FormData without Content-Type', async () => {
+    storeAdminToken('ok');
+    const uploadedPath = '/api/news/images/550e8400-e29b-41d4-a716-446655440000.png';
+    fetchMock.mockResolvedValue(json({ imageUrl: uploadedPath }, 201));
+    const file = new File([new Uint8Array([1, 2, 3])], 'thumb.png', { type: 'image/png' });
+    const result = await uploadAdminNewsImage(file);
+    expect(result).toEqual({ imageUrl: uploadedPath });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('/api/admin/news/images');
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toMatchObject({
+      Authorization: 'Bearer ok',
+      'x-guest-id': 'guest-123',
+    });
+    expect(init?.headers).not.toHaveProperty('Content-Type');
+    const body = init?.body;
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get('file')).toBe(file);
+  });
+
   it('POSTs preview URL', async () => {
     storeAdminToken('ok');
     fetchMock.mockResolvedValue(
@@ -116,5 +138,26 @@ describe('admin news API', () => {
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({ url: 'https://a.com' });
+  });
+});
+
+describe('resolveNewsImageUrl', () => {
+  it('prefixes VITE_API_URL for server-relative paths', () => {
+    vi.stubEnv('VITE_API_URL', 'https://api.example.com');
+    expect(resolveNewsImageUrl('/api/news/images/x.png')).toBe(
+      'https://api.example.com/api/news/images/x.png',
+    );
+    vi.unstubAllEnvs();
+  });
+
+  it('returns https URLs unchanged', () => {
+    expect(resolveNewsImageUrl('https://cdn.example/thumb.jpg')).toBe(
+      'https://cdn.example/thumb.jpg',
+    );
+  });
+
+  it('returns undefined for empty values', () => {
+    expect(resolveNewsImageUrl(undefined)).toBeUndefined();
+    expect(resolveNewsImageUrl('  ')).toBeUndefined();
   });
 });

@@ -23,6 +23,8 @@ export interface NewsStore {
   create(input: CreateNewsInput & NormalizedCreateFields): Promise<NewsDocument>;
   update(id: string, input: UpdateNewsInput & NormalizedUpdateFields): Promise<NewsDocument>;
   remove(id: string): Promise<boolean>;
+  /** Count items with exact `imageUrl` (optional exclude for in-flight updates). */
+  countByImageUrl(imageUrl: string, excludeId?: string): Promise<number>;
 }
 
 /** Normalized URL fields computed before create. */

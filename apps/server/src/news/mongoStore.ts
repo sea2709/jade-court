@@ -269,19 +269,24 @@ export class MongoNewsStore implements NewsStore {
       set.imageUrl = input.imageUrl;
     }
 
-    const merged: MongoNewsDoc = { ...current, ...set };
-    if (unset.publishedAt) delete merged.publishedAt;
-    if (unset.imageUrl) delete merged.imageUrl;
-    merged.sortAt = computeSortAt(merged.publishedAt, merged.createdAt);
-
-    const wasPublished = current.status === 'published';
-    const nowPublished = merged.status === 'published';
-    if (!wasPublished && nowPublished && !current.publishedOnSiteAt) {
-      merged.publishedOnSiteAt = now;
+    if (input.publishedAt !== undefined) {
+      const nextPublishedAt = input.publishedAt === null ? undefined : input.publishedAt;
+      set.sortAt = computeSortAt(nextPublishedAt, current.createdAt);
     }
 
+    const nextStatus = input.status !== undefined ? input.status : current.status;
+    const wasPublished = current.status === 'published';
+    const nowPublished = nextStatus === 'published';
+    if (!wasPublished && nowPublished && !current.publishedOnSiteAt) {
+      set.publishedOnSiteAt = now;
+    }
+
+    const after: MongoNewsDoc = { ...current, ...set };
+    if (unset.publishedAt) delete after.publishedAt;
+    if (unset.imageUrl) delete after.imageUrl;
+
     try {
-      const update: { $set: Partial<MongoNewsDoc>; $unset?: Record<string, ''> } = { $set: merged };
+      const update: { $set: Partial<MongoNewsDoc>; $unset?: Record<string, ''> } = { $set: set };
       if (Object.keys(unset).length > 0) update.$unset = unset;
       await col.updateOne({ _id: oid }, update);
     } catch (err) {
@@ -298,7 +303,7 @@ export class MongoNewsStore implements NewsStore {
       throw err;
     }
 
-    return fromMongo(merged);
+    return fromMongo(after);
   }
 
   async remove(id: string): Promise<boolean> {
@@ -311,6 +316,19 @@ export class MongoNewsStore implements NewsStore {
     }
     const result = await col.deleteOne({ _id: oid });
     return result.deletedCount === 1;
+  }
+
+  async countByImageUrl(imageUrl: string, excludeId?: string): Promise<number> {
+    const col = await this.collection();
+    const filter: { imageUrl: string; _id?: { $ne: ObjectId } } = { imageUrl };
+    if (excludeId) {
+      try {
+        filter._id = { $ne: new ObjectId(excludeId) };
+      } catch {
+        return 0;
+      }
+    }
+    return col.countDocuments(filter);
   }
 }
 
