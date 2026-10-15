@@ -50,6 +50,7 @@ Track progress with this checklist:
 ### 2. Set up the worktree
 
 - For an issue: `./scripts/issue-worktree.sh <n> [slug]` and note the printed path and dev ports.
+- For an issue: mark it in progress with `gh issue edit <n> --add-label in-progress`. If the label is missing, create it once (`gh label create in-progress --description "Currently being worked on by an agent" --color D93F0B`) then add it.
 - Every subagent works in that **same worktree path** — include it in every handoff.
 - Pick the **report folder name** once: `<YYYY-MM-DD>-issue-<n>-<slug>` (or `<YYYY-MM-DD>-<slug>` without an issue). Every developer, review, and QA round uses this same name so re-runs update the existing report instead of creating new folders.
 
@@ -127,7 +128,7 @@ Run every command from the issue worktree.
 
 ### 9. Hand back to the user
 
-Report only after step 8 is done or you have escalated:
+Report only after step 8 is done or you have escalated. For an issue, clear the in-progress mark first: `gh issue edit <n> --remove-label in-progress` (ignore errors if the label was never added).
 
 1. PR link (or why there is none), worktree path, and branch.
 2. What changed, by area (server, engine, web).

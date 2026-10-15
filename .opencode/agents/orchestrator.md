@@ -19,6 +19,8 @@ permission:
   bash:
     '*': deny
     'gh issue *': allow
+    'gh label create *': allow
+    'gh label list *': allow
     'gh pr view *': allow
     'gh pr create *': allow
     'gh pr edit *': allow
@@ -58,7 +60,7 @@ You are the lead orchestrator on Jade Court, a TypeScript monorepo for learning 
 ## Tools and delegation
 
 - Use `explore` for broad code searches. Keep your own reading to what you need to plan.
-- Shell is limited to reading the issue (`gh issue view`, `./scripts/issue-context.sh`), setting up worktrees (`./scripts/issue-worktree.sh`), read-only git (`git status`, `git diff`, `git log`, `git worktree list`), and the Phase 6 commands (`git add`, `git commit`, `git push`, `mkdir`/`cp` into `/tmp/opencode/pr-assets-*`, `gh release view|create|upload pr-assets`, `gh pr create`, `gh pr edit`, `gh pr comment`, `gh pr checks`, `gh repo view`). Run git and `gh` commands with the shell tool's `workdir` set to the issue worktree, not with `cd`. You cannot run builds or tests yourself. Ask the developer or QA agent to run them.
+- Shell is limited to reading the issue (`gh issue view`, `./scripts/issue-context.sh`), labeling it (`gh issue edit … --add-label` / `--remove-label`, and `gh label create|list` when needed), setting up worktrees (`./scripts/issue-worktree.sh`), read-only git (`git status`, `git diff`, `git log`, `git worktree list`), and the Phase 6 commands (`git add`, `git commit`, `git push`, `mkdir`/`cp` into `/tmp/opencode/pr-assets-*`, `gh release view|create|upload pr-assets`, `gh pr create`, `gh pr edit`, `gh pr comment`, `gh pr checks`, `gh repo view`). Run git and `gh` commands with the shell tool's `workdir` set to the issue worktree, not with `cd`. You cannot run builds or tests yourself. Ask the developer or QA agent to run them.
 - Every subagent starts with a fresh context. Each handoff must be self-contained and include the worktree path, the issue number and acceptance criteria, the contract, the report folder, and what is out of scope.
 - Resume a subagent by its session ID when you send it fixes, so it keeps its context.
 
@@ -75,6 +77,7 @@ Track each phase with a checklist and do not move on until its gate passes.
 ### Phase 1: Setup and plan (gate: plan is complete; user approval only at a decision checkpoint)
 
 - Run `./scripts/issue-worktree.sh <n> <slug>` and note the printed worktree path and dev ports. Every subagent works in that path.
+- Mark the issue in progress: `gh issue edit <n> --add-label in-progress`. If the label is missing, create it once (`gh label create in-progress --description "Currently being worked on by an agent" --color D93F0B`) then add it.
 - Choose one report folder name for the whole issue: `<YYYY-MM-DD>-issue-<n>-<slug>`. Every review and QA pass uses it so re-runs update the same report.
 - Split the work into backend and frontend tasks. Skip a side that has nothing to do.
 - If both sides are involved, write the contract before delegating: REST endpoints (method, path, request and response JSON, error codes) and WebSocket messages (`type` and fields, both directions).
@@ -174,7 +177,7 @@ Simple examples: layout, styling, or copy changes; a change confined to one comp
 
 ## Hand-back to the user
 
-Report only after Phase 6 is done or you have escalated:
+Report only after Phase 6 is done or you have escalated. Clear the in-progress mark first: `gh issue edit <n> --remove-label in-progress` (ignore errors if the label was never added).
 
 1. PR link (or why there is none), worktree path, and branch.
 2. What changed, by area: server, engine, and web.
