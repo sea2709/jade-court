@@ -107,10 +107,36 @@ describe('MultiplayerScreen lobby', () => {
     await userEvent.click(screen.getByRole('button', { name: /Create a room/ }));
     await waitFor(() => expect(screen.getByTestId('waiting-invite-panel')).toBeInTheDocument());
     expect(useRoomGameMock).toHaveBeenCalledWith('JADE-TEST', 'r');
+    expect(screen.getByText('Online', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByText(/Online · JADE/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Room JADE-TEST')).not.toBeInTheDocument();
     expect(screen.getByText('JADE–')).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByTestId('location-search')).toHaveTextContent('?room=JADE-TEST'),
     );
+  });
+
+  it('shows Creating… and disables other lobby actions while create is in flight', async () => {
+    useRoomGameMock.mockReturnValue(baseRoomState);
+    let resolveCreate!: (value: Response) => void;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+    renderMultiplayer();
+    await userEvent.click(screen.getByRole('button', { name: /Create a room/ }));
+    expect(screen.getByText('Creating…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Join with a code/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Pass-and-play on this device/ })).toBeDisabled();
+    resolveCreate(
+      json({
+        code: 'JADE-PEND',
+        room: { redName: 'Host', blackName: null, redJoined: true, blackJoined: false },
+      }),
+    );
+    await waitFor(() => expect(screen.getByTestId('waiting-invite-panel')).toBeInTheDocument());
   });
 
   it('Back from an invite-link join form returns to the lobby', async () => {
@@ -199,6 +225,32 @@ describe('MultiplayerScreen rejoin from ?room=', () => {
     renderMultiplayer('/multiplayer?room=JADE-GONE');
     await screen.findByRole('heading', { name: 'Join a room' });
     expect(screen.getByLabelText('Invite code')).toHaveValue('JADE-GONE');
+    expect(screen.getByLabelText('Invite code')).toHaveAttribute('spellCheck', 'false');
+    expect(screen.getByLabelText('Invite code')).toHaveAttribute('autoComplete', 'off');
+    expect(screen.getByLabelText('Invite code')).toHaveAttribute('autoCapitalize', 'characters');
+  });
+
+  it('maps join API errors to friendly messages', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/join') && init?.method === 'POST') {
+        return Promise.resolve(json({ error: 'Room not found' }, 400));
+      }
+      return Promise.resolve(json({ room: { code: 'JADE-GONE' }, side: null }));
+    });
+    renderMultiplayer('/multiplayer?room=JADE-GONE');
+    await screen.findByRole('heading', { name: 'Join a room' });
+    await userEvent.click(screen.getByRole('button', { name: 'Join game →' }));
+    expect(
+      await screen.findByText('Room not found — check the code with your friend.'),
+    ).toBeInTheDocument();
+  });
+
+  it('pass-and-play uses Exit game instead of Leave room', async () => {
+    renderMultiplayer();
+    await userEvent.click(screen.getByRole('button', { name: /Pass-and-play on this device/ }));
+    expect(screen.getByRole('button', { name: '← Exit game' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '← Leave room' })).not.toBeInTheDocument();
   });
 
   it('Leave room clears ?room= and stays in the lobby', async () => {

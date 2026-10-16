@@ -153,10 +153,7 @@ test.describe('Play with Friends (online room)', () => {
       const { host, guest } = room;
       await expect(host.getByText('Minh (you)')).toBeVisible();
       await expect(
-        host
-          .locator('.card')
-          .filter({ hasText: /^Room / })
-          .getByText('Black player'),
+        host.locator('.room-sidebar > .card').first().getByText('Black player', { exact: true }),
       ).toBeVisible();
       await expect(guest.getByText('Black player (you)')).toBeVisible();
       await expect(guest.locator('.card').getByText('Minh', { exact: true })).toBeVisible();
@@ -226,7 +223,7 @@ test.describe('Play with Friends (online room)', () => {
   test('joining an unknown room shows an error', async ({ page }) => {
     await page.goto('/multiplayer?room=JADE-ZZZZ');
     await page.getByRole('button', { name: 'Join game →' }).click();
-    await expect(page.getByText('Room not found')).toBeVisible();
+    await expect(page.getByText('Room not found — check the code with your friend.')).toBeVisible();
   });
 
   test('either player can resign; both sides see the resolved game-over overlay', async ({

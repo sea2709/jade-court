@@ -5,6 +5,7 @@ import { DisplayNameField } from '../components/DisplayNameField';
 import { RoomInviteShare } from '../components/RoomInviteShare';
 import { XQBoard } from '../components/XQBoard';
 import { createRoom, getRoom, joinRoom } from '../lib/api';
+import { joinRoomErrorMessage } from '../lib/joinRoomError';
 import {
   displayNameForApi,
   getStoredDisplayName,
@@ -122,7 +123,6 @@ function PassPlay({ onExit }: { onExit: () => void }) {
       </div>
       <div className="flex flex-col gap-3.5">
         <div className="card p-4">
-          <div className="font-extrabold text-[15px] mb-2.5">Room</div>
           <div className="text-[13px] text-ink-soft font-semibold leading-normal mb-3.5">
             You and your friend share this device. The board rotates so the player to move always
             sees their side at the bottom.
@@ -151,7 +151,7 @@ function PassPlay({ onExit }: { onExit: () => void }) {
             ↻ Restart
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onExit}>
-            ← Leave room
+            ← Exit game
           </button>
         </div>
       </div>
@@ -188,7 +188,7 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
     <div className="game-layout game-layout-room">
       <div className="relative">
         <div className="flex items-center gap-3 mb-3.5">
-          <span className="pill pill-gold">Online · {code}</span>
+          <span className="pill pill-gold">Online</span>
           <span
             className={`font-extrabold text-[15px] ${
               waitingForOpponent
@@ -260,7 +260,6 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
       </div>
       <div className="room-sidebar">
         <div className="card p-4">
-          <div className="font-extrabold text-[15px] mb-2.5">Room {code}</div>
           <RoomSeatRow
             seatSide="r"
             viewerSide={side}
@@ -379,7 +378,8 @@ function Lobby({
       setSearchParams({ room: res.room.code });
       onOnline(res.room.code, res.side);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to join room');
+      const message = e instanceof Error ? e.message : 'Failed to join room';
+      setError(joinRoomErrorMessage(message));
     } finally {
       setLoading(false);
     }
@@ -407,7 +407,9 @@ function Lobby({
               <span className="lobby-card-glyph">友</span>
             </div>
             <div className="px-5 pt-[18px] pb-[22px]">
-              <div className="font-display font-extrabold text-[21px] mb-1.5">Create a room</div>
+              <div className="font-display font-extrabold text-[21px] mb-1.5">
+                {loading ? 'Creating…' : 'Create a room'}
+              </div>
               <p className="m-0 text-ink-soft text-[14.5px] font-semibold leading-normal">
                 Get a shareable link and invite code to send to your friend.
               </p>
@@ -417,6 +419,7 @@ function Lobby({
             type="button"
             className="card p-0 overflow-hidden text-left cursor-pointer"
             onClick={() => setMode('join')}
+            disabled={loading}
           >
             <div className="lobby-card-header bg-gradient-to-br from-[#2BB495] to-[#157A63]">
               <span className="lobby-card-glyph">入</span>
@@ -430,7 +433,7 @@ function Lobby({
           </button>
         </div>
         <div className="text-center mt-[26px]">
-          <button type="button" className="btn btn-ghost" onClick={onPassPlay}>
+          <button type="button" className="btn btn-ghost" onClick={onPassPlay} disabled={loading}>
             Pass-and-play on this device →
           </button>
         </div>
@@ -453,6 +456,9 @@ function Lobby({
           placeholder="JADE-XXXX"
           className="room-input"
           aria-label="Invite code"
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="characters"
         />
         <button
           type="button"
