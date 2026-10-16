@@ -67,6 +67,38 @@ test.describe('Play with Friends (online room)', () => {
     await hostContext.close();
   });
 
+  test('Share invite calls Web Share stub with link and room code', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const host = await hostContext.newPage();
+    await host.addInitScript(() => {
+      const w = window as Window & { __sharePayloads?: ShareData[] };
+      w.__sharePayloads = [];
+      navigator.canShare = (data?: ShareData) => Boolean(data?.url);
+      navigator.share = async (data?: ShareData) => {
+        w.__sharePayloads!.push(data ?? {});
+      };
+    });
+    try {
+      await host.goto('/multiplayer');
+      await host.getByRole('button', { name: /Create a room/ }).click();
+      await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
+      const inviteLink = await host.locator('.room-link-input').inputValue();
+      const code = inviteLink.split('room=')[1]!;
+      await expect(host.getByRole('button', { name: 'Share invite' })).toBeVisible();
+      await host.getByRole('button', { name: 'Share invite' }).click();
+      const payloads = await host.evaluate(() => {
+        const w = window as Window & { __sharePayloads?: ShareData[] };
+        return w.__sharePayloads ?? [];
+      });
+      expect(payloads).toHaveLength(1);
+      expect(payloads[0]?.url).toBe(inviteLink);
+      expect(payloads[0]?.text).toContain(code);
+    } finally {
+      await host.close();
+      await hostContext.close();
+    }
+  });
+
   test('Red cannot move before Black joins', async ({ browser }) => {
     const hostContext = await browser.newContext();
     const host = await hostContext.newPage();

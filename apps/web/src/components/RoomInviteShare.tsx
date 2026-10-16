@@ -35,10 +35,20 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** Muted prefix + four boxed characters; Copy link and Copy code with per-action feedback. */
+function canUseWebShare(inviteLink: string): boolean {
+  return (
+    typeof navigator.share === 'function' && navigator.canShare?.({ url: inviteLink }) === true
+  );
+}
+
+/** Muted prefix + four boxed characters; Share invite (Web Share) and copy actions with feedback. */
 export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+  const [sharePending, setSharePending] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const webShareAvailable = canUseWebShare(inviteLink);
   const suffix = code.startsWith('JADE-') ? code.slice(5) : code.replace(/^JADE-?/, '');
 
   const onCopyLink = () => {
@@ -57,6 +67,31 @@ export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
     });
   };
 
+  const onShareInvite = () => {
+    if (sharePending || !webShareAvailable) return;
+    setShareError(null);
+    setSharePending(true);
+    void navigator
+      .share({
+        title: 'Play Xiangqi with me',
+        text: `Join my Jade Court room ${code}`,
+        url: inviteLink,
+      })
+      .catch(async (err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        const ok = await copyText(inviteLink);
+        if (ok) {
+          setCopiedShare(true);
+          setTimeout(() => setCopiedShare(false), 1600);
+        } else {
+          setShareError("Couldn't share — use Copy link");
+        }
+      })
+      .finally(() => {
+        setSharePending(false);
+      });
+  };
+
   return (
     <div data-testid="room-invite-share">
       <div className="flex justify-center items-center gap-2 mb-[18px]">
@@ -71,6 +106,24 @@ export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
           ))}
         </div>
       </div>
+
+      {webShareAvailable ? (
+        <div className="mb-3">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm w-full"
+            disabled={sharePending}
+            onClick={onShareInvite}
+          >
+            {copiedShare ? '✓ Copied' : 'Share invite'}
+          </button>
+          {shareError ? (
+            <p className="text-xs text-muted mt-1.5 text-center" role="status">
+              {shareError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex gap-2 mb-3">
         <input readOnly value={inviteLink} className="room-link-input" aria-label="Invite link" />
