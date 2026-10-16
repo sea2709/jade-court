@@ -71,6 +71,19 @@ describe('room REST endpoints', () => {
     expect(await read.json()).toMatchObject({ room: { code, redJoined: true, blackJoined: true } });
   });
 
+  it('reports the caller seat when reading a room', async () => {
+    const { code } = (await (await post('/api/rooms', {}, 'seat-host')).json()) as {
+      code: string;
+    };
+    await post(`/api/rooms/${code}/join`, {}, 'seat-guest');
+
+    const read = (guestId: string) =>
+      app.request(`/api/rooms/${code}`, { headers: { 'x-guest-id': guestId } });
+    expect(await (await read('seat-host')).json()).toMatchObject({ side: 'r' });
+    expect(await (await read('seat-guest')).json()).toMatchObject({ side: 'b' });
+    expect(await (await read('seat-stranger')).json()).toMatchObject({ side: null });
+  });
+
   it('rejects a third player', async () => {
     const { code } = (await (await post('/api/rooms', {}, 'host-2')).json()) as { code: string };
     await post(`/api/rooms/${code}/join`, {}, 'guest-2');

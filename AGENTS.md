@@ -49,6 +49,8 @@ Run from the repo root:
 | `pnpm dev:docker:status`            | Docker stack health, URLs, server config (`--watch`)    |
 | `pnpm dev:docker:logs`              | Follow Docker stack logs (optionally one service)       |
 | `pnpm dev:docker:down`              | Stop the Docker dev stack (volumes kept)                |
+| `pnpm agent`                        | Agent sandbox shell in Docker (needs `.env.agent`)      |
+| `pnpm agent:down`                   | Stop the agent sandbox and its Mongo (volumes kept)     |
 | `pnpm dev`                          | Web (:5173) + server (:3001) on the host, no Docker     |
 | `pnpm typecheck`                    | Typecheck all packages                                  |
 | `pnpm lint` / `pnpm lint:fix`       | ESLint (`eslint.config.mjs`); any warning fails         |

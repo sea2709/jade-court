@@ -40,7 +40,7 @@ async function openRoom(
   await host.goto('/multiplayer');
   if (options?.hostName) await fillDisplayName(host, options.hostName);
   await host.getByRole('button', { name: /Create a room/ }).click();
-  await expect(host.getByRole('heading', { name: 'Invite your friend' })).toBeVisible();
+  await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
   const code = (await host.locator('.room-link-input').inputValue()).split('room=')[1]!;
   expect(code).toMatch(/^JADE-/);
 
@@ -52,11 +52,7 @@ async function openRoom(
   const guestYouLabel = options?.guestName ? `${options.guestName} (you)` : 'Black player (you)';
   await expect(guest.getByText(guestYouLabel)).toBeVisible();
 
-  const hostJoinedMsg = options?.guestName
-    ? `✓ ${options.guestName} joined the room!`
-    : '✓ Black player joined the room!';
-  await expect(host.getByText(hostJoinedMsg)).toBeVisible();
-  await host.getByRole('button', { name: 'Start game →' }).click();
+  await expect(host.getByTestId('waiting-invite-panel')).toHaveCount(0);
   const hostYouLabel = options?.hostName ? `${options.hostName} (you)` : 'Red player (you)';
   await expect(host.getByText(hostYouLabel)).toBeVisible();
   if (options?.guestName) {
@@ -79,13 +75,45 @@ test.describe('Play with Friends (online room)', () => {
     const host = await hostContext.newPage();
     await host.goto('/multiplayer');
     await host.getByRole('button', { name: /Create a room/ }).click();
-    await expect(host.getByTestId('room-invite-share')).toBeVisible();
-    await host.getByRole('button', { name: 'Start game (waiting for opponent)' }).click();
     await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
     await host.getByRole('button', { name: 'Copy link' }).click();
     await expect(host.getByRole('button', { name: '✓ Copied' })).toBeVisible();
     await host.close();
     await hostContext.close();
+  });
+
+  test('Red cannot move before Black joins', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const host = await hostContext.newPage();
+    try {
+      await host.goto('/multiplayer');
+      await host.getByRole('button', { name: /Create a room/ }).click();
+      await expect(host.getByText('Waiting for opponent to join…')).toBeVisible();
+      await expect(host.getByText('Your move')).toHaveCount(0);
+      await square(host, 7, 1).click({ force: true });
+      await expect(square(host, 7, 1)).not.toHaveClass(/selected/);
+      await expect(host.locator('.hit')).toHaveCount(0);
+    } finally {
+      await host.close();
+      await hostContext.close();
+    }
+  });
+
+  test('host reload while waiting returns to the board, not the join form', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const host = await hostContext.newPage();
+    try {
+      await host.goto('/multiplayer');
+      await host.getByRole('button', { name: /Create a room/ }).click();
+      await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
+      await host.reload();
+      await expect(host.getByText('Red player (you)')).toBeVisible();
+      await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
+      await expect(host.getByRole('heading', { name: 'Join a room' })).toHaveCount(0);
+    } finally {
+      await host.close();
+      await hostContext.close();
+    }
   });
 
   test('two named players see each other in the room card', async ({ browser }) => {
@@ -242,7 +270,6 @@ test.describe('Play with Friends (online room)', () => {
       const offlineUrl = host.url();
 
       await host.reload();
-      await host.getByRole('button', { name: 'Join game →' }).click();
       await host.waitForURL(offlineUrl);
       await expect(host.getByText(/\(you\)/)).toBeVisible();
       await expect(host.getByTestId('online-game-over')).toBeVisible();

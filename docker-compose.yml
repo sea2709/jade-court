@@ -1,7 +1,7 @@
 # Agent sandbox — run opencode agents with full control inside a container.
 #
 #   # fill in JADE_AGENT_GH_TOKEN and JADE_AGENT_OPENCODE_API_KEY in .env.agent (git-ignored)
-#   docker compose --env-file .env.agent run --rm --service-ports agent
+#   pnpm agent                                   # = docker compose --env-file .env.agent run --rm --build --service-ports agent
 #   opencode                                     # pick the orchestrator agent
 #   agent                                        # or the Cursor CLI (subagents in .cursor/agents)
 #

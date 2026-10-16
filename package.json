@@ -9,6 +9,8 @@
     "dev:docker:down": "docker compose -f docker-compose.dev.yml down",
     "dev:docker:status": "./scripts/dev-docker-status.sh",
     "dev:docker:logs": "docker compose -f docker-compose.dev.yml logs -f --tail 100",
+    "agent": "docker compose --env-file .env.agent run --rm --build --service-ports agent",
+    "agent:down": "docker compose --env-file .env.agent down",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "test:coverage": "pnpm -r run test:coverage",

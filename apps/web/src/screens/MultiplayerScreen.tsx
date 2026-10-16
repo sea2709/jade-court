@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { X, type Side } from '@jade-court/xiangqi-engine';
 import { DisplayNameField } from '../components/DisplayNameField';
 import { RoomInviteShare } from '../components/RoomInviteShare';
 import { XQBoard } from '../components/XQBoard';
-import { createRoom, joinRoom } from '../lib/api';
+import { createRoom, getRoom, joinRoom } from '../lib/api';
 import {
   displayNameForApi,
   getStoredDisplayName,
@@ -160,10 +160,17 @@ function PassPlay({ onExit }: { onExit: () => void }) {
 function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: () => void }) {
   const game = useRoomGame(code, side);
   const flip = side === 'b';
-  const yourTurn = game.turn === side && !game.status;
+  const waitingForOpponent = !game.status && !game.opponentJoined;
+  const yourTurn = game.turn === side && !game.status && game.opponentJoined;
   const won = didSideWin(game.status as OnlineRoomStatus, game.winner, side, game.turn, X.opp);
   const opponentName = opponentSeatLabel(side, game.redName, game.blackName);
-  const turnLine = game.status ? 'Game over' : yourTurn ? 'Your move' : `${opponentName} to move`;
+  const turnLine = game.status
+    ? 'Game over'
+    : waitingForOpponent
+      ? 'Waiting for opponent to join…'
+      : yourTurn
+        ? 'Your move'
+        : `${opponentName} to move`;
   const [confirmResign, setConfirmResign] = useState(false);
   const inProgress = !game.status && game.opponentJoined;
   const inviteLink = inviteLinkForCode(code);
@@ -176,7 +183,11 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
           <span className="pill pill-gold">Online · {code}</span>
           <span
             className={`font-extrabold text-[15px] ${
-              game.turn === 'r' ? 'text-red-deep' : 'text-black-deep'
+              waitingForOpponent
+                ? 'text-muted'
+                : game.turn === 'r'
+                  ? 'text-red-deep'
+                  : 'text-black-deep'
             }`}
           >
             {turnLine}
@@ -302,49 +313,13 @@ function Lobby({
   const [searchParams, setSearchParams] = useSearchParams();
   const roomFromUrl = searchParams.get('room');
   const urlJoinCode = roomFromUrl ? roomFromUrl.toUpperCase() : '';
-  const [mode, setMode] = useState<'create' | 'join' | null>(null);
-  const [code, setCode] = useState('');
+  const [mode, setMode] = useState<'join' | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const activeMode = mode ?? (urlJoinCode ? 'join' : null);
   const joinCodeValue = joinCode || urlJoinCode;
   const [displayName, setDisplayName] = useState(() => getStoredDisplayName());
-  const nameLocked = activeMode === 'create' || mode === 'create';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [opponentJoined, setOpponentJoined] = useState(false);
-  const [redName, setRedName] = useState<string | null>(null);
-  const [blackName, setBlackName] = useState<string | null>(null);
-
-  const link = code ? inviteLinkForCode(code) : '';
-
-  useEffect(() => {
-    if (mode !== 'create' || !code) return;
-    const ws = new WebSocket(
-      import.meta.env.VITE_WS_URL ??
-        `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`,
-    );
-    ws.onopen = () => {
-      ws.send(
-        JSON.stringify({
-          type: 'subscribe',
-          code,
-          guestId: localStorage.getItem('jade-court-guest-id'),
-        }),
-      );
-    };
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data as string) as {
-        type: string;
-        room?: { blackJoined?: boolean; blackName?: string | null; redName?: string | null };
-      };
-      if (msg.type === 'room' && msg.room) {
-        if (msg.room.redName !== undefined) setRedName(msg.room.redName);
-        if (msg.room.blackName !== undefined) setBlackName(msg.room.blackName);
-        if (msg.room.blackJoined) setOpponentJoined(true);
-      }
-    };
-    return () => ws.close();
-  }, [mode, code]);
 
   const submitDisplayName = () => {
     const apiName = displayNameForApi(displayName);
@@ -358,11 +333,9 @@ function Lobby({
     try {
       const apiName = submitDisplayName();
       const res = await createRoom(apiName !== undefined ? { displayName: apiName } : undefined);
-      setCode(res.code);
-      setRedName(res.room.redName ?? null);
-      setBlackName(res.room.blackName ?? null);
-      setMode('create');
+      // The host waits on the board; the sidebar invite panel shows until Black joins.
       setSearchParams({ room: res.code });
+      onOnline(res.code, 'r');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create room');
     } finally {
@@ -444,93 +417,87 @@ function Lobby({
     );
   }
 
-  if (activeMode === 'join') {
-    return (
-      <div className="max-w-[480px] mx-auto px-[30px] py-[60px]">
-        <div className="card p-[30px] text-center">
-          <h2 className="text-[26px] m-0 mb-2">Join a room</h2>
-          <p className="text-ink-soft font-semibold m-0 mb-5">
-            Enter the invite code your friend shared.
-          </p>
-          <DisplayNameField value={displayName} onChange={setDisplayName} />
-          <input
-            value={joinCodeValue}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="JADE-XXXX"
-            className="room-input"
-            aria-label="Invite code"
-          />
-          <button
-            type="button"
-            className="btn btn-primary btn-lg w-full"
-            disabled={joinCodeValue.length < 4 || loading}
-            onClick={handleJoin}
-          >
-            {loading ? 'Joining…' : 'Join game →'}
-          </button>
-          {error && <p className="text-red-deep font-bold mt-3">{error}</p>}
-          <button type="button" className="nav-link mt-3.5" onClick={() => setMode(null)}>
-            ← Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const hostLabel = seatLabel('r', redName, blackName);
-  const joinedLabel = seatLabel('b', redName, blackName);
-
   return (
-    <div className="max-w-[560px] mx-auto px-[30px] py-[50px]">
-      <div className="card p-8 text-center">
-        <span className="pill pill-gold mb-4">Room ready</span>
-        <h2 className="text-[28px] m-0 mb-1.5">Invite your friend</h2>
-        <p className="text-ink-soft font-semibold m-0 mb-[22px]">
-          Share this code or link. They join, you play.
+    <div className="max-w-[480px] mx-auto px-[30px] py-[60px]">
+      <div className="card p-[30px] text-center">
+        <h2 className="text-[26px] m-0 mb-2">Join a room</h2>
+        <p className="text-ink-soft font-semibold m-0 mb-5">
+          Enter the invite code your friend shared.
         </p>
-
-        <RoomInviteShare code={code} inviteLink={link} />
-
-        <p className="text-ink-soft font-semibold text-[14.5px] m-0 mb-4">
-          You&apos;ll play Red 帥 as {hostLabel}
-        </p>
-
-        <div
-          className={`flex items-center justify-center gap-2.5 p-3 rounded-[14px] mb-5 ${
-            opponentJoined ? 'bg-jade-soft' : 'bg-cream'
-          }`}
-        >
-          {!opponentJoined ? (
-            <span className="font-bold text-muted text-sm">Waiting for opponent to join…</span>
-          ) : (
-            <span className="font-extrabold text-jade-deep text-[15px]">
-              ✓ {joinedLabel} joined the room!
-            </span>
-          )}
-        </div>
-
+        <DisplayNameField value={displayName} onChange={setDisplayName} />
+        <input
+          value={joinCodeValue}
+          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+          placeholder="JADE-XXXX"
+          className="room-input"
+          aria-label="Invite code"
+        />
         <button
           type="button"
-          className="btn btn-gold btn-lg w-full"
-          onClick={() => onOnline(code, 'r')}
+          className="btn btn-primary btn-lg w-full"
+          disabled={joinCodeValue.length < 4 || loading}
+          onClick={handleJoin}
         >
-          {opponentJoined ? 'Start game →' : 'Start game (waiting for opponent)'}
+          {loading ? 'Joining…' : 'Join game →'}
         </button>
-        <button type="button" className="nav-link mt-3.5" onClick={() => setMode(null)}>
+        {error && <p className="text-red-deep font-bold mt-3">{error}</p>}
+        <button
+          type="button"
+          className="nav-link mt-3.5"
+          onClick={() => {
+            setMode(null);
+            setSearchParams({});
+          }}
+        >
           ← Back
         </button>
       </div>
-      {nameLocked && (
-        <input type="hidden" data-testid="display-name-locked" value={displayName} readOnly />
-      )}
     </div>
   );
 }
 
 export function MultiplayerScreen() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<'lobby' | 'pass' | 'online'>('lobby');
   const [online, setOnline] = useState<{ code: string; side: Side } | null>(null);
+  // Captured once: only the URL the page was opened with triggers a rejoin check,
+  // so leaving a room never bounces the player straight back in.
+  const [restoreCode] = useState(() => searchParams.get('room')?.toUpperCase() || null);
+  const [restoring, setRestoring] = useState(restoreCode !== null);
 
+  const goOnline = useCallback((code: string, side: Side) => {
+    setOnline({ code, side });
+    setMode('online');
+  }, []);
+
+  // --- Rejoin after refresh: a guest already seated in `?room=` returns to the board ---
+  useEffect(() => {
+    if (!restoreCode) return;
+    let cancelled = false;
+    getRoom(restoreCode)
+      .then(({ room, side }) => {
+        if (cancelled) return;
+        if (side) goOnline(room.code, side);
+        setRestoring(false);
+      })
+      .catch(() => {
+        // Unknown room or network failure: fall through to the join form, which reports errors.
+        if (!cancelled) setRestoring(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [restoreCode, goOnline]);
+
+  if (restoring) {
+    return (
+      <div className="max-w-[480px] mx-auto px-[30px] py-[60px]">
+        <div className="card p-[30px] text-center text-ink-soft font-semibold" role="status">
+          Opening room {restoreCode}…
+        </div>
+      </div>
+    );
+  }
   if (mode === 'pass') return <PassPlay onExit={() => setMode('lobby')} />;
   if (mode === 'online' && online)
     return (
@@ -540,17 +507,10 @@ export function MultiplayerScreen() {
         onExit={() => {
           setMode('lobby');
           setOnline(null);
+          setSearchParams({});
         }}
       />
     );
 
-  return (
-    <Lobby
-      onPassPlay={() => setMode('pass')}
-      onOnline={(code, side) => {
-        setOnline({ code, side });
-        setMode('online');
-      }}
-    />
-  );
+  return <Lobby onPassPlay={() => setMode('pass')} onOnline={goOnline} />;
 }

@@ -58,8 +58,9 @@ export function joinRoom(code: string, options?: { displayName?: string }) {
   });
 }
 
+/** Read a room; `side` is the seat this guest already holds, or null when not seated. */
 export function getRoom(code: string) {
-  return api<{ room: PublicRoom }>(`/api/rooms/${encodeURIComponent(code)}`);
+  return api<{ room: PublicRoom; side: Side | null }>(`/api/rooms/${encodeURIComponent(code)}`);
 }
 
 export function wsUrl(): string {

@@ -21,7 +21,7 @@ describe('RoomInviteShare', () => {
     render(
       <RoomInviteShare code="JADE-WXYZ" inviteLink="http://localhost/multiplayer?room=JADE-WXYZ" />,
     );
-    expect(screen.getByText('J A D E –')).toBeInTheDocument();
+    expect(screen.getByText('JADE–')).toBeInTheDocument();
     expect(screen.getAllByTestId('invite-code-char')).toHaveLength(4);
     expect(screen.getAllByTestId('invite-code-char').map((el) => el.textContent)).toEqual([
       'W',

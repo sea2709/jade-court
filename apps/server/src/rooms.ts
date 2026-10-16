@@ -105,12 +105,21 @@ export function joinRoom(
   return { error: 'Room is full' };
 }
 
+/** Seat held by `guestId` in this room, or null when they are not seated (e.g. an invitee). */
+export function seatFor(room: RoomState, guestId: string): Side | null {
+  if (room.red?.guestId === guestId) return 'r';
+  if (room.black?.guestId === guestId) return 'b';
+  return null;
+}
+
 export function applyRoomMove(
   room: RoomState,
   guestId: string,
   move: Move,
 ): { ok: true; room: RoomState } | { ok: false; error: string } {
   if (room.status) return { ok: false, error: 'Game is over' };
+  // No moves into an empty room: Black must be seated before Red's first move.
+  if (!room.red || !room.black) return { ok: false, error: 'Waiting for opponent' };
   const player =
     room.red?.guestId === guestId ? room.red : room.black?.guestId === guestId ? room.black : null;
   if (!player || player.side !== room.turn) return { ok: false, error: 'Not your turn' };

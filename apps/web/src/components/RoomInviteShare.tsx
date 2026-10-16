@@ -1,5 +1,6 @@
 /**
- * Invite code display (JADE prefix + letter boxes) and copy actions for lobby / waiting room.
+ * Invite code display (JADE prefix + letter boxes) and copy actions for the host's
+ * in-game sidebar while waiting; sized to fit the 300px game sidebar.
  */
 import { useState } from 'react';
 
@@ -59,10 +60,10 @@ export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
   return (
     <div data-testid="room-invite-share">
       <div className="flex justify-center items-center gap-2 mb-[18px]">
-        <span className="font-display font-extrabold text-muted tracking-[3px] text-[22px] select-none">
-          J A D E –
+        <span className="font-display font-extrabold text-muted tracking-[2px] text-lg whitespace-nowrap select-none">
+          JADE–
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {suffix.split('').map((ch, i) => (
             <span key={i} className="invite-code-char" data-testid="invite-code-char">
               {ch}

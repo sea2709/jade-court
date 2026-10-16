@@ -203,6 +203,36 @@ describe('useRoomGame — resign', () => {
     expect(result.current.error).toBe('Game is over');
   });
 
+  it('ignores board clicks until the opponent has joined', () => {
+    const WS = installWebSocketMock();
+    const { result } = setupRoom();
+    act(() => WS.instances[0]!.open());
+
+    const roomSnapshot = (blackJoined: boolean) => ({
+      type: 'room',
+      room: {
+        code: 'JADE-TEST',
+        board: initialBoard,
+        turn: 'r',
+        history: [],
+        status: null,
+        winner: null,
+        redJoined: true,
+        blackJoined,
+        redConnected: true,
+        blackConnected: blackJoined,
+      },
+    });
+
+    act(() => WS.instances[0]!.dispatch('message', roomSnapshot(false)));
+    act(() => result.current.onPoint(9, 1));
+    expect(result.current.selected).toBeNull();
+
+    act(() => WS.instances[0]!.dispatch('message', roomSnapshot(true)));
+    act(() => result.current.onPoint(9, 1));
+    expect(result.current.selected).toEqual([9, 1]);
+  });
+
   it('still surfaces legacy `message`-field errors', () => {
     const WS = installWebSocketMock();
     const { result } = setupRoom();

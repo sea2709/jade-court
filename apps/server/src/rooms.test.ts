@@ -11,6 +11,7 @@ import {
   publicRoomView,
   randomCode,
   resignRoom,
+  seatFor,
 } from './rooms.js';
 
 let n = 0;
@@ -137,6 +138,20 @@ describe('joinRoom', () => {
   });
 });
 
+describe('seatFor', () => {
+  it('returns the seat held by a guest, or null for strangers', () => {
+    const { room, red, black } = seatedRoom();
+    expect(seatFor(room, red)).toBe('r');
+    expect(seatFor(room, black)).toBe('b');
+    expect(seatFor(room, 'stranger')).toBeNull();
+  });
+
+  it('returns null for an empty Black seat', () => {
+    const room = createRoom(guest('host'));
+    expect(seatFor(room, 'someone')).toBeNull();
+  });
+});
+
 describe('applyRoomMove', () => {
   it('applies a legal move and passes the turn', () => {
     const { room, red } = seatedRoom();
@@ -154,6 +169,20 @@ describe('applyRoomMove', () => {
       ok: false,
       error: 'Not your turn',
     });
+  });
+
+  it('rejects moves until Black has joined', () => {
+    const red = guest('red');
+    const room = createRoom(red);
+    expect(applyRoomMove(room, red, { from: [9, 1], to: [7, 2] })).toEqual({
+      ok: false,
+      error: 'Waiting for opponent',
+    });
+    expect(room.history).toHaveLength(0);
+    expect(room.board).toEqual(X.initialBoard());
+
+    joinRoom(room.code, guest('black'));
+    expect(applyRoomMove(room, red, { from: [9, 1], to: [7, 2] }).ok).toBe(true);
   });
 
   it('rejects guests who are not seated', () => {

@@ -144,7 +144,7 @@ export function useRoomGame(code: string, side: Side) {
   const onPoint = useCallback(
     (r: number, c: number) => {
       setState((s) => {
-        if (s.status || s.turn !== side) return s;
+        if (s.status || s.turn !== side || !s.opponentJoined) return s;
         if (r < 0) return { ...s, selected: null, targets: [] };
 
         const p = s.board[r]?.[c];

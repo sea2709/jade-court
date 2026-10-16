@@ -18,6 +18,7 @@ import {
   parseDisplayNameField,
   publicRoomView,
   resignRoom,
+  seatFor,
   type RoomState,
 } from './rooms.js';
 import aiRoutes from './routes/ai.js';
@@ -124,10 +125,12 @@ export function createApp(deps?: CreateAppDeps) {
     return c.json({ side: result.side, room: publicRoomView(result.room) });
   });
 
+  // `side` tells a returning player (same guest id) which seat they already hold,
+  // so the client can skip the join form after a refresh; null for non-players.
   app.get('/api/rooms/:code', (c) => {
     const room = getRoom(c.req.param('code'));
     if (!room) return c.json({ error: 'Room not found' }, 404);
-    return c.json({ room: publicRoomView(room) });
+    return c.json({ room: publicRoomView(room), side: seatFor(room, getGuestId(c)) });
   });
 
   app.get('/health', (c) => c.json({ ok: true }));
