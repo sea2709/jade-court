@@ -65,6 +65,19 @@ test.describe('home and navigation', () => {
     expect(cleared).toBeNull();
   });
 
+  test('breadcrumb is hidden on home and navigates back from Play', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+
+    await page.locator('nav.nav').getByRole('link', { name: 'Play vs Computer' }).click();
+    await expect(page).toHaveURL(/\/play$/);
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(breadcrumb).toContainText('Play vs Computer');
+    await breadcrumb.getByRole('link', { name: 'Home' }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+  });
+
   test('home call-to-action buttons open Learn and Play', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Start learning →' }).click();
