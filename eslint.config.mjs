@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dev-dist/**',
       'reference/**',
+      '.cursor/tmp/**',
       '**/coverage/**',
       '**/test-results/**',
       '**/playwright-report/**',
