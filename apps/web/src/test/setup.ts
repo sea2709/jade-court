@@ -13,6 +13,19 @@ if (jsdomWindow && typeof globalThis.localStorage?.getItem !== 'function') {
   });
 }
 
+if (typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();

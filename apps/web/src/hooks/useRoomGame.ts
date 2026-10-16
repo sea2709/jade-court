@@ -9,6 +9,15 @@ import {
 } from '@jade-court/xiangqi-engine';
 import { type PublicRoom, wsUrl } from '../lib/api';
 import { getGuestId } from '../lib/guestId';
+import type { RoomChatWsMessage } from '../lib/roomChatTypes';
+
+export type RoomWsMessage =
+  | { type: 'room'; room: PublicRoom }
+  | { type: 'error'; message?: string; error?: string }
+  | { type: 'move_rejected'; error: string }
+  | RoomChatWsMessage;
+
+type RoomMessageListener = (msg: RoomWsMessage) => void;
 
 /**
  * Online room game state (multiplayer `useRoomGame`).
@@ -48,6 +57,7 @@ export interface RoomGameState {
 export function useRoomGame(code: string, side: Side) {
   const guestId = getGuestId();
   const wsRef = useRef<WebSocket | null>(null);
+  const messageListenersRef = useRef(new Set<RoomMessageListener>());
   /** Set when a resign has been sent for the current room+code. Reset when
    *  the socket/teardown effect re-runs (new code) AND once a `resigned`
    *  snapshot is applied (so a future rematch could resign again — out of
@@ -118,10 +128,7 @@ export function useRoomGame(code: string, side: Side) {
       // Errors may carry either `message` (legacy parse/subscribe failures)
       // or `error` (new resign failures). Read both so the UI shows the
       // server's wording either way.
-      const msg = JSON.parse(ev.data as string) as
-        | { type: 'room'; room: PublicRoom }
-        | { type: 'error'; message?: string; error?: string }
-        | { type: 'move_rejected'; error: string };
+      const msg = JSON.parse(ev.data as string) as RoomWsMessage;
 
       if (msg.type === 'room') applyRoom(msg.room);
       else if (msg.type === 'error') {
@@ -130,6 +137,7 @@ export function useRoomGame(code: string, side: Side) {
       } else if (msg.type === 'move_rejected') {
         setState((s) => ({ ...s, error: msg.error }));
       }
+      for (const listener of messageListenersRef.current) listener(msg);
     };
 
     ws.onclose = () => setState((s) => ({ ...s, connected: false }));
@@ -200,5 +208,18 @@ export function useRoomGame(code: string, side: Side) {
     return true;
   }, [guestId]);
 
-  return { ...state, onPoint, resetLocal, resign, side, guestId };
+  const subscribeToMessages = useCallback((listener: RoomMessageListener) => {
+    messageListenersRef.current.add(listener);
+    return () => {
+      messageListenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const sendWs = useCallback((payload: object) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify(payload));
+  }, []);
+
+  return { ...state, onPoint, resetLocal, resign, side, guestId, subscribeToMessages, sendWs };
 }

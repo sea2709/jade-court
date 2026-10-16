@@ -327,6 +327,65 @@
     grid-template-columns: auto 300px;
   }
 
+  .game-layout-room {
+    @apply items-stretch;
+  }
+
+  .game-layout-room .room-sidebar {
+    @apply flex flex-col gap-3.5 min-h-0 min-w-0;
+  }
+
+  @media (max-width: 1023px) {
+    .game-layout-room {
+      grid-template-columns: 1fr;
+      @apply pb-24;
+    }
+
+    .game-layout-room .room-sidebar {
+      @apply order-2;
+    }
+  }
+
+  .room-chat-panel {
+    @apply flex-1 min-h-[280px] max-h-[min(52vh,520px)];
+  }
+
+  .room-chat-collapsed-row {
+    @apply w-full flex items-center gap-2.5 px-4 py-3 text-left cursor-pointer;
+  }
+
+  .room-chat-unread-badge {
+    @apply min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-deep text-white text-[11px] font-extrabold grid place-items-center shrink-0;
+  }
+
+  .room-chat-input {
+    @apply w-full font-semibold text-[14px] p-3 rounded-[12px] border-2 border-line-soft bg-cream text-ink;
+  }
+
+  .room-chat-input-over {
+    @apply border-red-deep;
+  }
+
+  .room-chat-new-pill {
+    @apply absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3.5 py-1.5 rounded-full bg-ink text-cream text-[12.5px] font-extrabold shadow-md cursor-pointer border-0;
+  }
+
+  .room-chat-mobile-bar {
+    @apply fixed bottom-0 left-0 right-0 z-30 flex items-center gap-2.5 px-4 py-3 border-t border-line-soft bg-paper shadow-md cursor-pointer;
+  }
+
+  .room-chat-sheet-root {
+    @apply fixed inset-0 z-40 flex flex-col justify-end;
+  }
+
+  .room-chat-sheet-backdrop {
+    @apply absolute inset-0 bg-ink/40 border-0 cursor-pointer;
+  }
+
+  .room-chat-sheet {
+    @apply relative z-10 max-h-[min(78vh,640px)] m-0 rounded-b-none;
+  }
+
   .game-layout-wide {
     @apply max-w-[1100px] mx-auto px-[30px] pt-6 pb-[50px] grid gap-[30px] items-start justify-center;
     grid-template-columns: auto 320px;
