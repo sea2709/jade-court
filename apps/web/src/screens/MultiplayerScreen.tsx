@@ -1,11 +1,75 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { X, type Side } from '@jade-court/xiangqi-engine';
+import { DisplayNameField } from '../components/DisplayNameField';
+import { RoomInviteShare } from '../components/RoomInviteShare';
 import { XQBoard } from '../components/XQBoard';
 import { createRoom, joinRoom } from '../lib/api';
+import {
+  displayNameForApi,
+  getStoredDisplayName,
+  opponentSeatLabel,
+  saveDisplayNameInput,
+  seatLabel,
+} from '../lib/displayName';
 import { useRoomGame } from '../hooks/useRoomGame';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
 import { didSideWin, onlineGameOverSubtitle, type OnlineRoomStatus } from './multiplayerGameOver';
+
+function inviteLinkForCode(code: string): string {
+  return `${location.origin}/multiplayer?room=${encodeURIComponent(code)}`;
+}
+
+function RoomSeatRow({
+  seatSide,
+  viewerSide,
+  redName,
+  blackName,
+  joined,
+  connected,
+}: {
+  seatSide: Side;
+  viewerSide: Side;
+  redName: string | null;
+  blackName: string | null;
+  joined: boolean;
+  connected: boolean;
+}) {
+  const isYou = seatSide === viewerSide;
+  const badge = seatSide === 'r' ? '帥' : '將';
+  const badgeTone = seatSide === 'r' ? 'bg-red-deep' : 'bg-black-deep';
+
+  if (!joined) {
+    return (
+      <div className="flex items-center gap-2.5 py-2 text-muted font-semibold text-[13.5px]">
+        <span
+          className={`w-7 h-7 rounded-lg grid place-items-center text-white text-sm font-extrabold ${badgeTone}`}
+        >
+          {badge}
+        </span>
+        <span>Waiting for opponent…</span>
+      </div>
+    );
+  }
+
+  const name = seatLabel(seatSide, redName, blackName);
+  const showConnected = !isYou && connected;
+
+  return (
+    <div className="flex items-center gap-2.5 py-2 text-[13.5px] font-semibold text-ink-soft">
+      <span
+        className={`w-7 h-7 rounded-lg grid place-items-center text-white text-sm font-extrabold shrink-0 ${badgeTone}`}
+      >
+        {badge}
+      </span>
+      <span className="text-ink font-bold">
+        {name}
+        {isYou ? ' (you)' : ''}
+      </span>
+      {showConnected && <span className="text-jade-deep font-bold text-[12.5px]">connected</span>}
+    </div>
+  );
+}
 
 function PassPlay({ onExit }: { onExit: () => void }) {
   const [autoFlip, setAutoFlip] = useState(true);
@@ -97,15 +161,13 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
   const game = useRoomGame(code, side);
   const flip = side === 'b';
   const yourTurn = game.turn === side && !game.status;
-  // Prefer the server's reported winner; fall back to the old inference
-  // (loser = side to move) for snapshots that don't yet carry `winner`.
   const won = didSideWin(game.status as OnlineRoomStatus, game.winner, side, game.turn, X.opp);
-  const turnName = game.turn === 'r' ? 'Red 帥' : 'Black 將';
-  // Confirmation overlay for the destructive Resign action. Only openable
-  // while the game is still live and the opponent is seated — once the game
-  // is over, the button disappears so the overlay can't re-open.
+  const opponentName = opponentSeatLabel(side, game.redName, game.blackName);
+  const turnLine = game.status ? 'Game over' : yourTurn ? 'Your move' : `${opponentName} to move`;
   const [confirmResign, setConfirmResign] = useState(false);
   const inProgress = !game.status && game.opponentJoined;
+  const inviteLink = inviteLinkForCode(code);
+  const showInvitePanel = side === 'r' && !game.opponentJoined;
 
   return (
     <div className="game-layout">
@@ -117,7 +179,7 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
               game.turn === 'r' ? 'text-red-deep' : 'text-black-deep'
             }`}
           >
-            {game.status ? 'Game over' : yourTurn ? 'Your move' : `${turnName} to move`}
+            {turnLine}
           </span>
           {!game.connected && <span className="pill pill-red">Reconnecting…</span>}
           {game.checkSide && !game.status && <span className="pill pill-red">Check!</span>}
@@ -139,7 +201,10 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
               <div className="text-[42px]">{won ? '🏆' : '🎯'}</div>
               <h2 className="my-1.5 mb-1 text-[26px]">{won ? 'You win!' : 'You lose'}</h2>
               <p className="text-ink-soft font-semibold m-0 mb-4">
-                {onlineGameOverSubtitle(game.status as OnlineRoomStatus, won, game.winner)}
+                {onlineGameOverSubtitle(game.status as OnlineRoomStatus, won, game.winner, {
+                  redName: game.redName,
+                  blackName: game.blackName,
+                })}
               </p>
             </div>
           </div>
@@ -177,28 +242,51 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
       <div className="flex flex-col gap-3.5">
         <div className="card p-4">
           <div className="font-extrabold text-[15px] mb-2.5">Room {code}</div>
-          <div className="text-[13px] text-ink-soft font-semibold leading-normal">
-            You are playing as {side === 'r' ? 'Red 帥' : 'Black 將'}.
-            {!game.opponentJoined && <div className="mt-2 text-muted">Waiting for opponent…</div>}
-            {game.opponentJoined && <div className="mt-2 text-jade-deep">Opponent connected ✓</div>}
-            {game.error && <div className="mt-2 text-red-deep">{game.error}</div>}
+          <RoomSeatRow
+            seatSide="r"
+            viewerSide={side}
+            redName={game.redName}
+            blackName={game.blackName}
+            joined={true}
+            connected={game.redConnected}
+          />
+          <RoomSeatRow
+            seatSide="b"
+            viewerSide={side}
+            redName={game.redName}
+            blackName={game.blackName}
+            joined={game.opponentJoined}
+            connected={game.blackConnected}
+          />
+          {game.error && (
+            <div className="mt-2 text-red-deep font-bold text-[13px]">{game.error}</div>
+          )}
+          <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-line-soft">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onExit}>
+              ← Leave room
+            </button>
+            {inProgress && (
+              <button
+                type="button"
+                className="btn btn-red btn-sm"
+                data-testid="resign-button"
+                onClick={() => setConfirmResign(true)}
+              >
+                Resign
+              </button>
+            )}
           </div>
         </div>
-        <div className="card p-4 flex flex-col gap-2">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onExit}>
-            ← Leave room
-          </button>
-          {inProgress && (
-            <button
-              type="button"
-              className="btn btn-red btn-sm"
-              data-testid="resign-button"
-              onClick={() => setConfirmResign(true)}
-            >
-              Resign
-            </button>
-          )}
-        </div>
+
+        {showInvitePanel && (
+          <div className="card p-4 text-center" data-testid="waiting-invite-panel">
+            <h3 className="m-0 mb-1 text-[18px] font-extrabold">Invite your friend</h3>
+            <p className="text-ink-soft font-semibold text-[13.5px] m-0 mb-4">
+              Share this code or link while you wait.
+            </p>
+            <RoomInviteShare code={code} inviteLink={inviteLink} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -219,12 +307,15 @@ function Lobby({
   const [joinCode, setJoinCode] = useState('');
   const activeMode = mode ?? (urlJoinCode ? 'join' : null);
   const joinCodeValue = joinCode || urlJoinCode;
-  const [copied, setCopied] = useState(false);
+  const [displayName, setDisplayName] = useState(() => getStoredDisplayName());
+  const nameLocked = activeMode === 'create' || mode === 'create';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [opponentJoined, setOpponentJoined] = useState(false);
+  const [redName, setRedName] = useState<string | null>(null);
+  const [blackName, setBlackName] = useState<string | null>(null);
 
-  const link = code ? `${location.origin}/multiplayer?room=${encodeURIComponent(code)}` : '';
+  const link = code ? inviteLinkForCode(code) : '';
 
   useEffect(() => {
     if (mode !== 'create' || !code) return;
@@ -244,26 +335,32 @@ function Lobby({
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data as string) as {
         type: string;
-        room?: { blackJoined?: boolean };
+        room?: { blackJoined?: boolean; blackName?: string | null; redName?: string | null };
       };
-      if (msg.type === 'room' && msg.room?.blackJoined) setOpponentJoined(true);
+      if (msg.type === 'room' && msg.room) {
+        if (msg.room.redName !== undefined) setRedName(msg.room.redName);
+        if (msg.room.blackName !== undefined) setBlackName(msg.room.blackName);
+        if (msg.room.blackJoined) setOpponentJoined(true);
+      }
     };
     return () => ws.close();
   }, [mode, code]);
 
-  const copy = (text: string) => {
-    navigator.clipboard?.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    });
+  const submitDisplayName = () => {
+    const apiName = displayNameForApi(displayName);
+    saveDisplayNameInput(displayName);
+    return apiName;
   };
 
   const handleCreate = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await createRoom();
+      const apiName = submitDisplayName();
+      const res = await createRoom(apiName !== undefined ? { displayName: apiName } : undefined);
       setCode(res.code);
+      setRedName(res.room.redName ?? null);
+      setBlackName(res.room.blackName ?? null);
       setMode('create');
       setSearchParams({ room: res.code });
     } catch (e) {
@@ -279,8 +376,10 @@ function Lobby({
     setLoading(true);
     setError(null);
     try {
+      const apiName = submitDisplayName();
       const res = await joinRoom(
         normalized.startsWith('JADE-') ? normalized : `JADE-${normalized}`,
+        apiName !== undefined ? { displayName: apiName } : undefined,
       );
       setSearchParams({ room: res.room.code });
       onOnline(res.room.code, res.side);
@@ -301,6 +400,7 @@ function Lobby({
             Create a private room and share the link, or jump straight into pass-and-play.
           </p>
         </div>
+        <DisplayNameField value={displayName} onChange={setDisplayName} />
         <div className="grid grid-cols-2 gap-5">
           <button
             type="button"
@@ -352,11 +452,13 @@ function Lobby({
           <p className="text-ink-soft font-semibold m-0 mb-5">
             Enter the invite code your friend shared.
           </p>
+          <DisplayNameField value={displayName} onChange={setDisplayName} />
           <input
             value={joinCodeValue}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             placeholder="JADE-XXXX"
             className="room-input"
+            aria-label="Invite code"
           />
           <button
             type="button"
@@ -375,7 +477,8 @@ function Lobby({
     );
   }
 
-  const codeSuffix = code.replace('JADE-', '');
+  const hostLabel = seatLabel('r', redName, blackName);
+  const joinedLabel = seatLabel('b', redName, blackName);
 
   return (
     <div className="max-w-[560px] mx-auto px-[30px] py-[50px]">
@@ -386,21 +489,11 @@ function Lobby({
           Share this code or link. They join, you play.
         </p>
 
-        <div className="flex justify-center gap-2.5 mb-[18px]">
-          {codeSuffix.split('').map((ch, i) => (
-            <span key={i} className="invite-code-char">
-              {ch}
-            </span>
-          ))}
-        </div>
-        <div className="font-display font-extrabold text-muted tracking-[3px] mb-5">{code}</div>
+        <RoomInviteShare code={code} inviteLink={link} />
 
-        <div className="flex gap-2 mb-[22px]">
-          <input readOnly value={link} className="room-link-input" />
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => copy(link)}>
-            {copied ? '✓ Copied' : 'Copy link'}
-          </button>
-        </div>
+        <p className="text-ink-soft font-semibold text-[14.5px] m-0 mb-4">
+          You&apos;ll play Red 帥 as {hostLabel}
+        </p>
 
         <div
           className={`flex items-center justify-center gap-2.5 p-3 rounded-[14px] mb-5 ${
@@ -411,7 +504,7 @@ function Lobby({
             <span className="font-bold text-muted text-sm">Waiting for opponent to join…</span>
           ) : (
             <span className="font-extrabold text-jade-deep text-[15px]">
-              ✓ Opponent joined the room!
+              ✓ {joinedLabel} joined the room!
             </span>
           )}
         </div>
@@ -427,6 +520,9 @@ function Lobby({
           ← Back
         </button>
       </div>
+      {nameLocked && (
+        <input type="hidden" data-testid="display-name-locked" value={displayName} readOnly />
+      )}
     </div>
   );
 }

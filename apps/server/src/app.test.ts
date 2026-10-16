@@ -87,6 +87,75 @@ describe('room REST endpoints', () => {
     const read = await app.request('/api/rooms/JADE-ZZZZ');
     expect(read.status).toBe(404);
   });
+
+  it('accepts optional display names on create and join', async () => {
+    const created = await post('/api/rooms', { displayName: '  Host  ' }, 'host-names');
+    expect(created.status).toBe(200);
+    const { code, room } = (await created.json()) as {
+      code: string;
+      room: { redName: string | null; blackName: string | null };
+    };
+    expect(room).toMatchObject({ redName: 'Host', blackName: null });
+
+    const joined = await post(`/api/rooms/${code}/join`, { displayName: 'Guest' }, 'guest-names');
+    expect(joined.status).toBe(200);
+    expect(await joined.json()).toMatchObject({
+      room: { redName: 'Host', blackName: 'Guest' },
+    });
+  });
+
+  it('rejects display names over 20 characters', async () => {
+    const res = await post('/api/rooms', { displayName: 'x'.repeat(21) }, 'host-long');
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Display name must be at most 20 characters' });
+  });
+
+  it('does not overwrite display name when the same guest rejoins', async () => {
+    const created = await post('/api/rooms', { displayName: 'Original' }, 'host-rejoin');
+    const { code } = (await created.json()) as { code: string };
+    await post(`/api/rooms/${code}/join`, { displayName: 'Other' }, 'host-rejoin');
+    const read = await app.request(`/api/rooms/${code}`, {
+      headers: { 'x-guest-id': 'host-rejoin' },
+    });
+    const { room } = (await read.json()) as { room: { redName: string | null } };
+    expect(room.redName).toBe('Original');
+  });
+
+  it('rejects JSON null body with 400 invalid_json', async () => {
+    const create = await post('/api/rooms', 'null', 'null-body-host');
+    expect(create.status).toBe(400);
+    expect(await create.json()).toEqual({ error: 'invalid_json' });
+
+    const { code } = (await (await post('/api/rooms', {}, 'null-body-join-host')).json()) as {
+      code: string;
+    };
+    const join = await post(`/api/rooms/${code}/join`, 'null', 'null-body-guest');
+    expect(join.status).toBe(400);
+    expect(await join.json()).toEqual({ error: 'invalid_json' });
+  });
+
+  it('creates and joins without a request body', async () => {
+    const created = await app.request('/api/rooms', {
+      method: 'POST',
+      headers: { 'x-guest-id': 'bodyless-host' },
+    });
+    expect(created.status).toBe(200);
+    const { code } = (await created.json()) as { code: string };
+
+    const joined = await app.request(`/api/rooms/${code}/join`, {
+      method: 'POST',
+      headers: { 'x-guest-id': 'bodyless-guest' },
+    });
+    expect(joined.status).toBe(200);
+    expect(await joined.json()).toMatchObject({ side: 'b', room: { blackJoined: true } });
+
+    const emptyJsonBody = await app.request('/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-guest-id': 'empty-body-host' },
+      body: '',
+    });
+    expect(emptyJsonBody.status).toBe(200);
+  });
 });
 
 describe('POST /api/opponent/move', () => {

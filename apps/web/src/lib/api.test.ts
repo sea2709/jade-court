@@ -24,10 +24,17 @@ describe('room API client', () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe('/api/rooms');
     expect(init?.method).toBe('POST');
+    expect(init?.body).toBe('{}');
     expect(init?.headers).toMatchObject({
       'x-guest-id': 'guest-123',
       'Content-Type': 'application/json',
     });
+  });
+
+  it('createRoom sends displayName in the JSON body when provided', async () => {
+    fetchMock.mockResolvedValue(json({ code: 'JADE-ABCD', room: {} }));
+    await createRoom({ displayName: 'Minh' });
+    expect(fetchMock.mock.calls[0]![1]?.body).toBe(JSON.stringify({ displayName: 'Minh' }));
   });
 
   it('joinRoom URL-encodes the room code', async () => {

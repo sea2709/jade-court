@@ -6,6 +6,29 @@ export interface RoomPlayer {
   guestId: string;
   side: Side;
   connected: boolean;
+  /** Normalised display name when the player set one at create/join; absent when unset. */
+  displayName?: string;
+}
+
+export const DISPLAY_NAME_MAX_LENGTH = 20;
+
+/** Trim, collapse internal whitespace; empty after normalise becomes null. */
+export function normalizeDisplayName(raw: string | undefined | null): string | null {
+  if (raw == null) return null;
+  const collapsed = raw.trim().replace(/\s+/g, ' ');
+  return collapsed === '' ? null : collapsed;
+}
+
+export function parseDisplayNameField(
+  raw: unknown,
+): { ok: true; displayName: string | null } | { ok: false; error: string } {
+  if (raw === undefined) return { ok: true, displayName: null };
+  if (typeof raw !== 'string') return { ok: false, error: 'Invalid display name' };
+  const displayName = normalizeDisplayName(raw);
+  if (displayName && displayName.length > DISPLAY_NAME_MAX_LENGTH) {
+    return { ok: false, error: 'Display name must be at most 20 characters' };
+  }
+  return { ok: true, displayName };
 }
 
 export interface RoomState {
@@ -32,9 +55,12 @@ export function randomCode(): string {
   return `JADE-${s}`;
 }
 
-export function createRoom(hostGuestId: string): RoomState {
+export function createRoom(hostGuestId: string, displayName?: string | null): RoomState {
   let code = randomCode();
   while (rooms.has(code)) code = randomCode();
+  const red: RoomPlayer = { guestId: hostGuestId, side: 'r', connected: false };
+  const hostName = normalizeDisplayName(displayName ?? null);
+  if (hostName) red.displayName = hostName;
   const room: RoomState = {
     code,
     hostGuestId,
@@ -44,7 +70,7 @@ export function createRoom(hostGuestId: string): RoomState {
     status: null,
     winner: null,
     createdAt: Date.now(),
-    red: { guestId: hostGuestId, side: 'r', connected: false },
+    red,
   };
   rooms.set(code, room);
   return room;
@@ -57,6 +83,7 @@ export function getRoom(code: string): RoomState | undefined {
 export function joinRoom(
   code: string,
   guestId: string,
+  displayName?: string | null,
 ): { room: RoomState; side: Side } | { error: string } {
   const room = getRoom(code);
   if (!room) return { error: 'Room not found' };
@@ -69,7 +96,10 @@ export function joinRoom(
     return { room, side: 'r' };
   }
   if (!room.black) {
-    room.black = { guestId, side: 'b', connected: true };
+    const black: RoomPlayer = { guestId, side: 'b', connected: true };
+    const guestName = normalizeDisplayName(displayName ?? null);
+    if (guestName) black.displayName = guestName;
+    room.black = black;
     return { room, side: 'b' };
   }
   return { error: 'Room is full' };
@@ -133,5 +163,7 @@ export function publicRoomView(room: RoomState) {
     blackJoined: !!room.black,
     redConnected: room.red?.connected ?? false,
     blackConnected: room.black?.connected ?? false,
+    redName: room.red?.displayName ?? null,
+    blackName: room.black?.displayName ?? null,
   };
 }

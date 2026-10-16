@@ -7,6 +7,7 @@
  * screen keeps its own strings since it never produces a `'resigned'` status.
  */
 import type { Side } from '@jade-court/xiangqi-engine';
+import { seatLabel } from '../lib/displayName';
 
 /** Online room status: extends the engine `GameStatus` with `'resigned'`. */
 export type OnlineRoomStatus = 'checkmate' | 'stalemate' | 'resigned' | null;
@@ -25,28 +26,41 @@ export function didSideWin(
   return turn === opp(side);
 }
 
+export type GameOverNameContext = {
+  redName?: string | null;
+  blackName?: string | null;
+};
+
+function loserSide(winner: Side | null): Side | null {
+  if (!winner) return null;
+  return winner === 'r' ? 'b' : 'r';
+}
+
 /**
  * Subtitle wording for the multiplayer game-over overlay.
  *
  * - `'stalemate'` → plain "Stalemate."
  * - `'checkmate'` → plain "Checkmate!"
  * - `'resigned'`:
- *   - `won=true`  → "`<LoserColor>` resigned — `<WinnerColor>` wins."
- *     (loser is the opposite side of `winner`).
- *   - `won=false` → "You resigned." (the viewer is the resigner).
+ *   - `won=true`  → "`{loserName}` resigned." (display name when set).
+ *   - `won=false` → "You resigned."
  */
 export function onlineGameOverSubtitle(
   status: OnlineRoomStatus,
   won: boolean,
   winner: Side | null,
+  names?: GameOverNameContext,
 ): string {
   if (status === 'stalemate') return 'Stalemate.';
   if (status === 'checkmate') return 'Checkmate!';
   if (status === 'resigned') {
-    if (won) {
-      return winner === 'b' ? 'Red resigned — Black wins.' : 'Black resigned — Red wins.';
+    if (!won) return 'You resigned.';
+    const loser = loserSide(winner);
+    if (loser) {
+      const label = seatLabel(loser, names?.redName, names?.blackName);
+      return `${label} resigned.`;
     }
-    return 'You resigned.';
+    return 'Your opponent resigned.';
   }
   return '';
 }
