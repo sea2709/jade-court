@@ -46,6 +46,8 @@ Run from the repo root:
 | `pnpm test:coverage`                | Vitest + v8 coverage; fails below thresholds (CI)       |
 | `pnpm test:e2e`                     | Playwright E2E (own server :3101 + Vite :5199)          |
 | `pnpm dev:docker`                   | Default: Mongo + server (:3001) + web (:5173) in Docker |
+| `pnpm dev:docker:status`            | Docker stack health, URLs, server config (`--watch`)    |
+| `pnpm dev:docker:logs`              | Follow Docker stack logs (optionally one service)       |
 | `pnpm dev:docker:down`              | Stop the Docker dev stack (volumes kept)                |
 | `pnpm dev`                          | Web (:5173) + server (:3001) on the host, no Docker     |
 | `pnpm typecheck`                    | Typecheck all packages                                  |

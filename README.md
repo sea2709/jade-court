@@ -62,9 +62,13 @@ Or create the remote with `gh repo create` — see the full checklist in [.curso
 Run the app in Docker (the default way to start the server) — MongoDB, the Hono server, and Vite, all from your checkout with hot reload:
 
 ```bash
-pnpm dev:docker       # docker compose -f docker-compose.dev.yml up --build
-pnpm dev:docker:down  # stop the containers (Mongo data and node_modules volumes are kept)
+pnpm dev:docker         # docker compose -f docker-compose.dev.yml up --build
+pnpm dev:docker:status  # container health, web/server URLs, server config, recent errors
+pnpm dev:docker:logs    # follow logs (optionally: server | web | mongo)
+pnpm dev:docker:down    # stop the containers (Mongo data and node_modules volumes are kept)
 ```
+
+Add `--watch` (or `--watch 5` for a 5-second interval) to `dev:docker:status` to keep it refreshing in a second terminal.
 
 The server container always uses the bundled MongoDB (`mongodb://mongo:27017`, reachable from the host at `mongodb://localhost:27018`). To use Pikafish, set `PIKAFISH_DIR` in `.env` to the host folder holding the binary and `pikafish.nnue`. See the header of [`docker-compose.dev.yml`](docker-compose.dev.yml) for details. Keep running `pnpm lint`, `pnpm test`, etc. on the host; those need `pnpm install` on the host too.
 

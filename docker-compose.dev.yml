@@ -1,6 +1,8 @@
 # Local dev stack — MongoDB + Hono server + Vite web, running your host checkout in containers.
 #
 #   pnpm dev:docker           # docker compose -f docker-compose.dev.yml up --build
+#   pnpm dev:docker:status    # container health, URLs, server config (add --watch to refresh)
+#   pnpm dev:docker:logs      # follow logs (optionally for one service: server | web | mongo)
 #   pnpm dev:docker:down      # stop and remove the containers (data volumes are kept)
 #
 # Web: http://localhost:5173 · Server: http://localhost:3001/health · Mongo from the host:
