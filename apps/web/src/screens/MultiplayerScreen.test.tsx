@@ -13,6 +13,18 @@ vi.mock('../hooks/useRoomGame', () => ({
   useRoomGame: (...args: unknown[]) => useRoomGameMock(...args),
 }));
 
+vi.mock('../hooks/useRoomChat', () => ({
+  useRoomChat: () => ({
+    messages: [],
+    sendChat: vi.fn(),
+    unread: 0,
+    setChatVisible: vi.fn(),
+    lastRejection: null,
+    clearRejection: vi.fn(),
+    connected: true,
+  }),
+}));
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 

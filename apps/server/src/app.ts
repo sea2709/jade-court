@@ -7,9 +7,16 @@ import { cors } from 'hono/cors';
 import type { Server } from 'http';
 import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
-import type { Move } from '@jade-court/xiangqi-engine';
+import type { Move, Side } from '@jade-court/xiangqi-engine';
 import { saveFinishedGame } from './db.js';
 import { authMiddleware, getGuestId } from './middleware/auth.js';
+import {
+  addChatEntry,
+  chatRateLimiter,
+  newSystemEntry,
+  postPlayerChat,
+  type ChatEntry,
+} from './chat.js';
 import {
   applyRoomMove,
   createRoom,
@@ -44,6 +51,25 @@ function broadcastRoom(room: RoomState) {
   for (const [ws, meta] of sockets) {
     if (meta.code === room.code && ws.readyState === ws.OPEN) ws.send(payload);
   }
+}
+
+function broadcastChatToPlayers(room: RoomState, message: ChatEntry) {
+  const payload = JSON.stringify({ type: 'chat', message });
+  for (const [ws, meta] of sockets) {
+    if (meta.code !== room.code || ws.readyState !== ws.OPEN) continue;
+    if (!seatFor(room, meta.guestId)) continue;
+    ws.send(payload);
+  }
+}
+
+function appendAndBroadcastSystem(
+  room: RoomState,
+  event: 'joined' | 'resigned' | 'checkmate' | 'stalemate',
+  side: Side,
+) {
+  const entry = newSystemEntry(event, side);
+  addChatEntry(room, entry);
+  broadcastChatToPlayers(room, entry);
 }
 
 function setConnected(room: RoomState, guestId: string, connected: boolean) {
@@ -119,8 +145,13 @@ export function createApp(deps?: CreateAppDeps) {
     if (nameResult instanceof Response) return nameResult;
     const guestId = getGuestId(c);
     const code = c.req.param('code').toUpperCase();
+    const before = getRoom(code);
+    const hadBlack = !!before?.black;
     const result = joinRoom(code, guestId, nameResult.displayName);
     if ('error' in result) return c.json({ error: result.error }, 400);
+    if (result.side === 'b' && !hadBlack) {
+      appendAndBroadcastSystem(result.room, 'joined', 'b');
+    }
     broadcastRoom(result.room);
     return c.json({ side: result.side, room: publicRoomView(result.room) });
   });
@@ -167,7 +198,8 @@ export function attachRoomSockets(httpServer: Server) {
               from: [number, number];
               to: [number, number];
             }
-          | { type: 'resign'; code?: string; guestId: string };
+          | { type: 'resign'; code?: string; guestId: string }
+          | { type: 'chat'; text: string };
 
         if (msg.type === 'subscribe') {
           const code = msg.code.toUpperCase();
@@ -179,7 +211,37 @@ export function attachRoomSockets(httpServer: Server) {
           sockets.set(ws, { guestId: msg.guestId, code });
           setConnected(room, msg.guestId, true);
           ws.send(JSON.stringify({ type: 'room', room: publicRoomView(room) }));
+          const playerSide = seatFor(room, msg.guestId);
+          if (playerSide) {
+            ws.send(
+              JSON.stringify({
+                type: 'chat_history',
+                messages: room.chat ?? [],
+              }),
+            );
+          }
           broadcastRoom(room);
+          return;
+        }
+
+        if (msg.type === 'chat') {
+          const meta = sockets.get(ws);
+          const code = meta?.code?.toUpperCase();
+          const room = code ? getRoom(code) : undefined;
+          const guestId = meta?.guestId ?? '';
+          const text = typeof msg.text === 'string' ? msg.text : '';
+          const result = postPlayerChat(room, guestId, text, chatRateLimiter);
+          if (!result.ok) {
+            ws.send(
+              JSON.stringify({
+                type: 'chat_rejected',
+                error: result.error,
+                text: result.text,
+              }),
+            );
+            return;
+          }
+          if (room) broadcastChatToPlayers(room, result.entry);
           return;
         }
 
@@ -202,6 +264,12 @@ export function attachRoomSockets(httpServer: Server) {
             return;
           }
           broadcastRoom(result.room);
+          if (result.room.status === 'checkmate' || result.room.status === 'stalemate') {
+            const winner = result.room.winner;
+            if (winner) {
+              appendAndBroadcastSystem(result.room, result.room.status, winner);
+            }
+          }
           if (result.room.status) {
             await saveFinishedGame({
               code: result.room.code,
@@ -228,12 +296,14 @@ export function attachRoomSockets(httpServer: Server) {
             ws.send(JSON.stringify({ type: 'error', error: 'Room not found' }));
             return;
           }
+          const playerSide = seatFor(room, msg.guestId);
           const result = resignRoom(room, msg.guestId);
           if (!result.ok) {
             // Per the resign contract, failures reply with an `error` field to the requester only.
             ws.send(JSON.stringify({ type: 'error', error: result.error }));
             return;
           }
+          if (playerSide) appendAndBroadcastSystem(room, 'resigned', playerSide);
           broadcastRoom(room);
           // Status is always 'resigned' here; the guard mirrors the move path for TypeScript.
           if (room.status) {

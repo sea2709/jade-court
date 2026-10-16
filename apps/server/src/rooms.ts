@@ -1,5 +1,6 @@
 import * as X from '@jade-court/xiangqi-engine';
 import type { Board, GameStatus, Move, Side } from '@jade-court/xiangqi-engine';
+import type { ChatEntry } from './chat.js';
 
 export interface RoomPlayer {
   userId?: string;
@@ -44,6 +45,8 @@ export interface RoomState {
   red?: RoomPlayer;
   black?: RoomPlayer;
   createdAt: number;
+  /** In-memory chat log (messages + system lines); not exposed in {@link publicRoomView}. */
+  chat?: ChatEntry[];
 }
 
 const rooms = new Map<string, RoomState>();

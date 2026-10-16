@@ -1,5 +1,5 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { playMove, square } from './helpers';
+import { expect, test, type Browser, type Page } from '@playwright/test';
+import { closeMultiplayerRoom, playMove, square } from './helpers';
 
 export type MultiplayerRoom = {
   host: Page;
@@ -7,21 +7,6 @@ export type MultiplayerRoom = {
   code: string;
   close: () => Promise<void>;
 };
-
-/** Close pages/contexts so WebSockets shut down before Playwright tears down the browser. */
-export async function closeMultiplayerRoom(host: Page, guest: Page): Promise<void> {
-  const pages = [host, guest];
-  for (const page of pages) {
-    await page.goto('about:blank').catch(() => {});
-  }
-  for (const page of pages) {
-    await page.close().catch(() => {});
-  }
-  const contexts = new Set<BrowserContext>(pages.map((p) => p.context()));
-  for (const ctx of contexts) {
-    await ctx.close().catch(() => {});
-  }
-}
 
 async function fillDisplayName(page: Page, name: string) {
   await page.getByLabel('Your name').fill(name);
@@ -135,7 +120,12 @@ test.describe('Play with Friends (online room)', () => {
     try {
       const { host, guest } = room;
       await expect(host.getByText('Minh (you)')).toBeVisible();
-      await expect(host.getByText('Black player')).toBeVisible();
+      await expect(
+        host
+          .locator('.card')
+          .filter({ hasText: /^Room / })
+          .getByText('Black player'),
+      ).toBeVisible();
       await expect(guest.getByText('Black player (you)')).toBeVisible();
       await expect(guest.locator('.card').getByText('Minh', { exact: true })).toBeVisible();
     } finally {

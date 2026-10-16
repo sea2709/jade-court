@@ -12,6 +12,8 @@ import {
   saveDisplayNameInput,
   seatLabel,
 } from '../lib/displayName';
+import { RoomChatPanel } from '../components/room/RoomChatPanel';
+import { useRoomChat } from '../hooks/useRoomChat';
 import { useRoomGame } from '../hooks/useRoomGame';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
 import { didSideWin, onlineGameOverSubtitle, type OnlineRoomStatus } from './multiplayerGameOver';
@@ -159,6 +161,12 @@ function PassPlay({ onExit }: { onExit: () => void }) {
 
 function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: () => void }) {
   const game = useRoomGame(code, side);
+  const chat = useRoomChat({
+    viewerSide: side,
+    connected: game.connected,
+    subscribeToMessages: game.subscribeToMessages,
+    sendWs: game.sendWs,
+  });
   const flip = side === 'b';
   const waitingForOpponent = !game.status && !game.opponentJoined;
   const yourTurn = game.turn === side && !game.status && game.opponentJoined;
@@ -177,7 +185,7 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
   const showInvitePanel = side === 'r' && !game.opponentJoined;
 
   return (
-    <div className="game-layout">
+    <div className="game-layout game-layout-room">
       <div className="relative">
         <div className="flex items-center gap-3 mb-3.5">
           <span className="pill pill-gold">Online · {code}</span>
@@ -250,7 +258,7 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
           </div>
         )}
       </div>
-      <div className="flex flex-col gap-3.5">
+      <div className="room-sidebar">
         <div className="card p-4">
           <div className="font-extrabold text-[15px] mb-2.5">Room {code}</div>
           <RoomSeatRow
@@ -298,6 +306,20 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
             <RoomInviteShare code={code} inviteLink={inviteLink} />
           </div>
         )}
+
+        <RoomChatPanel
+          messages={chat.messages}
+          viewerSide={side}
+          redName={game.redName}
+          blackName={game.blackName}
+          opponentJoined={game.opponentJoined}
+          connected={game.connected}
+          unread={chat.unread}
+          lastRejection={chat.lastRejection}
+          onSend={chat.sendChat}
+          onClearRejection={chat.clearRejection}
+          onVisibilityChange={chat.setChatVisible}
+        />
       </div>
     </div>
   );

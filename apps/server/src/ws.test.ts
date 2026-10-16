@@ -1,9 +1,12 @@
+import { X } from '@jade-court/xiangqi-engine';
+import type { Board, Piece } from '@jade-court/xiangqi-engine';
 import { getRequestListener } from '@hono/node-server';
 import { createServer, type Server } from 'http';
 import type { AddressInfo } from 'net';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket, { type WebSocketServer } from 'ws';
 import { attachRoomSockets, createApp } from './app.js';
+import type { ChatEntry } from './chat.js';
 import { createRoom, getRoom, joinRoom } from './rooms.js';
 
 type Msg = { type: string; [k: string]: unknown };
@@ -21,13 +24,16 @@ type RoomMsg = Msg & {
 let server: Server;
 let wss: WebSocketServer;
 let url: string;
+let httpBase: string;
 const open: WebSocket[] = [];
 
 beforeAll(async () => {
   server = createServer(getRequestListener(createApp().fetch));
   wss = attachRoomSockets(server);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  url = `ws://127.0.0.1:${(server.address() as AddressInfo).port}/ws`;
+  const port = (server.address() as AddressInfo).port;
+  url = `ws://127.0.0.1:${port}/ws`;
+  httpBase = `http://127.0.0.1:${port}`;
 });
 
 afterEach(() => {
@@ -71,6 +77,30 @@ const isRoom =
   (pred: (r: RoomMsg['room']) => boolean = () => true) =>
   (m: Msg) =>
     m.type === 'room' && pred((m as RoomMsg).room);
+
+type ChatMsg = Msg & { message: ChatEntry };
+type ChatHistoryMsg = Msg & { messages: ChatEntry[] };
+
+const isChat =
+  (pred: (e: ChatEntry) => boolean = () => true) =>
+  (m: Msg) =>
+    m.type === 'chat' && pred((m as ChatMsg).message);
+
+const isChatHistory = () => (m: Msg) => m.type === 'chat_history';
+
+function boardWith(...pieces: [number, number, Piece][]): Board {
+  const b = Array.from({ length: 10 }, () => Array(9).fill(null)) as Board;
+  for (const [r, c, p] of pieces) b[r][c] = p;
+  return b;
+}
+
+async function httpJoin(code: string, guestId: string) {
+  return fetch(`${httpBase}/api/rooms/${encodeURIComponent(code)}/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-guest-id': guestId },
+    body: '{}',
+  });
+}
 
 /** Resolves true when `p` stays pending for `ms` — proves no matching message was sent. */
 function silence(p: Promise<unknown>, ms = 150): Promise<boolean> {
@@ -248,5 +278,152 @@ describe('room WebSocket resign', () => {
     const client = await connect();
     client.send({ type: 'resign', guestId: 'x', code: 'JADE-ZZZZ' });
     expect(await client.next()).toEqual({ type: 'error', error: 'Room not found' });
+  });
+});
+
+describe('room WebSocket chat', () => {
+  it('broadcasts chat to both players and chat_rejected to the sender only', async () => {
+    const { redWs, blackWs } = await subscribedPair();
+    redWs.send({ type: 'chat', text: '  hello  ' });
+    const [a, b] = await Promise.all([
+      redWs.next<ChatMsg>(isChat((e) => e.kind === 'message' && e.text === 'hello')),
+      blackWs.next<ChatMsg>(isChat((e) => e.kind === 'message' && e.text === 'hello')),
+    ]);
+    expect(a.message.side).toBe('r');
+    expect(b.message.side).toBe('r');
+    expect(a.message).not.toHaveProperty('guestId');
+
+    redWs.send({ type: 'chat', text: '   ' });
+    expect(await redWs.next((m) => m.type === 'chat_rejected')).toEqual({
+      type: 'chat_rejected',
+      error: 'empty',
+      text: '',
+    });
+    expect(await silence(blackWs.next(isChat()))).toBe(true);
+  });
+
+  it('rejects chat from a socket that never subscribed or from a spectator', async () => {
+    const { code, redWs } = await subscribedPair();
+    const nosub = await connect();
+    nosub.send({ type: 'chat', text: 'nope' });
+    expect(await nosub.next((m) => m.type === 'chat_rejected')).toMatchObject({
+      error: 'not_a_player',
+    });
+
+    const spectator = await connect();
+    spectator.send({ type: 'subscribe', code, guestId: 'watcher' });
+    await spectator.next(isRoom());
+    spectator.send({ type: 'chat', text: 'spectate' });
+    expect(await spectator.next((m) => m.type === 'chat_rejected')).toMatchObject({
+      error: 'not_a_player',
+    });
+    expect(await silence(redWs.next(isChat()))).toBe(true);
+  });
+
+  it('does not send chat broadcasts or history to spectators', async () => {
+    const { code, redWs } = await subscribedPair();
+    const spectator = await connect();
+    spectator.send({ type: 'subscribe', code, guestId: 'watcher' });
+    await spectator.next(isRoom());
+    expect(await silence(spectator.next(isChatHistory()))).toBe(true);
+
+    redWs.send({ type: 'chat', text: 'players only' });
+    await redWs.next(isChat());
+    expect(await silence(spectator.next(isChat()))).toBe(true);
+    spectator.send({ type: 'chat', text: 'blocked' });
+    expect(await spectator.next((m) => m.type === 'chat_rejected')).toBeTruthy();
+    expect(
+      getRoom(code)?.chat?.some((e) => e.kind === 'message' && e.text === 'players only'),
+    ).toBe(true);
+    expect(getRoom(code)?.chat?.some((e) => e.text === 'blocked')).toBe(false);
+  });
+
+  it('sends chat_history after a player subscribes', async () => {
+    const red = `hist-red-${++seq}`;
+    const black = `hist-black-${seq}`;
+    const room = createRoom(red);
+    joinRoom(room.code, black);
+    const redWs = await connect();
+    redWs.send({ type: 'subscribe', code: room.code, guestId: red });
+    await redWs.next(isRoom());
+    redWs.send({ type: 'chat', text: 'before reconnect' });
+    await redWs.next(isChat((e) => e.text === 'before reconnect'));
+
+    const reconnected = await connect();
+    reconnected.send({ type: 'subscribe', code: room.code, guestId: red });
+    await reconnected.next(isRoom());
+    const hist = await reconnected.next<ChatHistoryMsg>(isChatHistory());
+    expect(hist.messages.some((e) => e.kind === 'message' && e.text === 'before reconnect')).toBe(
+      true,
+    );
+  });
+
+  it('emits a joined system line when Black first joins via REST', async () => {
+    const red = `join-red-${++seq}`;
+    const black = `join-black-${seq}`;
+    const room = createRoom(red);
+    const redWs = await connect();
+    redWs.send({ type: 'subscribe', code: room.code, guestId: red });
+    await redWs.next(isRoom());
+
+    const joinRes = await httpJoin(room.code, black);
+    expect(joinRes.ok).toBe(true);
+
+    const joined = await redWs.next<ChatMsg>(
+      isChat((e) => e.kind === 'system' && e.event === 'joined'),
+    );
+    expect(joined.message.side).toBe('b');
+
+    const blackWs = await connect();
+    blackWs.send({ type: 'subscribe', code: room.code, guestId: black });
+    await blackWs.next(isRoom((r) => r.blackJoined));
+    const hist = await blackWs.next<ChatHistoryMsg>(isChatHistory());
+    expect(hist.messages.some((e) => e.kind === 'system' && e.event === 'joined')).toBe(true);
+  });
+
+  it('emits a resigned system line when a player resigns', async () => {
+    const { red, redWs, blackWs } = await subscribedPair();
+    redWs.send({ type: 'resign', guestId: red });
+    const [chatA, chatB, ,] = await Promise.all([
+      redWs.next<ChatMsg>(isChat((e) => e.kind === 'system' && e.event === 'resigned')),
+      blackWs.next<ChatMsg>(isChat((e) => e.kind === 'system' && e.event === 'resigned')),
+      redWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+      blackWs.next<RoomMsg>(isRoom((r) => r.status === 'resigned')),
+    ]);
+    expect(chatA.message.side).toBe('r');
+    expect(chatB.message.side).toBe('r');
+  });
+
+  it('emits a checkmate system line for the winning side', async () => {
+    const { code, red, redWs, blackWs } = await subscribedPair();
+    const room = getRoom(code)!;
+    room.board = boardWith(
+      [9, 3, { t: 'G', s: 'r' }],
+      [0, 4, { t: 'G', s: 'b' }],
+      [5, 0, { t: 'R', s: 'r' }],
+      [1, 8, { t: 'R', s: 'r' }],
+    );
+    redWs.send({ type: 'move', guestId: red, from: [5, 0], to: [0, 0] });
+    const [chatA, chatB] = await Promise.all([
+      redWs.next<ChatMsg>(isChat((e) => e.kind === 'system' && e.event === 'checkmate')),
+      blackWs.next<ChatMsg>(isChat((e) => e.kind === 'system' && e.event === 'checkmate')),
+    ]);
+    expect(chatA.message.side).toBe('r');
+    expect(chatB.message.side).toBe('r');
+    expect(X.gameStatus(room.board, room.turn)).toBe('checkmate');
+  });
+
+  it('does not let a client create a system chat entry', async () => {
+    const { redWs } = await subscribedPair();
+    redWs.send({
+      type: 'chat',
+      text: '{"kind":"system","event":"joined","side":"b"}',
+    });
+    const msg = await redWs.next<ChatMsg>(isChat());
+    expect(msg.message.kind).toBe('message');
+    expect(msg.message).toMatchObject({ side: 'r' });
+    if (msg.message.kind === 'message') {
+      expect(msg.message.text).toContain('kind');
+    }
   });
 });
