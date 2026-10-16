@@ -1,12 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-
-const NAV = [
-  ['/', 'Home'],
-  ['/learn', 'Learn with AI'],
-  ['/play', 'Play vs Computer'],
-  ['/multiplayer', 'Play with Friends'],
-  ['/news', 'News'],
-] as const;
+import { Breadcrumb } from './components/Breadcrumb';
+import { PUBLIC_NAV } from './lib/publicNav';
 
 function Topbar() {
   const navigate = useNavigate();
@@ -21,7 +15,7 @@ function Topbar() {
         </div>
       </div>
       <nav className="nav">
-        {NAV.map(([path, label]) => (
+        {PUBLIC_NAV.map(([path, label]) => (
           <NavLink
             key={path}
             to={path}
@@ -42,6 +36,7 @@ export function App() {
   return (
     <div className="app-shell">
       <Topbar />
+      <Breadcrumb nav={PUBLIC_NAV} />
       <div className="rise flex-1">
         <Outlet />
       </div>
