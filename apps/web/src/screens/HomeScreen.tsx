@@ -55,10 +55,6 @@ function ModeCard({
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const go = (path: string) => {
-    navigate(path);
-    window.scrollTo({ top: 0 });
-  };
 
   return (
     <div className="page-container-lg">
@@ -74,10 +70,10 @@ export function HomeScreen() {
             your level — from your very first game to beating a friend across the river.
           </p>
           <div className="flex gap-3.5 flex-wrap">
-            <button type="button" className="btn btn-primary btn-lg" onClick={() => go('/learn')}>
+            <button type="button" className="btn btn-primary btn-lg" onClick={() => navigate('/learn')}>
               Start learning →
             </button>
-            <button type="button" className="btn btn-ghost btn-lg" onClick={() => go('/play')}>
+            <button type="button" className="btn btn-ghost btn-lg" onClick={() => navigate('/play')}>
               Play vs computer
             </button>
           </div>
@@ -105,7 +101,7 @@ export function HomeScreen() {
           desc="Play a real game while Master Lin highlights moves, suggests the best one, and grades each move you make."
           cta="Learn now"
           ctaClass="btn-primary"
-          onClick={() => go('/learn')}
+          onClick={() => navigate('/learn')}
         />
         <ModeCard
           tag="Compete"
@@ -117,7 +113,7 @@ export function HomeScreen() {
           desc="Test yourself against three strengths — Beginner, Intermediate, Advanced. No hints, just the game."
           cta="Pick a level"
           ctaClass="btn-red"
-          onClick={() => go('/play')}
+          onClick={() => navigate('/play')}
         />
         <ModeCard
           tag="2 players"
@@ -129,7 +125,7 @@ export function HomeScreen() {
           desc="Share a room link or play pass-and-play on one screen. Bring a friend to the board."
           cta="Create a room"
           ctaClass="btn-gold"
-          onClick={() => go('/multiplayer')}
+          onClick={() => navigate('/multiplayer')}
         />
       </div>
 
