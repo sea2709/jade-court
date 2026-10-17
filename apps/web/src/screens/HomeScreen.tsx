@@ -28,7 +28,7 @@ function ModeCard({
   return (
     <button
       type="button"
-      className="card rise text-left p-0 overflow-hidden cursor-pointer flex flex-col bg-paper"
+      className="card mode-card rise text-left p-0 overflow-hidden cursor-pointer flex flex-col bg-paper"
       onClick={onClick}
     >
       <div

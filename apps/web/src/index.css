@@ -204,20 +204,27 @@
     transition:
       transform 0.12s,
       box-shadow 0.16s,
-      background 0.16s;
+      background 0.16s,
+      color 0.16s;
   }
 
   .btn:active {
     @apply translate-y-px scale-[0.99];
   }
 
+  /* Hover inverts every variant: the fill becomes the text color and vice
+     versa. The inset ring keeps the button's outline (and size) on light
+     surfaces once the filled background is gone. */
   .btn-primary {
     background: linear-gradient(160deg, var(--jade), var(--jade-deep));
     @apply text-white shadow-md;
   }
 
-  .btn-primary:hover {
-    box-shadow: 0 16px 34px -10px rgba(21, 122, 99, 0.55);
+  .btn-primary:not(:disabled):hover,
+  .mode-card:hover .btn-primary {
+    background: var(--paper);
+    color: var(--jade-deep);
+    box-shadow: inset 0 0 0 2px var(--jade-deep);
   }
 
   .btn-red {
@@ -225,17 +232,34 @@
     @apply text-white shadow-md;
   }
 
+  .btn-red:not(:disabled):hover,
+  .mode-card:hover .btn-red {
+    background: var(--paper);
+    color: var(--red-deep);
+    box-shadow: inset 0 0 0 2px var(--red-deep);
+  }
+
   .btn-gold {
     background: linear-gradient(160deg, var(--gold), var(--gold-deep));
-    @apply text-[#4a3208] shadow-sm;
+    text-shadow: 0 1px 1px rgba(120, 75, 10, 0.35);
+    @apply text-white shadow-sm;
+  }
+
+  /* Text is darker than --gold-deep so it stays readable on paper. */
+  .btn-gold:not(:disabled):hover,
+  .mode-card:hover .btn-gold {
+    background: var(--paper);
+    color: #8f5f0e;
+    text-shadow: none;
+    box-shadow: inset 0 0 0 2px var(--gold-deep);
   }
 
   .btn-ghost {
     @apply bg-white text-ink shadow-sm border border-line-soft;
   }
 
-  .btn-ghost:hover {
-    @apply bg-[#fffdf6];
+  .btn-ghost:not(:disabled):hover {
+    @apply bg-ink text-cream border-ink shadow-none;
   }
 
   .btn-sm {

@@ -22,21 +22,26 @@ export function DisplayNameField({ value, onChange, disabled }: DisplayNameField
 
   return (
     <div className="mb-6 text-left" data-testid="display-name-field">
-      <label className="block font-extrabold text-[15px] mb-2" htmlFor="display-name-input">
-        Your name
-      </label>
-      <input
-        id="display-name-input"
-        type="text"
-        className="room-input mb-1.5 text-left px-4 tracking-normal text-lg font-bold"
-        placeholder="Optional"
-        maxLength={DISPLAY_NAME_MAX_LENGTH}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={handleBlur}
-        autoComplete="nickname"
-      />
+      <div className="flex items-center gap-3 mb-1.5">
+        <label
+          className="shrink-0 font-extrabold text-[15px] whitespace-nowrap"
+          htmlFor="display-name-input"
+        >
+          Your name
+        </label>
+        <input
+          id="display-name-input"
+          type="text"
+          className="room-input mb-0 flex-1 min-w-0 text-left px-4 tracking-normal text-lg font-bold"
+          placeholder="Optional"
+          maxLength={DISPLAY_NAME_MAX_LENGTH}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={handleBlur}
+          autoComplete="nickname"
+        />
+      </div>
       <div className="text-muted text-[13px] font-semibold text-right" aria-live="polite">
         {length}/{DISPLAY_NAME_MAX_LENGTH}
       </div>

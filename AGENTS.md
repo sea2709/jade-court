@@ -99,7 +99,7 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 - Prefer focused diffs over broad refactors.
 - **Teaching comments** when editing `packages/xiangqi-engine`, `apps/server`, or `apps/web`: follow [.cursor/rules/code-comments.mdc](.cursor/rules/code-comments.mdc) (file headers, JSDoc on exports, section labels on non-obvious logic — not line-by-line noise).
 
-Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `issue-worktree.mdc`, `code-comments.mdc`, `testing.mdc`).
+Project rules also live in `.cursor/rules/` (`jade-court.mdc`, `github-issues.mdc`, `issue-worktree.mdc`, `code-comments.mdc`, `testing.mdc`, `dev-servers.mdc`).
 
 **Project skills:**
 

@@ -1,0 +1,33 @@
+---
+description: Reuse the user's running dev servers for manual/browser checks instead of starting new ones
+alwaysApply: true
+---
+
+# Reuse running dev servers
+
+Before starting a dev server to check a change by hand or in the browser, check whether the user already has one running, and use it.
+
+## Check outside the sandbox
+
+The agent sandbox has its own network, so probes run inside it report the user's servers as down, and servers started inside it can't be reached by the browser. Run the check with `required_permissions: ["all"]`:
+
+```bash
+for p in 5173 3001; do printf "%s: " $p; curl -s -o /dev/null -w '%{http_code}\n' --max-time 3 http://localhost:$p/ || echo down; done
+```
+
+- `:5173` answering (200) means the web app is up: `pnpm dev` or `pnpm dev:docker` (`docker-compose.dev.yml` mounts the repo at `/app`).
+- `:3001` answering any HTTP code (404 on `/` is normal) means the Hono server is up. `/health` returns 200.
+
+## Use them
+
+- Open `http://localhost:5173` in the browser. Vite hot-reloads edits under `apps/web`, and the Docker stack's `server` service watches `apps/server` and the engine. No restart is needed except after `.env` changes.
+- Vite proxies `/api` and WebSocket traffic to `:3001`, so screens that load data use the running Hono server too.
+- Changes that are only CSS or layout never involve Hono.
+
+## When to start your own
+
+- Nothing answers on `:5173` / `:3001`: start one with `pnpm dev`, run outside the sandbox so the browser can reach it, and stop it when done.
+- The work is in an issue worktree: the running stack serves the **main** checkout, not the worktree. Use the ports printed by `scripts/issue-worktree.sh`.
+- `pnpm test:e2e` always starts its own servers (`:3101` + `:5199`); leave the user's stack alone.
+
+Never stop, restart, or rebuild the user's servers without asking.
