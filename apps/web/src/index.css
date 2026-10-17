@@ -314,6 +314,47 @@
     @apply opacity-45 cursor-not-allowed;
   }
 
+  /* Whole-card buttons (Home mode cards, Lobby cards): jade border on hover
+     and a focus ring so the card itself reads as clickable. */
+  .card-interactive {
+    @apply cursor-pointer transition-[scale,border-color] duration-150;
+  }
+
+  @media (hover: hover) {
+    .card-interactive:not(:disabled):hover {
+      border-color: var(--jade-soft);
+    }
+  }
+
+  .card-interactive:not(:disabled):active {
+    @apply scale-[0.99];
+  }
+
+  .card-interactive:focus-visible {
+    outline: 3px solid var(--jade);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-interactive {
+      @apply transition-none;
+    }
+
+    .card-interactive:not(:disabled):active {
+      @apply scale-100;
+    }
+  }
+
+  /* Title inside a .card-interactive that turns jade and underlines like a
+     link while the card is hovered or keyboard-focused. */
+  .card-title-link {
+    @apply underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] duration-150;
+  }
+
+  .card-interactive:not(:disabled):hover .card-title-link,
+  .card-interactive:focus-visible .card-title-link {
+    @apply text-jade-deep decoration-jade-deep;
+  }
   .pill {
     @apply inline-flex items-center gap-[7px] font-extrabold text-[13px] px-[13px] py-1.5 rounded-full;
   }
@@ -555,7 +596,8 @@
   }
 
   .level-card {
-    @apply relative transition-[outline,transform,box-shadow,border-color] duration-150;
+    outline: 2px solid transparent;
+    @apply relative transition-[outline,scale,border-color] duration-150;
   }
 
   .level-card:focus-visible {
@@ -566,8 +608,6 @@
   @media (hover: hover) {
     .level-card:hover:not(.level-card-active) {
       outline: 2px solid var(--jade-soft);
-      @apply -translate-y-0.5;
-      box-shadow: 0 8px 20px rgba(21, 122, 99, 0.12);
     }
   }
 
@@ -575,20 +615,9 @@
     @apply absolute top-2.5 right-2.5 z-[1];
   }
 
-  .level-card-active {
-    outline: 4px solid var(--jade-deep);
-    border-color: var(--jade);
-    @apply -translate-y-1 z-[1] shadow-none;
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .level-card-active {
-      transform: translateY(-4px) scale(1.03);
-    }
-  }
-
-  .level-card-active .level-card-body {
-    box-shadow: inset 4px 0 0 var(--jade-deep);
+  /* Inset shadow instead of border-bottom so selecting doesn't change height. */
+  .level-card-active .mode-card-header {
+    box-shadow: inset 0 -3px 0 var(--jade-deep);
   }
 
   .news-page {

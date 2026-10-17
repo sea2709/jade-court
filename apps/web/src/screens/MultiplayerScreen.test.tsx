@@ -95,6 +95,16 @@ describe('MultiplayerScreen lobby', () => {
     expect(screen.getByText('20/20')).toBeInTheDocument();
   });
 
+  it('renders lobby cards as interactive cards with link-style arrow titles', () => {
+    renderMultiplayer();
+    expect(screen.getByRole('button', { name: /Create a room/ })).toHaveClass('card-interactive');
+    expect(screen.getByRole('button', { name: /Join with a code/ })).toHaveClass(
+      'card-interactive',
+    );
+    expect(screen.getByText('Create a room →')).toHaveClass('card-title-link');
+    expect(screen.getByText('Join with a code →')).toHaveClass('card-title-link');
+  });
+
   it('takes the host straight to the board with the invite panel after creating a room', async () => {
     useRoomGameMock.mockReturnValue(baseRoomState);
     fetchMock.mockResolvedValue(

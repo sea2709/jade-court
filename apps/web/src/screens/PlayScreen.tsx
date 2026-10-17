@@ -42,7 +42,7 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
               key={l.id}
               type="button"
               aria-pressed={selected}
-              className={`level-card card p-0 overflow-hidden text-left cursor-pointer outline-[4px] outline-transparent ${
+              className={`level-card card card-interactive p-0 overflow-hidden text-left ${
                 selected ? 'level-card-active' : ''
               }`}
               onClick={() => setLevel(l.id)}
@@ -55,7 +55,9 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
               </div>
               <div className="level-card-body px-4 pt-3.5 pb-[18px]">
                 <div className="flex justify-between items-center">
-                  <span className="font-display font-extrabold text-[19px]">{l.name}</span>
+                  <span className="card-title-link font-display font-extrabold text-[19px]">
+                    {l.name}
+                  </span>
                   <Stars n={l.stars} />
                 </div>
                 <p className="mt-1.5 mb-0 text-ink-soft text-[13.5px] font-semibold leading-snug">

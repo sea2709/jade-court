@@ -399,7 +399,7 @@ function Lobby({
         <div className="grid grid-cols-2 gap-5">
           <button
             type="button"
-            className="card p-0 overflow-hidden text-left cursor-pointer"
+            className="card card-interactive p-0 overflow-hidden text-left"
             onClick={handleCreate}
             disabled={loading}
           >
@@ -407,8 +407,8 @@ function Lobby({
               <span className="lobby-card-glyph">友</span>
             </div>
             <div className="px-5 pt-[18px] pb-[22px]">
-              <div className="font-display font-extrabold text-[21px] mb-1.5">
-                {loading ? 'Creating…' : 'Create a room'}
+              <div className="card-title-link font-display font-extrabold text-[21px] mb-1.5">
+                {loading ? 'Creating…' : 'Create a room →'}
               </div>
               <p className="m-0 text-ink-soft text-[14.5px] font-semibold leading-normal">
                 Get a shareable link and invite code to send to your friend.
@@ -417,7 +417,7 @@ function Lobby({
           </button>
           <button
             type="button"
-            className="card p-0 overflow-hidden text-left cursor-pointer"
+            className="card card-interactive p-0 overflow-hidden text-left"
             onClick={() => setMode('join')}
             disabled={loading}
           >
@@ -425,7 +425,9 @@ function Lobby({
               <span className="lobby-card-glyph">入</span>
             </div>
             <div className="px-5 pt-[18px] pb-[22px]">
-              <div className="font-display font-extrabold text-[21px] mb-1.5">Join with a code</div>
+              <div className="card-title-link font-display font-extrabold text-[21px] mb-1.5">
+                Join with a code →
+              </div>
               <p className="m-0 text-ink-soft text-[14.5px] font-semibold leading-normal">
                 Got an invite code from a friend? Enter it to sit down at their board.
               </p>
