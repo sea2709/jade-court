@@ -3,6 +3,8 @@
  * in-game sidebar while waiting; sized to fit the 300px game sidebar.
  */
 import { useState } from 'react';
+import { inviteCodeSuffix } from '../lib/inviteCode';
+import { InviteCodeBoxes } from './InviteCode';
 
 export type RoomInviteShareProps = {
   code: string;
@@ -49,7 +51,7 @@ export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
   const [sharePending, setSharePending] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const webShareAvailable = canUseWebShare(inviteLink);
-  const suffix = code.startsWith('JADE-') ? code.slice(5) : code.replace(/^JADE-?/, '');
+  const suffix = inviteCodeSuffix(code);
 
   const onCopyLink = () => {
     void copyText(inviteLink).then((ok) => {
@@ -60,7 +62,7 @@ export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
   };
 
   const onCopyCode = () => {
-    void copyText(code).then((ok) => {
+    void copyText(suffix).then((ok) => {
       if (!ok) return;
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 1600);
@@ -94,17 +96,8 @@ export function RoomInviteShare({ code, inviteLink }: RoomInviteShareProps) {
 
   return (
     <div data-testid="room-invite-share">
-      <div className="flex justify-center items-center gap-2 mb-[18px]">
-        <span className="font-display font-extrabold text-muted tracking-[2px] text-lg whitespace-nowrap select-none">
-          JADE–
-        </span>
-        <div className="flex gap-1.5">
-          {suffix.split('').map((ch, i) => (
-            <span key={i} className="invite-code-char" data-testid="invite-code-char">
-              {ch}
-            </span>
-          ))}
-        </div>
+      <div className="mb-[18px]">
+        <InviteCodeBoxes chars={suffix} />
       </div>
 
       {webShareAvailable ? (

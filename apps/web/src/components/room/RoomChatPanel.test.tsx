@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DisplayChatRow } from '../../lib/roomChatTypes';
-import { ROOM_CHAT_COLLAPSED_KEY } from '../../lib/roomChatTypes';
 import { RoomChatPanel } from './RoomChatPanel';
 
 const baseProps = {
@@ -19,6 +19,13 @@ const baseProps = {
   onVisibilityChange: vi.fn(),
 };
 
+/** Render the desktop panel and expand it (chat starts collapsed). */
+async function renderOpen(props: Partial<ComponentProps<typeof RoomChatPanel>> = {}) {
+  const view = render(<RoomChatPanel {...baseProps} {...props} />);
+  await userEvent.click(screen.getByTestId('room-chat-collapsed'));
+  return view;
+}
+
 describe('RoomChatPanel', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -34,9 +41,27 @@ describe('RoomChatPanel', () => {
     });
   });
 
+  it('starts collapsed on desktop with a down chevron', () => {
+    const onVisibilityChange = vi.fn();
+    render(<RoomChatPanel {...baseProps} onVisibilityChange={onVisibilityChange} />);
+    const row = screen.getByTestId('room-chat-collapsed');
+    expect(row).toBeVisible();
+    expect(row).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('room-chat-chevron-down')).toBeInTheDocument();
+    expect(screen.queryByTestId('room-chat-panel')).toBeNull();
+    expect(onVisibilityChange).toHaveBeenCalledWith(false);
+    expect(onVisibilityChange).not.toHaveBeenCalledWith(true);
+  });
+
+  it('starts collapsed even if an old preference said expanded', () => {
+    localStorage.setItem('jade-court-chat-collapsed', '0');
+    render(<RoomChatPanel {...baseProps} />);
+    expect(screen.getByTestId('room-chat-collapsed')).toBeVisible();
+  });
+
   it('sends on Enter and clears the input', async () => {
     const onSend = vi.fn();
-    render(<RoomChatPanel {...baseProps} onSend={onSend} />);
+    await renderOpen({ onSend });
     const input = screen.getByTestId('room-chat-input');
     await userEvent.type(input, 'Hello{Enter}');
     expect(onSend).toHaveBeenCalledWith('Hello');
@@ -45,20 +70,20 @@ describe('RoomChatPanel', () => {
 
   it('does not send empty input', async () => {
     const onSend = vi.fn();
-    render(<RoomChatPanel {...baseProps} onSend={onSend} />);
+    await renderOpen({ onSend });
     await userEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(onSend).not.toHaveBeenCalled();
   });
 
-  it('disables input while disconnected', () => {
-    render(<RoomChatPanel {...baseProps} connected={false} />);
+  it('disables input while disconnected', async () => {
+    await renderOpen({ connected: false });
     expect(screen.getByTestId('room-chat-input')).toBeDisabled();
     expect(screen.getByText('Reconnecting… chat is paused')).toBeVisible();
   });
 
   it('shows counter and blocks send over 500 characters', async () => {
     const onSend = vi.fn();
-    render(<RoomChatPanel {...baseProps} onSend={onSend} />);
+    await renderOpen({ onSend });
     const input = screen.getByTestId('room-chat-input');
     await userEvent.type(input, 'x'.repeat(401));
     expect(screen.getByTestId('room-chat-counter')).toBeVisible();
@@ -67,70 +92,60 @@ describe('RoomChatPanel', () => {
     expect(input).toHaveClass('room-chat-input-over');
   });
 
-  it('restores rejected text and shows rate-limit copy', () => {
-    render(
-      <RoomChatPanel {...baseProps} lastRejection={{ error: 'rate_limited', text: 'slow down' }} />,
-    );
+  it('restores rejected text and shows rate-limit copy', async () => {
+    await renderOpen({ lastRejection: { error: 'rate_limited', text: 'slow down' } });
     expect(
       screen.getByText("You're sending messages too fast. Wait a few seconds and try again."),
     ).toBeVisible();
     expect(screen.getByTestId('room-chat-input')).toHaveValue('slow down');
   });
 
-  it('renders message text as plain text (no HTML injection)', () => {
+  it('renders message text as plain text (no HTML injection)', async () => {
     const payload = '<img src=x onerror=alert(1)>';
-    render(
-      <RoomChatPanel
-        {...baseProps}
-        messages={[{ kind: 'message', id: '1', side: 'b', text: payload, createdAt: Date.now() }]}
-      />,
-    );
+    await renderOpen({
+      messages: [{ kind: 'message', id: '1', side: 'b', text: payload, createdAt: Date.now() }],
+    });
     expect(screen.getByText(payload)).toBeInTheDocument();
     expect(document.querySelector('img')).toBeNull();
   });
 
-  it('shows names on message groups', () => {
-    render(
-      <RoomChatPanel
-        {...baseProps}
-        messages={[{ kind: 'message', id: '1', side: 'b', text: 'Hi', createdAt: Date.now() }]}
-      />,
-    );
+  it('shows names on message groups', async () => {
+    await renderOpen({
+      messages: [{ kind: 'message', id: '1', side: 'b', text: 'Hi', createdAt: Date.now() }],
+    });
     expect(screen.getByText('Lan')).toBeVisible();
   });
 
-  it('renders system lines with names', () => {
-    render(
-      <RoomChatPanel
-        {...baseProps}
-        messages={[
-          {
-            kind: 'system',
-            id: 's',
-            event: 'joined',
-            side: 'b',
-            createdAt: Date.now(),
-          },
-        ]}
-      />,
-    );
+  it('renders system lines with names', async () => {
+    await renderOpen({
+      messages: [
+        {
+          kind: 'system',
+          id: 's',
+          event: 'joined',
+          side: 'b',
+          createdAt: Date.now(),
+        },
+      ],
+    });
     expect(screen.getByTestId('room-chat-system-line')).toHaveTextContent('Lan joined the room');
   });
 
-  it('collapses on desktop and persists preference', async () => {
+  it('expands and collapses on desktop with chevron icons', async () => {
     const onVisibilityChange = vi.fn();
-    render(<RoomChatPanel {...baseProps} onVisibilityChange={onVisibilityChange} />);
-    await userEvent.click(screen.getByTestId('room-chat-collapse'));
-    expect(screen.getByTestId('room-chat-collapsed')).toBeVisible();
-    expect(localStorage.getItem(ROOM_CHAT_COLLAPSED_KEY)).toBe('1');
-    expect(onVisibilityChange).toHaveBeenCalledWith(false);
-    await userEvent.click(screen.getByTestId('room-chat-collapsed'));
+    await renderOpen({ onVisibilityChange });
     expect(screen.getByTestId('room-chat-panel')).toBeVisible();
-    expect(localStorage.getItem(ROOM_CHAT_COLLAPSED_KEY)).toBe('0');
+    expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
+    const collapse = screen.getByTestId('room-chat-collapse');
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('room-chat-chevron-up')).toBeInTheDocument();
+
+    await userEvent.click(collapse);
+    expect(screen.getByTestId('room-chat-collapsed')).toBeVisible();
+    expect(onVisibilityChange).toHaveBeenLastCalledWith(false);
   });
 
   it('shows unread badge on collapsed row', () => {
-    localStorage.setItem(ROOM_CHAT_COLLAPSED_KEY, '1');
     render(
       <RoomChatPanel
         {...baseProps}

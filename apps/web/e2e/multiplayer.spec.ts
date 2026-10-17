@@ -32,7 +32,7 @@ async function openRoom(
   await guest.goto('/multiplayer');
   if (options?.guestName) await fillDisplayName(guest, options.guestName);
   await guest.getByRole('button', { name: /Join with a code/ }).click();
-  await guest.getByPlaceholder('JADE-XXXX').fill(code);
+  await guest.getByLabel('Invite code').fill(code.slice('JADE-'.length));
   await guest.getByRole('button', { name: 'Join game →' }).click();
   const guestYouLabel = options?.guestName ? `${options.guestName} (you)` : 'Black player (you)';
   await expect(guest.getByText(guestYouLabel)).toBeVisible();
@@ -65,6 +65,58 @@ test.describe('Play with Friends (online room)', () => {
     await expect(host.getByRole('button', { name: '✓ Copied' })).toBeVisible();
     await host.close();
     await hostContext.close();
+  });
+
+  test('Copy code copies only the four characters after JADE-', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    await hostContext.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const host = await hostContext.newPage();
+    try {
+      await host.goto('/multiplayer');
+      await host.getByRole('button', { name: /Create a room/ }).click();
+      await expect(host.getByTestId('waiting-invite-panel')).toBeVisible();
+      const code = (await host.locator('.room-link-input').inputValue()).split('room=')[1]!;
+      await host.getByRole('button', { name: 'Copy code' }).click();
+      await expect(host.getByRole('button', { name: '✓ Copied' })).toBeVisible();
+      const copied = await host.evaluate(() => navigator.clipboard.readText());
+      expect(copied).toBe(code.slice('JADE-'.length));
+      expect(copied).toMatch(/^[A-Z0-9]{4}$/);
+    } finally {
+      await hostContext.close();
+    }
+  });
+
+  test('join field accepts four characters and normalizes a pasted full code', async ({ page }) => {
+    await page.goto('/multiplayer');
+    await page.getByRole('button', { name: /Join with a code/ }).click();
+    const input = page.getByLabel('Invite code');
+    await input.fill('abcde');
+    await expect(input).toHaveValue('ABCD');
+    await expect(page.getByTestId('invite-code-char')).toHaveText(['A', 'B', 'C', 'D']);
+    await input.fill('JADE-WXYZ');
+    await expect(input).toHaveValue('WXYZ');
+    await expect(page.getByRole('button', { name: 'Join game →' })).toBeEnabled();
+  });
+
+  test('invite panel starts open and can be collapsed and reopened', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const host = await hostContext.newPage();
+    try {
+      await host.goto('/multiplayer');
+      await host.getByRole('button', { name: /Create a room/ }).click();
+      const panel = host.getByTestId('waiting-invite-panel');
+      await expect(panel).toBeVisible();
+      await expect(host.locator('.room-link-input')).toBeVisible();
+
+      await host.getByRole('button', { name: 'Collapse invite' }).click();
+      await expect(host.locator('.room-link-input')).toHaveCount(0);
+      await expect(panel.getByText('Invite your friend')).toBeVisible();
+
+      await host.getByRole('button', { name: 'Expand invite' }).click();
+      await expect(host.locator('.room-link-input')).toBeVisible();
+    } finally {
+      await hostContext.close();
+    }
   });
 
   test('Share invite calls Web Share stub with link and room code', async ({ browser }) => {

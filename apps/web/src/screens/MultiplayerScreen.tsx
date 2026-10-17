@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { X, type Side } from '@jade-court/xiangqi-engine';
+import { ChevronIcon } from '../components/ChevronIcon';
 import { DisplayNameField } from '../components/DisplayNameField';
+import { InviteCodeInput } from '../components/InviteCode';
 import { RoomInviteShare } from '../components/RoomInviteShare';
 import { XQBoard } from '../components/XQBoard';
 import { createRoom, getRoom, joinRoom } from '../lib/api';
+import { fullInviteCode, INVITE_CODE_LENGTH, inviteCodeSuffix } from '../lib/inviteCode';
 import { joinRoomErrorMessage } from '../lib/joinRoomError';
 import {
   displayNameForApi,
@@ -159,6 +162,39 @@ function PassPlay({ onExit }: { onExit: () => void }) {
   );
 }
 
+/** Host's "Invite your friend" card while waiting; starts open and can be collapsed. */
+function InvitePanel({ code, inviteLink }: { code: string; inviteLink: string }) {
+  const [open, setOpen] = useState(true);
+  const bodyId = 'waiting-invite-body';
+
+  return (
+    <div className="card p-4" data-testid="waiting-invite-panel">
+      <div className="flex items-center gap-2">
+        <h3 className="m-0 flex-1 text-[18px] font-extrabold">Invite your friend</h3>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          aria-label={open ? 'Collapse invite' : 'Expand invite'}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          data-testid="waiting-invite-toggle"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <ChevronIcon direction={open ? 'up' : 'down'} />
+        </button>
+      </div>
+      {open && (
+        <div id={bodyId} className="text-center mt-1" data-testid="waiting-invite-body">
+          <p className="text-ink-soft font-semibold text-[13.5px] m-0 mb-4">
+            Share this code or link while you wait.
+          </p>
+          <RoomInviteShare code={code} inviteLink={inviteLink} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: () => void }) {
   const game = useRoomGame(code, side);
   const chat = useRoomChat({
@@ -296,15 +332,7 @@ function OnlineGame({ code, side, onExit }: { code: string; side: Side; onExit: 
           </div>
         </div>
 
-        {showInvitePanel && (
-          <div className="card p-4 text-center" data-testid="waiting-invite-panel">
-            <h3 className="m-0 mb-1 text-[18px] font-extrabold">Invite your friend</h3>
-            <p className="text-ink-soft font-semibold text-[13.5px] m-0 mb-4">
-              Share this code or link while you wait.
-            </p>
-            <RoomInviteShare code={code} inviteLink={inviteLink} />
-          </div>
-        )}
+        {showInvitePanel && <InvitePanel code={code} inviteLink={inviteLink} />}
 
         <RoomChatPanel
           messages={chat.messages}
@@ -333,7 +361,7 @@ function Lobby({
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const roomFromUrl = searchParams.get('room');
-  const urlJoinCode = roomFromUrl ? roomFromUrl.toUpperCase() : '';
+  const urlJoinCode = roomFromUrl ? inviteCodeSuffix(roomFromUrl) : '';
   const [mode, setMode] = useState<'join' | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const activeMode = mode ?? (urlJoinCode ? 'join' : null);
@@ -365,14 +393,13 @@ function Lobby({
   };
 
   const handleJoin = async () => {
-    const normalized = joinCodeValue.trim().toUpperCase();
-    if (normalized.length < 4) return;
+    if (joinCodeValue.length < INVITE_CODE_LENGTH) return;
     setLoading(true);
     setError(null);
     try {
       const apiName = submitDisplayName();
       const res = await joinRoom(
-        normalized.startsWith('JADE-') ? normalized : `JADE-${normalized}`,
+        fullInviteCode(joinCodeValue),
         apiName !== undefined ? { displayName: apiName } : undefined,
       );
       setSearchParams({ room: res.room.code });
@@ -449,23 +476,14 @@ function Lobby({
       <div className="card p-[30px] text-center">
         <h2 className="text-[26px] m-0 mb-2">Join a room</h2>
         <p className="text-ink-soft font-semibold m-0 mb-5">
-          Enter the invite code your friend shared.
+          Enter the 4-character code your friend shared.
         </p>
         <DisplayNameField value={displayName} onChange={setDisplayName} />
-        <input
-          value={joinCodeValue}
-          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-          placeholder="JADE-XXXX"
-          className="room-input"
-          aria-label="Invite code"
-          spellCheck={false}
-          autoComplete="off"
-          autoCapitalize="characters"
-        />
+        <InviteCodeInput value={joinCodeValue} onChange={setJoinCode} disabled={loading} />
         <button
           type="button"
           className="btn btn-primary btn-lg w-full"
-          disabled={joinCodeValue.length < 4 || loading}
+          disabled={joinCodeValue.length < INVITE_CODE_LENGTH || loading}
           onClick={handleJoin}
         >
           {loading ? 'Joining…' : 'Join game →'}

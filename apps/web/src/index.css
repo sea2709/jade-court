@@ -555,6 +555,15 @@
     @apply w-10 h-12 rounded-xl grid place-items-center font-display font-extrabold text-2xl bg-cream border-2 border-line-soft text-ink;
   }
 
+  .invite-code-char-active {
+    @apply border-jade;
+  }
+
+  /* Transparent input over the boxes: receives typing/paste, boxes render the value. */
+  .invite-code-input {
+    @apply absolute inset-0 w-full h-full opacity-0 cursor-text;
+  }
+
   .room-input {
     @apply w-full text-center font-display font-extrabold text-2xl tracking-[2px] p-3.5 rounded-[14px] border-2 border-line-soft bg-cream text-ink mb-[18px];
   }

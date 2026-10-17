@@ -175,6 +175,27 @@ describe('MultiplayerScreen online waiting panel', () => {
     expect(screen.queryByTestId('resign-button')).not.toBeInTheDocument();
   });
 
+  it('invite panel starts open and toggles closed and open with chevrons', async () => {
+    useRoomGameMock.mockReturnValue(baseRoomState);
+    await createRoomAsHost();
+    await waitFor(() => expect(screen.getByTestId('waiting-invite-panel')).toBeInTheDocument());
+    const toggle = screen.getByTestId('waiting-invite-toggle');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAccessibleName('Collapse invite');
+    expect(screen.getByTestId('waiting-invite-body')).toBeVisible();
+    expect(screen.getByText('Copy link')).toBeVisible();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAccessibleName('Expand invite');
+    expect(screen.queryByTestId('waiting-invite-body')).not.toBeInTheDocument();
+    expect(screen.getByText('Invite your friend')).toBeVisible();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('waiting-invite-body')).toBeVisible();
+  });
+
   it('hides invite panel once opponent has joined', async () => {
     useRoomGameMock.mockReturnValue({
       ...baseRoomState,
@@ -226,7 +247,7 @@ describe('MultiplayerScreen rejoin from ?room=', () => {
     fetchMock.mockResolvedValue(json({ room: { code: 'JADE-LINK' }, side: null }));
     renderMultiplayer('/multiplayer?room=JADE-LINK');
     await screen.findByRole('heading', { name: 'Join a room' });
-    expect(screen.getByLabelText('Invite code')).toHaveValue('JADE-LINK');
+    expect(screen.getByLabelText('Invite code')).toHaveValue('LINK');
     expect(useRoomGameMock).not.toHaveBeenCalled();
   });
 
@@ -234,10 +255,24 @@ describe('MultiplayerScreen rejoin from ?room=', () => {
     fetchMock.mockResolvedValue(json({ error: 'Room not found' }, 404));
     renderMultiplayer('/multiplayer?room=JADE-GONE');
     await screen.findByRole('heading', { name: 'Join a room' });
-    expect(screen.getByLabelText('Invite code')).toHaveValue('JADE-GONE');
+    expect(screen.getByLabelText('Invite code')).toHaveValue('GONE');
     expect(screen.getByLabelText('Invite code')).toHaveAttribute('spellCheck', 'false');
     expect(screen.getByLabelText('Invite code')).toHaveAttribute('autoComplete', 'off');
     expect(screen.getByLabelText('Invite code')).toHaveAttribute('autoCapitalize', 'characters');
+  });
+
+  it('joins with four typed characters by sending the full JADE- code', async () => {
+    useRoomGameMock.mockReturnValue({ ...baseRoomState, side: 'b', opponentJoined: true });
+    fetchMock.mockResolvedValue(json({ room: { code: 'JADE-KPSQ' }, side: 'b' }));
+    renderMultiplayer();
+    await userEvent.click(screen.getByRole('button', { name: /Join with a code/ }));
+    const joinButton = screen.getByRole('button', { name: 'Join game →' });
+    await userEvent.type(screen.getByLabelText('Invite code'), 'kps');
+    expect(joinButton).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('Invite code'), 'q');
+    await userEvent.click(joinButton);
+    await waitFor(() => expect(useRoomGameMock).toHaveBeenCalledWith('JADE-KPSQ', 'b'));
+    expect(fetchMock.mock.calls[0]![0]).toBe('/api/rooms/JADE-KPSQ/join');
   });
 
   it('maps join API errors to friendly messages', async () => {

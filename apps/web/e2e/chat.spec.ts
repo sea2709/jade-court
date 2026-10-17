@@ -20,10 +20,12 @@ async function openNamedRoom(browser: Browser, hostName: string, guestName: stri
   await guest.goto('/multiplayer');
   await fillDisplayName(guest, guestName);
   await guest.getByRole('button', { name: /Join with a code/ }).click();
-  await guest.getByPlaceholder('JADE-XXXX').fill(code);
+  await guest.getByLabel('Invite code').fill(code.slice('JADE-'.length));
   await guest.getByRole('button', { name: 'Join game →' }).click();
   await expect(guest.getByText(`${guestName} (you)`)).toBeVisible();
   await expect(host.getByText(`${hostName} (you)`)).toBeVisible();
+  await openChat(host);
+  await openChat(guest);
 
   return {
     host,
@@ -31,6 +33,12 @@ async function openNamedRoom(browser: Browser, hostName: string, guestName: stri
     code,
     close: () => closeMultiplayerRoom(host, guest),
   };
+}
+
+/** Desktop chat starts collapsed in every room; expand it. */
+async function openChat(page: Page) {
+  await page.getByTestId('room-chat-collapsed').click();
+  await expect(page.getByTestId('room-chat-panel')).toBeVisible();
 }
 
 async function sendChat(page: Page, text: string) {
@@ -68,6 +76,7 @@ test.describe('In-room chat', () => {
       await expect(guest.getByText('See you after refresh')).toBeVisible();
 
       await guest.reload();
+      await openChat(guest);
       await expect(guest.getByText('See you after refresh')).toBeVisible();
       await expect(guest.getByTestId('room-chat-system-line')).toContainText('Bob joined the room');
     } finally {
@@ -108,6 +117,20 @@ test.describe('In-room chat', () => {
     }
   });
 
+  test('desktop chat starts collapsed in a new room', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const host = await hostContext.newPage();
+    try {
+      await host.goto('/multiplayer');
+      await fillDisplayName(host, 'Alice');
+      await host.getByRole('button', { name: /Create a room/ }).click();
+      await expect(host.getByTestId('room-chat-collapsed')).toBeVisible();
+      await expect(host.getByTestId('room-chat-panel')).toHaveCount(0);
+    } finally {
+      await hostContext.close();
+    }
+  });
+
   test('desktop collapse shows unread when a message arrives', async ({ browser }) => {
     const room = await openNamedRoom(browser, 'Alice', 'Bob');
     try {
@@ -142,7 +165,7 @@ test.describe('In-room chat', () => {
       await guest.goto('/multiplayer');
       await fillDisplayName(guest, 'Bob');
       await guest.getByRole('button', { name: /Join with a code/ }).click();
-      await guest.getByPlaceholder('JADE-XXXX').fill(code);
+      await guest.getByLabel('Invite code').fill(code.slice('JADE-'.length));
       await guest.getByRole('button', { name: 'Join game →' }).click();
       await expect(guest.getByText('Bob (you)')).toBeVisible();
 
@@ -152,6 +175,7 @@ test.describe('In-room chat', () => {
       await guest.getByLabel('Close chat').first().click();
       await expect(guest.getByTestId('room-chat-sheet')).toHaveCount(0);
 
+      await openChat(host);
       await sendChat(host, 'Mobile ping');
       await expect(guest.getByTestId('room-chat-unread')).toBeVisible();
     } finally {

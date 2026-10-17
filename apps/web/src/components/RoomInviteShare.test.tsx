@@ -67,7 +67,7 @@ describe('RoomInviteShare', () => {
     expect(screen.getByRole('button', { name: '✓ Copied' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Copy code' }));
-    expect(writeText).toHaveBeenLastCalledWith(defaultCode);
+    expect(writeText).toHaveBeenLastCalledWith('ABCD');
     expect(screen.getAllByRole('button', { name: '✓ Copied' })).toHaveLength(2);
   });
 

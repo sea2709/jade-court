@@ -9,7 +9,8 @@ import {
   groupChatRows,
   latestPlayerMessageText,
 } from '../../lib/roomChatFormat';
-import { ROOM_CHAT_COLLAPSED_KEY, ROOM_CHAT_MAX_LENGTH } from '../../lib/roomChatTypes';
+import { ROOM_CHAT_MAX_LENGTH } from '../../lib/roomChatTypes';
+import { ChevronIcon } from '../ChevronIcon';
 import type { RoomChatRejection } from '../../hooks/useRoomChat';
 import type { DisplayChatRow } from '../../lib/roomChatTypes';
 
@@ -27,22 +28,6 @@ function useIsMobile(): boolean {
     return () => mq.removeEventListener('change', onChange);
   }, []);
   return mobile;
-}
-
-function readCollapsedPreference(): boolean {
-  try {
-    return localStorage.getItem(ROOM_CHAT_COLLAPSED_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function saveCollapsedPreference(collapsed: boolean): void {
-  try {
-    localStorage.setItem(ROOM_CHAT_COLLAPSED_KEY, collapsed ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
 }
 
 function UnreadBadge({ count }: { count: number }) {
@@ -296,7 +281,8 @@ export function RoomChatPanel({
   onVisibilityChange,
 }: RoomChatPanelProps) {
   const isMobile = useIsMobile();
-  const [desktopCollapsed, setDesktopCollapsed] = useState(readCollapsedPreference);
+  // Chat starts closed on every room visit (desktop and mobile).
+  const [desktopCollapsed, setDesktopCollapsed] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -310,13 +296,7 @@ export function RoomChatPanel({
     onVisibilityChange(visible);
   }, [chatExpanded, onVisibilityChange]);
 
-  const toggleDesktopCollapsed = () => {
-    setDesktopCollapsed((c) => {
-      const next = !c;
-      saveCollapsedPreference(next);
-      return next;
-    });
-  };
+  const toggleDesktopCollapsed = () => setDesktopCollapsed((c) => !c);
 
   const openMobile = () => setMobileOpen(true);
   const closeMobile = () => setMobileOpen(false);
@@ -395,6 +375,7 @@ export function RoomChatPanel({
         type="button"
         className="card room-chat-collapsed-row"
         onClick={toggleDesktopCollapsed}
+        aria-expanded={false}
         data-testid="room-chat-collapsed"
       >
         <span className="font-extrabold text-[14px] shrink-0">Chat</span>
@@ -402,8 +383,8 @@ export function RoomChatPanel({
           {preview ?? 'No messages yet'}
         </span>
         <UnreadBadge count={unread} />
-        <span className="text-muted text-lg leading-none" aria-hidden>
-          ▾
+        <span className="text-muted shrink-0 grid place-items-center">
+          <ChevronIcon direction="down" testId="room-chat-chevron-down" />
         </span>
       </button>
     );
@@ -422,10 +403,11 @@ export function RoomChatPanel({
           type="button"
           className="ml-auto btn btn-ghost btn-sm"
           aria-label="Collapse chat"
+          aria-expanded={true}
           data-testid="room-chat-collapse"
           onClick={toggleDesktopCollapsed}
         >
-          ▴
+          <ChevronIcon direction="up" testId="room-chat-chevron-up" />
         </button>
       </div>
       <MessageList

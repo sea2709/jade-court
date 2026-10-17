@@ -5,7 +5,6 @@ import type { Side } from '@jade-court/xiangqi-engine';
 
 export const ROOM_CHAT_MAX_LENGTH = 500;
 export const ROOM_CHAT_COUNTER_FROM = 400;
-export const ROOM_CHAT_COLLAPSED_KEY = 'jade-court-chat-collapsed';
 export const ROOM_CHAT_GROUP_MS = 2 * 60 * 1000;
 
 export type ChatEntry =
