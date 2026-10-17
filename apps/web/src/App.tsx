@@ -1,19 +1,17 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { Breadcrumb } from './components/Breadcrumb';
 import { PUBLIC_NAV } from './lib/publicNav';
 
 function Topbar() {
-  const navigate = useNavigate();
-
   return (
     <div className="topbar">
-      <div className="brand" onClick={() => navigate('/')} role="button" tabIndex={0}>
+      <Link to="/" className="brand">
         <div className="brand-mark">象</div>
         <div>
           <div className="brand-name">Jade Court</div>
           <div className="brand-sub">Xiangqi</div>
         </div>
-      </div>
+      </Link>
       <nav className="nav">
         {PUBLIC_NAV.map(([path, label]) => (
           <NavLink
@@ -31,8 +29,6 @@ function Topbar() {
 }
 
 export function App() {
-  const navigate = useNavigate();
-
   return (
     <div className="app-shell">
       <Topbar />
@@ -44,27 +40,15 @@ export function App() {
         <span className="brand-mark w-[30px] h-[30px] rounded-[9px] text-[17px]">象</span>
         <span className="text-ink-soft">Jade Court · Learn &amp; play Xiangqi</span>
         <nav className="ml-auto flex gap-5">
-          <button
-            type="button"
-            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
-            onClick={() => navigate('/learn')}
-          >
+          <Link to="/learn" className="nav-link p-0 text-[13.5px] font-bold">
             Learn
-          </button>
-          <button
-            type="button"
-            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
-            onClick={() => navigate('/multiplayer')}
-          >
+          </Link>
+          <Link to="/multiplayer" className="nav-link p-0 text-[13.5px] font-bold">
             Play with Friends
-          </button>
-          <button
-            type="button"
-            className="nav-link p-0 text-[13.5px] font-bold bg-transparent"
-            onClick={() => navigate('/news')}
-          >
+          </Link>
+          <Link to="/news" className="nav-link p-0 text-[13.5px] font-bold">
             News
-          </button>
+          </Link>
         </nav>
         <span className="w-full text-left text-muted font-semibold">
           © 2026 Jade Court · A teaching prototype

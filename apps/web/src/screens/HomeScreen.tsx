@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { CoachAvatar } from '../components/CoachAvatar';
 import { HomeDemoBoard } from '../components/HomeDemoBoard';
 
@@ -10,7 +10,7 @@ function ModeCard({
   desc,
   cta,
   ctaClass,
-  onClick,
+  to,
   accent,
   glyph,
 }: {
@@ -21,15 +21,14 @@ function ModeCard({
   desc: string;
   cta: string;
   ctaClass: string;
-  onClick: () => void;
+  to: string;
   accent: string;
   glyph: string;
 }) {
   return (
-    <button
-      type="button"
+    <Link
+      to={to}
       className="card card-interactive mode-card rise text-left p-0 overflow-hidden flex flex-col bg-paper"
-      onClick={onClick}
     >
       <div
         className="h-[132px] relative grid place-items-center overflow-hidden"
@@ -49,13 +48,11 @@ function ModeCard({
         </div>
         <span className={`btn ${ctaClass} self-start mt-1.5`}>{cta}</span>
       </div>
-    </button>
+    </Link>
   );
 }
 
 export function HomeScreen() {
-  const navigate = useNavigate();
-
   return (
     <div className="page-container-lg">
       <div className="grid grid-cols-[1.05fr_0.95fr] gap-11 items-center mb-[54px]">
@@ -70,12 +67,12 @@ export function HomeScreen() {
             your level — from your very first game to beating a friend across the river.
           </p>
           <div className="flex gap-3.5 flex-wrap">
-            <button type="button" className="btn btn-primary btn-lg" onClick={() => navigate('/learn')}>
+            <Link to="/learn" className="btn btn-primary btn-lg">
               Start learning →
-            </button>
-            <button type="button" className="btn btn-ghost btn-lg" onClick={() => navigate('/play')}>
+            </Link>
+            <Link to="/play" className="btn btn-ghost btn-lg">
               Play vs computer
-            </button>
+            </Link>
           </div>
           <div className="flex items-center gap-3 mt-[26px] text-ink-soft font-bold text-sm">
             <CoachAvatar size={42} />
@@ -101,7 +98,7 @@ export function HomeScreen() {
           desc="Play a real game while Master Lin highlights moves, suggests the best one, and grades each move you make."
           cta="Learn now"
           ctaClass="btn-primary"
-          onClick={() => navigate('/learn')}
+          to="/learn"
         />
         <ModeCard
           tag="Compete"
@@ -113,7 +110,7 @@ export function HomeScreen() {
           desc="Test yourself against three strengths — Beginner, Intermediate, Advanced. No hints, just the game."
           cta="Pick a level"
           ctaClass="btn-red"
-          onClick={() => navigate('/play')}
+          to="/play"
         />
         <ModeCard
           tag="2 players"
@@ -125,7 +122,7 @@ export function HomeScreen() {
           desc="Share a room link or play pass-and-play on one screen. Bring a friend to the board."
           cta="Create a room"
           ctaClass="btn-gold"
-          onClick={() => navigate('/multiplayer')}
+          to="/multiplayer"
         />
       </div>
 

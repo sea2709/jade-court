@@ -29,7 +29,7 @@ test.describe('home and navigation', () => {
     await expect(page).toHaveURL(/\/news$/);
     await expect(page.getByRole('heading', { name: 'Xiangqi news' })).toBeVisible();
 
-    await page.getByRole('button', { name: /Jade Court/ }).click();
+    await page.getByRole('link', { name: /Jade Court/ }).click();
     await expect(page).toHaveURL(/\/$/);
   });
 
@@ -78,13 +78,13 @@ test.describe('home and navigation', () => {
     await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
   });
 
-  test('home call-to-action buttons open Learn and Play', async ({ page }) => {
+  test('home call-to-action links open Learn and Play', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Start learning →' }).click();
+    await page.getByRole('link', { name: 'Start learning →' }).click();
     await expect(page).toHaveURL(/\/learn$/);
 
     await page.goto('/');
-    await page.getByRole('button', { name: 'Play vs computer', exact: true }).click();
+    await page.getByRole('link', { name: 'Play vs computer', exact: true }).click();
     await expect(page).toHaveURL(/\/play$/);
   });
 });

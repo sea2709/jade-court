@@ -345,16 +345,17 @@
     }
   }
 
-  /* Title inside a .card-interactive that turns jade and underlines like a
-     link while the card is hovered or keyboard-focused. */
+  /* Title inside a .card-interactive that turns jade like a link while the
+     card is hovered or keyboard-focused. */
   .card-title-link {
-    @apply underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] duration-150;
+    @apply transition-colors duration-150;
   }
 
   .card-interactive:not(:disabled):hover .card-title-link,
   .card-interactive:focus-visible .card-title-link {
-    @apply text-jade-deep decoration-jade-deep;
+    @apply text-jade-deep;
   }
+
   .pill {
     @apply inline-flex items-center gap-[7px] font-extrabold text-[13px] px-[13px] py-1.5 rounded-full;
   }
