@@ -1,0 +1,1823 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Play with AI — design prototype (Jade Court)</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@600;700;800&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap"
+    />
+    <style>
+      body {
+        margin: 0;
+        background: #f4f4f2;
+        color: #1f1f1f;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .export-note {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 16px;
+      }
+      .load-error {
+        color: #b42318;
+        font-weight: 600;
+      }
+    </style>
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <div class="export-note">
+        Design reference for the Play with AI epic (#75). Exported from the Cursor canvas prototype;
+        needs an internet connection for React, Babel, and fonts.
+      </div>
+      <div id="root"></div>
+    </div>
+
+    <!-- Minimal stand-ins for the `cursor/canvas` components the prototype uses (light theme). -->
+    <script type="text/plain" id="canvas-shim">
+      const { useState } = React;
+      type CSSProperties = any;
+
+      function useCanvasState(key, initial) {
+        return useState(initial);
+      }
+
+      const HOST_THEME = {
+        text: { primary: '#1f1f1f', secondary: '#555555', tertiary: '#777777', quaternary: '#999999', link: '#1a5fb4' },
+        bg: { editor: '#ffffff', chrome: '#efefec', elevated: '#ffffff' },
+        fill: { primary: '#e6e6e2', secondary: '#ececea', tertiary: '#f2f2f0', quaternary: '#f7f7f5' },
+        stroke: { primary: '#c4c4bf', secondary: '#d6d6d1', tertiary: '#e4e4df' },
+        accent: { primary: '#1a5fb4', control: '#1a5fb4' },
+      };
+
+      function useHostTheme() {
+        return HOST_THEME;
+      }
+
+      function Stack({ children, gap = 12, style }) {
+        return <div style={{ display: 'flex', flexDirection: 'column', gap, ...style }}>{children}</div>;
+      }
+
+      function Row({ children, gap = 8, align = 'center', justify = 'start', wrap, style }) {
+        const map = { start: 'flex-start', end: 'flex-end', center: 'center', stretch: 'stretch', 'space-between': 'space-between' };
+        return (
+          <div
+            style={{
+              display: 'flex',
+              gap,
+              alignItems: map[align],
+              justifyContent: map[justify],
+              flexWrap: wrap ? 'wrap' : 'nowrap',
+              ...style,
+            }}
+          >
+            {children}
+          </div>
+        );
+      }
+
+      function H1({ children, style }) {
+        return <h1 style={{ fontSize: 24, lineHeight: '30px', fontWeight: 600, margin: 0, ...style }}>{children}</h1>;
+      }
+
+      function H2({ children, style }) {
+        return <h2 style={{ fontSize: 18, lineHeight: '24px', fontWeight: 600, margin: 0, ...style }}>{children}</h2>;
+      }
+
+      function Text({ children, tone = 'primary', size = 'body', weight = 'normal', style }) {
+        const weights = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+        return (
+          <div
+            style={{
+              color: HOST_THEME.text[tone],
+              fontSize: size === 'small' ? 12 : 14,
+              lineHeight: size === 'small' ? '16px' : '20px',
+              fontWeight: weights[weight],
+              ...style,
+            }}
+          >
+            {children}
+          </div>
+        );
+      }
+
+      function Pill({ children, active, onClick, size = 'md', style }) {
+        return (
+          <button
+            type="button"
+            onClick={onClick}
+            style={{
+              font: 'inherit',
+              fontSize: size === 'sm' ? 12 : 13,
+              padding: size === 'sm' ? '2px 8px' : '4px 12px',
+              borderRadius: 999,
+              cursor: 'pointer',
+              border: `1px solid ${active ? HOST_THEME.text.primary : HOST_THEME.stroke.secondary}`,
+              background: active ? HOST_THEME.text.primary : HOST_THEME.bg.editor,
+              color: active ? HOST_THEME.bg.editor : HOST_THEME.text.primary,
+              ...style,
+            }}
+          >
+            {children}
+          </button>
+        );
+      }
+
+      function Table({ headers, rows }) {
+        const cell = { padding: '8px 10px', borderTop: `1px solid ${HOST_THEME.stroke.tertiary}`, verticalAlign: 'top', fontSize: 13 };
+        return (
+          <div style={{ border: `1px solid ${HOST_THEME.stroke.secondary}`, borderRadius: 8, overflowX: 'auto', background: HOST_THEME.bg.editor }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <thead>
+                <tr>
+                  {headers.map((h, i) => (
+                    <th key={i} style={{ ...cell, borderTop: 'none', textAlign: 'left', color: HOST_THEME.text.secondary, fontWeight: 600 }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    {r.map((c, j) => (
+                      <td key={j} style={cell}>
+                        {c}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      function Callout({ children, title }) {
+        return (
+          <div
+            style={{
+              border: `1px solid ${HOST_THEME.stroke.secondary}`,
+              borderLeft: `3px solid ${HOST_THEME.accent.primary}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              background: HOST_THEME.bg.editor,
+              fontSize: 14,
+            }}
+          >
+            {title && <div style={{ fontWeight: 600, marginBottom: 4 }}>{title}</div>}
+            <div>{children}</div>
+          </div>
+        );
+      }
+    </script>
+
+    <!-- Prototype source: the canvas file with its `cursor/canvas` imports removed. -->
+    <script type="text/plain" id="prototype-src">
+
+      type Kids = Parameters<typeof Stack>[0]['children'];
+
+      // Jade Court brand palette (apps/web/src/index.css). The mock app frame uses the
+      // product's fixed theme on purpose; the canvas chrome around it uses host tokens.
+      const J = {
+        white: '#ffffff',
+        cream: '#fbf3e1',
+        cream2: '#f4e8ce',
+        paper: '#fffdf6',
+        ink: '#2b2622',
+        inkSoft: '#5c5347',
+        muted: '#94886f',
+        line: '#e7dabc',
+        board: '#ebc987',
+        boardEdge: '#b07f44',
+        grid: '#97632f',
+        red: '#d5452c',
+        redDeep: '#ae3119',
+        redSoft: '#f6d7cc',
+        black: '#38342f',
+        jade: '#1f9e81',
+        jadeDeep: '#157a63',
+        jadeSoft: '#d6efe7',
+        gold: '#e7ac3f',
+        goldDeep: '#a8740f',
+        goldSoft: '#fbeac4',
+        warn: '#b86a10',
+        warnSoft: '#fde3c3',
+        hover: '#fff7e6',
+      };
+      const DISPLAY = "'Baloo 2', 'Nunito', system-ui, sans-serif";
+      const BODY = "'Nunito', system-ui, sans-serif";
+      const PIECE = "'Noto Serif SC', 'Songti SC', 'STSong', serif";
+
+      type Screen = 'signedOut' | 'paywall' | 'playing' | 'pvcResume' | 'account';
+
+      const SCREENS: { id: Screen; label: string; path: string }[] = [
+        { id: 'signedOut', label: 'Play with AI — signed out', path: '/play-ai' },
+        { id: 'paywall', label: 'Play with AI — no pass', path: '/play-ai' },
+        { id: 'playing', label: 'Play with AI — playing', path: '/play-ai' },
+        { id: 'pvcResume', label: 'Play vs Computer — resume', path: '/play' },
+        { id: 'account', label: 'Account page', path: '/account' },
+      ];
+
+      type Model = { id: string; label: string; vendor: string; blurb?: string };
+
+      const MODELS: Model[] = [
+        { id: 'gemini-flash', label: 'Gemini Flash', vendor: 'Google', blurb: 'Fast replies, sharp openings' },
+        { id: 'gpt-4o-mini', label: 'GPT-4o mini', vendor: 'OpenAI' },
+        { id: 'claude-haiku', label: 'Claude Haiku', vendor: 'Anthropic', blurb: 'Quick, solid defender' },
+        { id: 'claude-sonnet', label: 'Claude Sonnet', vendor: 'Anthropic', blurb: 'Strongest, slower moves' },
+        { id: 'gemma', label: 'Gemma 4', vendor: 'Google (open)', blurb: 'Playful, takes risks' },
+      ];
+
+      // --- Jade Court primitives (mock app only) ---
+
+      type BtnKind = 'primary' | 'gold' | 'ghost' | 'dark' | 'text' | 'google' | 'facebook';
+
+      function JBtn({
+        children,
+        kind = 'primary',
+        small,
+        full,
+        disabled,
+        onClick,
+      }: {
+        children: Kids;
+        kind?: BtnKind;
+        small?: boolean;
+        full?: boolean;
+        disabled?: boolean;
+        onClick?: () => void;
+      }) {
+        const base: CSSProperties = {
+          fontFamily: BODY,
+          fontWeight: 800,
+          fontSize: small ? 13 : 15,
+          borderRadius: 999,
+          padding: small ? '7px 14px' : '11px 22px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.45 : 1,
+          border: '1px solid transparent',
+          width: full ? '100%' : undefined,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          whiteSpace: 'nowrap',
+        };
+        const kinds: Record<BtnKind, CSSProperties> = {
+          primary: { background: J.jade, color: J.white },
+          gold: { background: J.gold, color: J.white },
+          ghost: { background: J.white, color: J.ink, borderColor: J.line },
+          dark: { background: J.ink, color: J.cream },
+          text: { background: 'transparent', color: J.jadeDeep, padding: small ? '4px 6px' : '6px 8px' },
+          google: { background: J.white, color: J.ink, borderColor: J.line },
+          facebook: { background: J.white, color: J.ink, borderColor: J.line },
+        };
+        return (
+          <button type="button" disabled={disabled} onClick={onClick} style={{ ...base, ...kinds[kind] }}>
+            {children}
+          </button>
+        );
+      }
+
+      type PillTone = 'jade' | 'gold' | 'red' | 'warn' | 'neutral';
+
+      function JPill({ children, tone = 'jade' }: { children: Kids; tone?: PillTone }) {
+        const tones: Record<PillTone, CSSProperties> = {
+          jade: { background: J.jadeSoft, color: J.jadeDeep },
+          gold: { background: J.goldSoft, color: J.goldDeep },
+          red: { background: J.redSoft, color: J.redDeep },
+          warn: { background: J.warnSoft, color: J.warn },
+          neutral: { background: J.cream2, color: J.inkSoft },
+        };
+        return (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontWeight: 800,
+              fontSize: 12.5,
+              padding: '5px 12px',
+              borderRadius: 999,
+              whiteSpace: 'nowrap',
+              ...tones[tone],
+            }}
+          >
+            {children}
+          </span>
+        );
+      }
+
+      function JCard({ children, style }: { children: Kids; style?: CSSProperties }) {
+        return (
+          <div
+            style={{
+              background: J.paper,
+              border: `1px solid ${J.line}`,
+              borderRadius: 20,
+              ...style,
+            }}
+          >
+            {children}
+          </div>
+        );
+      }
+
+      function JHeading({ children, size = 20 }: { children: Kids; size?: number }) {
+        return (
+          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: size, lineHeight: 1.15, color: J.ink }}>
+            {children}
+          </div>
+        );
+      }
+
+      function JMuted({ children, size = 13 }: { children: Kids; size?: number }) {
+        return <div style={{ fontSize: size, fontWeight: 700, color: J.muted }}>{children}</div>;
+      }
+
+      function JInput({ placeholder, type = 'text', value }: { placeholder: string; type?: string; value?: string }) {
+        return (
+          <input
+            readOnly
+            type={type}
+            placeholder={placeholder}
+            defaultValue={value}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              fontFamily: BODY,
+              fontWeight: 600,
+              fontSize: 14,
+              padding: '11px 14px',
+              borderRadius: 12,
+              border: `2px solid ${J.line}`,
+              background: J.cream,
+              color: J.ink,
+            }}
+          />
+        );
+      }
+
+      function Avatar({ label, size = 36, bg = J.jade }: { label: string; size?: number; bg?: string }) {
+        return (
+          <div
+            style={{
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              background: bg,
+              color: J.white,
+              display: 'grid',
+              placeItems: 'center',
+              fontFamily: DISPLAY,
+              fontWeight: 800,
+              fontSize: size * 0.4,
+              flexShrink: 0,
+            }}
+          >
+            {label}
+          </div>
+        );
+      }
+
+      function AiTag({ small }: { small?: boolean }) {
+        return (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontWeight: 900,
+              fontSize: small ? 9 : 10.5,
+              letterSpacing: '0.06em',
+              lineHeight: 1,
+              padding: small ? '2px 4px' : '3px 6px',
+              borderRadius: 6,
+              background: J.jade,
+              color: J.white,
+              border: small ? `1.5px solid ${J.paper}` : undefined,
+            }}
+          >
+            AI
+          </span>
+        );
+      }
+
+      /** Master Lin's avatar with an "AI" tag pinned to the corner, used everywhere he appears. */
+      function AiAvatar({ size = 36 }: { size?: number }) {
+        return (
+          <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+            <Avatar label="林" size={size} bg={J.black} />
+            <span style={{ position: 'absolute', right: -6, bottom: -4 }}>
+              <AiTag small />
+            </span>
+          </div>
+        );
+      }
+
+      function ProviderMark({ provider }: { provider: 'google' | 'facebook' | 'email' }) {
+        const map = {
+          google: { ch: 'G', bg: J.white, fg: J.ink, border: J.line },
+          facebook: { ch: 'f', bg: J.ink, fg: J.white, border: J.ink },
+          email: { ch: '@', bg: J.jadeSoft, fg: J.jadeDeep, border: J.jadeSoft },
+        }[provider];
+        return (
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              display: 'inline-grid',
+              placeItems: 'center',
+              fontWeight: 900,
+              fontSize: 13,
+              background: map.bg,
+              color: map.fg,
+              border: `1px solid ${map.border}`,
+            }}
+          >
+            {map.ch}
+          </span>
+        );
+      }
+
+      // --- App chrome: browser frame + topbar ---
+
+      /** Avatar button in the top bar; opens a small menu with Account and a one-click Sign out. */
+      function AccountMenu({
+        active,
+        onAccount,
+        onSignOut,
+      }: {
+        active: boolean;
+        onAccount: () => void;
+        onSignOut: () => void;
+      }) {
+        const [open, setOpen] = useCanvasState('accountMenuOpen', false);
+        const item = (label: string, onClick: () => void, danger = false) => (
+          <div
+            onClick={() => {
+              setOpen(false);
+              onClick();
+            }}
+            style={{
+              padding: '9px 14px',
+              fontWeight: 800,
+              fontSize: 13.5,
+              cursor: 'pointer',
+              color: danger ? J.redDeep : J.ink,
+            }}
+          >
+            {label}
+          </div>
+        );
+        return (
+          <span style={{ position: 'relative', marginLeft: 8 }}>
+            <span
+              onClick={() => setOpen(!open)}
+              title="Account menu"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '4px 10px 4px 4px',
+                borderRadius: 999,
+                cursor: 'pointer',
+                background: active || open ? J.ink : J.white,
+                color: active || open ? J.cream : J.ink,
+                border: `1px solid ${J.line}`,
+                fontWeight: 800,
+                fontSize: 13,
+              }}
+            >
+              <Avatar label="DT" size={26} />
+              Dang
+              <span style={{ fontSize: 10, opacity: 0.7 }}>{open ? '▲' : '▼'}</span>
+            </span>
+            {open && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 8px)',
+                  width: 230,
+                  zIndex: 20,
+                  background: J.paper,
+                  border: `1px solid ${J.line}`,
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '12px 14px' }}>
+                  <Avatar label="DT" size={34} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14 }}>Dang Tran</div>
+                    <JMuted size={12}>dang@example.com</JMuted>
+                  </div>
+                </div>
+                <div style={{ padding: '0 14px 10px' }}>
+                  <JPill tone="gold">Day pass · 17h 42m left</JPill>
+                </div>
+                <div style={{ borderTop: `1px solid ${J.line}` }}>{item('Account', onAccount)}</div>
+                <div style={{ borderTop: `1px solid ${J.line}` }}>{item('Sign out', onSignOut, true)}</div>
+              </div>
+            )}
+          </span>
+        );
+      }
+
+      function Topbar({
+        screen,
+        onNavigate,
+        onSignOut,
+      }: {
+        screen: Screen;
+        onNavigate: (s: Screen) => void;
+        onSignOut: () => void;
+      }) {
+        const signedIn = screen !== 'signedOut';
+        const activeLabel =
+          screen === 'account' ? null : screen === 'pvcResume' ? 'Play vs Computer' : 'Play with AI';
+        const nav: [string, boolean][] = ['Home', 'Play with AI', 'Play vs Computer', 'Play with Friends', 'News'].map(
+          (label) => [label, label === activeLabel],
+        );
+        const navTarget: Record<string, Screen | undefined> = {
+          'Play with AI': signedIn ? 'playing' : 'signedOut',
+          'Play vs Computer': 'pvcResume',
+        };
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              padding: '12px 22px',
+              borderBottom: `1px solid ${J.line}`,
+              background: J.cream,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 11,
+                  background: J.red,
+                  color: J.white,
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontFamily: PIECE,
+                  fontWeight: 900,
+                  fontSize: 20,
+                }}
+              >
+                象
+              </div>
+              <div>
+                <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 17, lineHeight: 1 }}>Jade Court</div>
+                <div style={{ fontSize: 10, color: J.muted, fontWeight: 800, letterSpacing: '0.14em' }}>XIANGQI</div>
+              </div>
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {nav.map(([label, active]) => (
+                <span
+                  key={label}
+                  onClick={() => {
+                    const target = navTarget[label];
+                    if (target) onNavigate(target);
+                  }}
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13.5,
+                    padding: '7px 12px',
+                    borderRadius: 999,
+                    cursor: 'pointer',
+                    background: active ? J.ink : 'transparent',
+                    color: active ? J.cream : J.inkSoft,
+                  }}
+                >
+                  {label}
+                </span>
+              ))}
+              {signedIn ? (
+                <AccountMenu
+                  active={screen === 'account'}
+                  onAccount={() => onNavigate('account')}
+                  onSignOut={onSignOut}
+                />
+              ) : (
+                <span style={{ marginLeft: 8 }}>
+                  <JBtn kind="dark" small onClick={() => onNavigate('paywall')}>
+                    Sign in
+                  </JBtn>
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      /** Mirrors apps/web/src/components/Breadcrumb.tsx: Home / current section, under the top bar. */
+      function Breadcrumb({ screen }: { screen: Screen }) {
+        const section = screen === 'account' ? 'Account' : screen === 'pvcResume' ? 'Play vs Computer' : 'Play with AI';
+        return (
+          <div
+            aria-label="Breadcrumb"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 22px',
+              fontSize: 13.5,
+              fontWeight: 700,
+              color: J.muted,
+            }}
+          >
+            <span style={{ cursor: 'pointer' }}>Home</span>
+            <span aria-hidden="true">/</span>
+            <span style={{ color: J.inkSoft }}>{section}</span>
+          </div>
+        );
+      }
+
+      function BrowserFrame({ path, children }: { path: string; children: Kids }) {
+        const theme = useHostTheme();
+        return (
+          <div style={{ border: `1px solid ${theme.stroke.secondary}`, borderRadius: 10, overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '6px 12px',
+                background: theme.bg.chrome,
+                borderBottom: `1px solid ${theme.stroke.tertiary}`,
+                color: theme.text.tertiary,
+                fontSize: 12,
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              jadecourt.app{path}
+            </div>
+            <div style={{ background: J.cream, color: J.ink, fontFamily: BODY }}>{children}</div>
+          </div>
+        );
+      }
+
+      // --- Xiangqi board (flat pieces) ---
+
+      type Piece = { r: number; c: number; ch: string; side: 'r' | 'b' };
+
+      function startPosition(): Piece[] {
+        const p: Piece[] = [];
+        ['車', '馬', '象', '士', '將', '士', '象', '馬', '車'].forEach((ch, c) => p.push({ r: 0, c, ch, side: 'b' }));
+        [1, 7].forEach((c) => p.push({ r: 2, c, ch: '砲', side: 'b' }));
+        [0, 2, 4, 6, 8].forEach((c) => p.push({ r: 3, c, ch: '卒', side: 'b' }));
+        ['俥', '傌', '相', '仕', '帥', '仕', '相', '傌', '俥'].forEach((ch, c) => p.push({ r: 9, c, ch, side: 'r' }));
+        [1, 7].forEach((c) => p.push({ r: 7, c, ch: '炮', side: 'r' }));
+        [0, 2, 4, 6, 8].forEach((c) => p.push({ r: 6, c, ch: '兵', side: 'r' }));
+        const move = (fr: number, fc: number, tr: number, tc: number) => {
+          const piece = p.find((x) => x.r === fr && x.c === fc);
+          if (piece) {
+            piece.r = tr;
+            piece.c = tc;
+          }
+        };
+        move(7, 7, 7, 4); // 炮二平五 — central cannon
+        move(0, 7, 2, 6); // 馬8進7
+        return p;
+      }
+
+      const POSITION = startPosition();
+
+      function Board({ showHint, dimmed, cell = 34 }: { showHint: boolean; dimmed: boolean; cell?: number }) {
+        const pad = Math.round(cell * 0.7);
+        const k = cell / 34;
+        const w = pad * 2 + cell * 8;
+        const h = pad * 2 + cell * 9;
+        const x = (c: number) => pad + c * cell;
+        const y = (r: number) => pad + r * cell;
+        const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+        for (let r = 0; r < 10; r++) lines.push({ x1: x(0), y1: y(r), x2: x(8), y2: y(r) });
+        for (let c = 0; c < 9; c++) {
+          if (c === 0 || c === 8) lines.push({ x1: x(c), y1: y(0), x2: x(c), y2: y(9) });
+          else {
+            lines.push({ x1: x(c), y1: y(0), x2: x(c), y2: y(4) });
+            lines.push({ x1: x(c), y1: y(5), x2: x(c), y2: y(9) });
+          }
+        }
+        const palace: [number, number, number, number][] = [
+          [0, 3, 2, 5],
+          [0, 5, 2, 3],
+          [7, 3, 9, 5],
+          [7, 5, 9, 3],
+        ];
+        const ring = (r: number, c: number, color: string, dashed = false) => (
+          <circle
+            cx={x(c)}
+            cy={y(r)}
+            r={16 * k}
+            fill="none"
+            stroke={color}
+            strokeWidth={2.5 * k}
+            strokeDasharray={dashed ? '4 3' : undefined}
+          />
+        );
+        return (
+          <div
+            style={{
+              background: J.board,
+              border: `2px solid ${J.boardEdge}`,
+              borderRadius: 14,
+              padding: 6,
+              position: 'relative',
+              opacity: dimmed ? 0.55 : 1,
+              width: 'fit-content',
+            }}
+          >
+            <svg width={w} height={h} style={{ display: 'block' }}>
+              {lines.map((l, i) => (
+                <line key={i} {...l} stroke={J.grid} strokeWidth={1.2} />
+              ))}
+              {palace.map(([r1, c1, r2, c2], i) => (
+                <line key={`p${i}`} x1={x(c1)} y1={y(r1)} x2={x(c2)} y2={y(r2)} stroke={J.grid} strokeWidth={1.2} />
+              ))}
+              <text x={x(2)} y={y(4.5) + 6 * k} fontFamily={PIECE} fontSize={17 * k} fill={J.grid} textAnchor="middle">
+                楚 河
+              </text>
+              <text x={x(6)} y={y(4.5) + 6 * k} fontFamily={PIECE} fontSize={17 * k} fill={J.grid} textAnchor="middle">
+                漢 界
+              </text>
+              {ring(0, 7, J.jade, true)}
+              {ring(2, 6, J.jade)}
+              {showHint && ring(9, 7, J.gold, true)}
+              {showHint && ring(7, 6, J.gold)}
+              {POSITION.map((p) => {
+                const color = p.side === 'r' ? J.red : J.black;
+                return (
+                  <g key={`${p.r}-${p.c}`}>
+                    <circle cx={x(p.c)} cy={y(p.r)} r={14 * k} fill={J.paper} stroke={color} strokeWidth={1.8 * k} />
+                    <circle cx={x(p.c)} cy={y(p.r)} r={11 * k} fill="none" stroke={color} strokeWidth={0.8 * k} />
+                    <text
+                      x={x(p.c)}
+                      y={y(p.r) + 5.5 * k}
+                      fontFamily={PIECE}
+                      fontWeight={700}
+                      fontSize={15 * k}
+                      fill={color}
+                      textAnchor="middle"
+                    >
+                      {p.ch}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        );
+      }
+
+      // --- Screen: signed out ---
+
+      function SignedOutScreen({
+        onSignedIn,
+        notice,
+        onDismissNotice,
+      }: {
+        onSignedIn: () => void;
+        notice: boolean;
+        onDismissNotice: () => void;
+      }) {
+        const [tab, setTab] = useCanvasState<'signin' | 'register'>('authTab', 'signin');
+        return (
+          <div>
+            {notice && (
+              <div
+                style={{
+                  margin: '16px 26px 0',
+                  padding: '10px 14px',
+                  borderRadius: 14,
+                  background: J.jadeSoft,
+                  color: J.jadeDeep,
+                  fontWeight: 800,
+                  fontSize: 13.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  flexWrap: 'wrap',
+                }}
+              >
+                You're signed out. Your unfinished games are saved to your account.
+                <span style={{ marginLeft: 'auto' }}>
+                  <JBtn kind="text" small onClick={onDismissNotice}>
+                    Dismiss
+                  </JBtn>
+                </span>
+              </div>
+            )}
+          <div style={{ padding: '30px 26px 36px', display: 'flex', gap: 26, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <JPill tone="jade">Play with AI</JPill>
+              <JHeading size={24}>Play Master Lin, an AI Xiangqi player, and talk through every move</JHeading>
+              <div style={{ fontSize: 15, fontWeight: 600, color: J.inkSoft, lineHeight: 1.5 }}>
+                Master Lin isn't a person. It's an AI opponent you can chat with. Pick the AI model behind it, play a full
+                game as Red, and ask why it moved, what you missed, or what to try next.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                {[
+                  ['Choose the AI behind Master Lin', 'Five AI models, each with its own playing style'],
+                  ['Chat while you play', 'Ask questions, get hints, and get feedback on each move'],
+                  ['Pick up where you left off', 'Unfinished games save to your account, including Play vs Computer'],
+                  ['Simple pricing', '$1 for 24 hours of unlimited games. No subscription'],
+                ].map(([title, sub]) => (
+                  <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span
+                      style={{ width: 8, height: 8, borderRadius: 4, background: J.jade, marginTop: 7, flexShrink: 0 }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 14.5 }}>{title}</div>
+                      <div style={{ fontWeight: 600, fontSize: 13.5, color: J.inkSoft }}>{sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <JCard style={{ flex: '1 1 300px', maxWidth: 380, padding: 22 }}>
+              <div style={{ display: 'flex', gap: 4, background: J.cream2, borderRadius: 999, padding: 4, marginBottom: 18 }}>
+                {(
+                  [
+                    ['signin', 'Sign in'],
+                    ['register', 'Create account'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <span
+                    key={id}
+                    onClick={() => setTab(id)}
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      padding: '7px 0',
+                      borderRadius: 999,
+                      fontWeight: 800,
+                      fontSize: 13.5,
+                      cursor: 'pointer',
+                      background: tab === id ? J.ink : 'transparent',
+                      color: tab === id ? J.cream : J.inkSoft,
+                    }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <JBtn kind="google" full onClick={onSignedIn}>
+                  <ProviderMark provider="google" /> Continue with Google
+                </JBtn>
+                <JBtn kind="facebook" full onClick={onSignedIn}>
+                  <ProviderMark provider="facebook" /> Continue with Facebook
+                </JBtn>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0' }}>
+                  <div style={{ flex: 1, height: 1, background: J.line }} />
+                  <JMuted size={12}>or with email</JMuted>
+                  <div style={{ flex: 1, height: 1, background: J.line }} />
+                </div>
+                {tab === 'register' && <JInput placeholder="Display name" />}
+                <JInput placeholder="Email" type="email" />
+                <JInput placeholder="Password" type="password" />
+                <JBtn kind="primary" full onClick={onSignedIn}>
+                  {tab === 'signin' ? 'Sign in' : 'Create account'}
+                </JBtn>
+                {tab === 'signin' ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <JBtn kind="text" small>
+                      Forgot password?
+                    </JBtn>
+                  </div>
+                ) : (
+                  <JMuted size={12}>
+                    We will email you a link to verify your address. Creating an account is free; you only pay for a day
+                    pass.
+                  </JMuted>
+                )}
+              </div>
+            </JCard>
+          </div>
+          </div>
+        );
+      }
+
+      // --- Screen: paywall (signed in, no active pass) ---
+
+      function PaywallScreen({ noEmail, onBought }: { noEmail: boolean; onBought: () => void }) {
+        return (
+          <div style={{ padding: '30px 26px 36px', display: 'flex', justifyContent: 'center' }}>
+            <JCard style={{ width: '100%', maxWidth: 560, overflow: 'hidden' }}>
+              <div style={{ padding: '22px 24px 18px', borderBottom: `1px solid ${J.line}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <JPill tone="gold">Day pass</JPill>
+                  <JMuted>Signed in as Dang</JMuted>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 24 }}>$1</span>
+                  <span style={{ fontWeight: 700, color: J.inkSoft }}>for 24 hours of Play with AI</span>
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: J.inkSoft, marginTop: 6, lineHeight: 1.5 }}>
+                  Your 24 hours start when the payment goes through. Buy again any time to add another 24 hours. It never
+                  renews on its own.
+                </div>
+              </div>
+              <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <JMuted size={12}>AI models Master Lin can run on</JMuted>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {MODELS.map((m) => (
+                    <JPill key={m.id} tone="neutral">
+                      {m.label}
+                    </JPill>
+                  ))}
+                </div>
+              </div>
+              <div
+                style={{
+                  padding: '16px 24px 22px',
+                  background: J.cream,
+                  borderTop: `1px solid ${J.line}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                {noEmail && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14 }}>Add an email for your receipt</div>
+                    <JMuted size={12}>
+                      Your Facebook account didn't share an email. We'll send a verification link before checkout.
+                    </JMuted>
+                    <JInput placeholder="you@example.com" type="email" />
+                    <JBtn kind="ghost">Send verification link</JBtn>
+                  </div>
+                )}
+                <JBtn kind="primary" full disabled={noEmail} onClick={onBought}>
+                  Buy day pass · $1
+                </JBtn>
+                <JMuted size={12}>Secure checkout with Stripe. You'll come straight back here to play.</JMuted>
+              </div>
+            </JCard>
+          </div>
+        );
+      }
+
+      // --- Screen: playing ---
+
+      type Msg = { id: number; from: 'coach' | 'player' | 'sys'; text: string; sub?: string; verdict?: string };
+
+      const INITIAL_CHAT: Msg[] = [
+        {
+          id: 1,
+          from: 'coach',
+          text: "Hi Dang, I'm Master Lin, an AI Xiangqi player. I'll play Black and explain my thinking as we go.",
+        },
+        { id: 2, from: 'player', text: 'Cannon to the center (炮二平五)' },
+        {
+          id: 3,
+          from: 'coach',
+          verdict: 'Good move',
+          text: 'A classic central cannon.',
+          sub: 'It puts pressure on my center soldier right away.',
+        },
+        { id: 4, from: 'coach', text: "I'll bring my horse out to guard the center (馬8進7)." },
+        { id: 5, from: 'player', text: 'Should I develop my horse next?' },
+        {
+          id: 6,
+          from: 'coach',
+          text: 'Yes. 傌二進三 develops a piece and protects your center soldier before I can attack it.',
+        },
+      ];
+
+      function ChatBubble({ m }: { m: Msg }) {
+        if (m.from === 'sys') {
+          return (
+            <div style={{ alignSelf: 'center', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: J.muted }}>
+              {m.text}
+            </div>
+          );
+        }
+        if (m.from === 'player') {
+          return (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div
+                style={{
+                  background: J.jadeSoft,
+                  border: `1px solid ${J.jadeSoft}`,
+                  borderRadius: '16px 4px 16px 16px',
+                  padding: '9px 13px',
+                  maxWidth: 240,
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                {m.text}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <AiAvatar size={28} />
+            <div
+              style={{
+                background: J.white,
+                border: `1px solid ${J.line}`,
+                borderRadius: '4px 16px 16px 16px',
+                padding: '9px 13px',
+                maxWidth: 250,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 800, color: J.muted, marginBottom: 2 }}>Master Lin · AI</div>
+              {m.verdict && <div style={{ fontWeight: 800, fontSize: 12.5, color: J.jadeDeep, marginBottom: 3 }}>{m.verdict}</div>}
+              <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>{m.text}</div>
+              {m.sub && <div style={{ fontSize: 12.5, fontWeight: 600, color: J.inkSoft, marginTop: 4 }}>{m.sub}</div>}
+            </div>
+          </div>
+        );
+      }
+
+      function PlayingScreen({ lowTime, onRenew }: { lowTime: boolean; onRenew: () => void }) {
+        const [modelId, setModelId] = useCanvasState('modelId', 'gpt-4o-mini');
+        const [chat, setChat] = useCanvasState<Msg[]>('chat', INITIAL_CHAT);
+        const [draft, setDraft] = useCanvasState('draft', '');
+        const [showHint, setShowHint] = useCanvasState('showHint', false);
+        const model = MODELS.find((m) => m.id === modelId) ?? MODELS[0];
+        const nextId = () => chat.reduce((max, m) => Math.max(max, m.id), 0) + 1;
+
+        const changeModel = (id: string) => {
+          const next = MODELS.find((m) => m.id === id);
+          if (!next || id === modelId) return;
+          setModelId(id);
+          setChat((c) => [...c, { id: nextId(), from: 'sys', text: `Master Lin (AI) now runs on ${next.label}` }]);
+        };
+
+        const ask = (question: string) => {
+          if (!question.trim()) return;
+          const id = nextId();
+          setChat((c) => [
+            ...c,
+            { id, from: 'player', text: question.trim() },
+            {
+              id: id + 1,
+              from: 'coach',
+              text: `${model.label} would answer here, streaming token by token from /api/coach/ask/stream.`,
+            },
+          ]);
+          setDraft('');
+        };
+
+        const hint = () => {
+          setShowHint(true);
+          setChat((c) => [
+            ...c,
+            {
+              id: nextId(),
+              from: 'coach',
+              text: 'Try 傌二進三: horse forward to guard the center.',
+              sub: 'Hint shown on the board in gold.',
+            },
+          ]);
+        };
+
+        return (
+          <div style={{ padding: '18px 22px 26px' }}>
+            {lowTime && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 14px',
+                  borderRadius: 14,
+                  background: J.warnSoft,
+                  color: J.warn,
+                  fontWeight: 800,
+                  fontSize: 13.5,
+                  marginBottom: 14,
+                  flexWrap: 'wrap',
+                }}
+              >
+                Your day pass ends in 4 minutes. AI moves and chat stop when it runs out.
+                <span style={{ marginLeft: 'auto' }}>
+                  <JBtn kind="gold" small onClick={onRenew}>
+                    Add 24 hours · $1
+                  </JBtn>
+                </span>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <JPill tone="jade">Play with AI</JPill>
+                  <span style={{ fontWeight: 800, fontSize: 13.5, color: J.inkSoft }}>
+                    Your move (Red) vs Master Lin (AI)
+                  </span>
+                  <span style={{ marginLeft: 'auto' }}>
+                    <JPill tone={lowTime ? 'warn' : 'gold'}>{lowTime ? 'Pass · 4m left' : 'Pass · 17h 42m left'}</JPill>
+                  </span>
+                </div>
+                <Board showHint={showHint} dimmed={false} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AiAvatar size={26} />
+                  <div style={{ fontSize: 13, fontWeight: 700, color: J.inkSoft, marginLeft: 4 }}>
+                    Black: <span style={{ color: J.ink }}>Master Lin, AI player</span> · running {model.label}
+                    {model.blurb ? ` · ${model.blurb}` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <JCard
+                style={{
+                  flex: '1 1 300px',
+                  minWidth: 280,
+                  maxWidth: 380,
+                  height: 470,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderBottom: `1px solid ${J.line}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <AiAvatar size={36} />
+                  <div style={{ minWidth: 0, marginLeft: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 16 }}>Master Lin</span>
+                      <AiTag />
+                    </div>
+                    <JMuted size={11.5}>AI player and coach</JMuted>
+                  </div>
+                  <select
+                    value={modelId}
+                    onChange={(e: { target: { value: string } }) => changeModel(e.target.value)}
+                    title="AI model"
+                    style={{
+                      marginLeft: 'auto',
+                      fontFamily: BODY,
+                      fontWeight: 700,
+                      fontSize: 12.5,
+                      border: `1px solid ${J.line}`,
+                      borderRadius: 999,
+                      padding: '6px 10px',
+                      background: J.white,
+                      color: J.ink,
+                    }}
+                  >
+                    {MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {chat.map((m) => (
+                    <ChatBubble key={m.id} m={m} />
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    padding: 12,
+                    borderTop: `1px solid ${J.line}`,
+                    background: J.cream,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      value={draft}
+                      onChange={(e: { target: { value: string } }) => setDraft(e.target.value)}
+                      onKeyDown={(e: { key: string }) => {
+                        if (e.key === 'Enter') ask(draft);
+                      }}
+                      placeholder="Ask Master Lin (AI) anything…"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontFamily: BODY,
+                        fontWeight: 600,
+                        fontSize: 13.5,
+                        padding: '9px 12px',
+                        borderRadius: 12,
+                        border: `2px solid ${J.line}`,
+                        background: J.paper,
+                        color: J.ink,
+                      }}
+                    />
+                    <JBtn kind="primary" small onClick={() => ask(draft)}>
+                      Send
+                    </JBtn>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <JBtn kind="primary" small full onClick={hint}>
+                      Hint
+                    </JBtn>
+                    <JBtn kind="ghost" small full onClick={() => ask('What should I focus on this turn?')}>
+                      What should I look for?
+                    </JBtn>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <JBtn kind="ghost" small full>
+                      Take back
+                    </JBtn>
+                    <JBtn
+                      kind="ghost"
+                      small
+                      full
+                      onClick={() => {
+                        setChat(INITIAL_CHAT);
+                        setShowHint(false);
+                      }}
+                    >
+                      New game
+                    </JBtn>
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: J.muted, textAlign: 'center' }}>
+                    Master Lin is an AI. Its moves and advice can be wrong.
+                  </div>
+                </div>
+              </JCard>
+            </div>
+          </div>
+        );
+      }
+
+      // --- Screen: Play vs Computer setup with a resumable game ---
+
+      const LEVEL_OPTIONS = [
+        { id: 'beginner', name: 'Beginner', blurb: 'Shallow search, forgiving' },
+        { id: 'intermediate', name: 'Intermediate', blurb: 'Sees simple tactics' },
+        { id: 'advanced', name: 'Advanced', blurb: 'Punishes loose pieces' },
+      ];
+
+      function PvcResumeScreen() {
+        const [hasSave, setHasSave] = useCanvasState('pvcHasSave', true);
+        const [confirming, setConfirming] = useCanvasState('pvcConfirm', false);
+        const [level, setLevel] = useCanvasState('pvcLevel', 'intermediate');
+        const [resumed, setResumed] = useCanvasState('pvcResumed', false);
+
+        const start = () => {
+          if (hasSave) setConfirming(true);
+        };
+
+        return (
+          <div style={{ padding: '24px 24px 32px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {hasSave && (
+              <JCard style={{ padding: 18, display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Board showHint={false} dimmed={false} cell={14} />
+                <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <JPill tone="jade">Continue your game</JPill>
+                  <JHeading size={19}>Intermediate · You play Red</JHeading>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: J.inkSoft }}>
+                    Move 14 · Your turn · Last played today at 8:12 PM
+                  </div>
+                  <JMuted size={12}>
+                    {resumed
+                      ? 'Continue opens today\u2019s game screen with the 14 saved moves replayed, Red to move.'
+                      : 'Saved to your account, so you can pick it up on any device.'}
+                  </JMuted>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                    <JBtn kind="primary" onClick={() => setResumed(true)}>
+                      Continue
+                    </JBtn>
+                    <JBtn
+                      kind="ghost"
+                      onClick={() => {
+                        setHasSave(false);
+                        setConfirming(false);
+                      }}
+                    >
+                      Abandon
+                    </JBtn>
+                  </div>
+                </div>
+              </JCard>
+            )}
+
+            <div>
+              <JHeading size={18}>{hasSave ? 'Or start a new game' : 'Start a new game'}</JHeading>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+                {LEVEL_OPTIONS.map((l) => {
+                  const selected = l.id === level;
+                  return (
+                    <div
+                      key={l.id}
+                      onClick={() => setLevel(l.id)}
+                      style={{
+                        flex: '1 1 150px',
+                        padding: '12px 14px',
+                        borderRadius: 16,
+                        cursor: 'pointer',
+                        background: J.paper,
+                        border: `2px solid ${selected ? J.jade : J.line}`,
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, fontSize: 14.5 }}>{l.name}</div>
+                      <div style={{ fontWeight: 600, fontSize: 12.5, color: J.inkSoft }}>{l.blurb}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                <JBtn kind="dark" onClick={start}>
+                  Start new game
+                </JBtn>
+                {!hasSave && <JMuted size={12}>Your game saves automatically after every move.</JMuted>}
+              </div>
+              {confirming && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    background: J.warnSoft,
+                    color: J.warn,
+                    fontWeight: 800,
+                    fontSize: 13.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  Starting a new game abandons your unfinished one at move 14.
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                    <JBtn
+                      kind="dark"
+                      small
+                      onClick={() => {
+                        setHasSave(false);
+                        setConfirming(false);
+                      }}
+                    >
+                      Abandon and start
+                    </JBtn>
+                    <JBtn kind="ghost" small onClick={() => setConfirming(false)}>
+                      Keep it
+                    </JBtn>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // --- Screen: account ---
+
+      type SavedRow = { mode: 'pvc' | 'ai'; title: string; detail: string; when: string };
+
+      const SAVED_GAMES: SavedRow[] = [
+        { mode: 'pvc', title: 'Play vs Computer', detail: 'Intermediate · Red · move 14', when: 'Today, 8:12 PM' },
+        { mode: 'ai', title: 'Play with AI', detail: 'vs Master Lin (AI) on GPT-4o mini · Red · move 6 · 12 chat messages', when: 'Yesterday, 9:40 PM' },
+      ];
+
+      function UnfinishedGames({ onResume }: { onResume: (mode: 'pvc' | 'ai') => void }) {
+        const [abandoned, setAbandoned] = useCanvasState<string[]>('abandoned', []);
+        const rows = SAVED_GAMES.filter((g) => !abandoned.includes(g.mode));
+        if (rows.length === 0) return null;
+        return (
+          <div>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 16, marginBottom: 10 }}>Unfinished games</div>
+            <JCard style={{ overflow: 'hidden' }}>
+              {rows.map((g, i) => (
+                <div
+                  key={g.mode}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 16px',
+                    borderTop: i === 0 ? undefined : `1px solid ${J.line}`,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14 }}>{g.title}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: J.inkSoft }}>
+                      {g.detail} · {g.when}
+                    </div>
+                  </div>
+                  <JBtn kind="primary" small onClick={() => onResume(g.mode)}>
+                    Resume
+                  </JBtn>
+                  <JBtn kind="text" small onClick={() => setAbandoned([...abandoned, g.mode])}>
+                    Abandon
+                  </JBtn>
+                </div>
+              ))}
+            </JCard>
+          </div>
+        );
+      }
+
+      const PAYMENTS: [string, string, string, 'Paid' | 'Refunded'][] = [
+        ['Oct 20, 2026 · 8:45 PM', 'Day pass · 24 hours', '$1.00', 'Paid'],
+        ['Oct 18, 2026 · 7:02 PM', 'Day pass · 24 hours', '$1.00', 'Paid'],
+        ['Oct 11, 2026 · 9:30 AM', 'Day pass · 24 hours', '$1.00', 'Refunded'],
+      ];
+
+      function AccountScreen({
+        onRenew,
+        onResume,
+        onSignOut,
+      }: {
+        onRenew: () => void;
+        onResume: (mode: 'pvc' | 'ai') => void;
+        onSignOut: () => void;
+      }) {
+        const [fbLinked, setFbLinked] = useCanvasState('fbLinked', false);
+        const sectionTitle = (t: string) => (
+          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 16, marginBottom: 10 }}>{t}</div>
+        );
+        const methods: { provider: 'email' | 'google' | 'facebook'; name: string; detail: string; linked: boolean }[] = [
+          { provider: 'email', name: 'Email and password', detail: 'dang@example.com', linked: true },
+          { provider: 'google', name: 'Google', detail: 'dang.tran@gmail.com', linked: true },
+          { provider: 'facebook', name: 'Facebook', detail: fbLinked ? 'Dang Tran' : 'Not linked', linked: fbLinked },
+        ];
+        return (
+          <div style={{ padding: '24px 24px 32px', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ flex: '1 1 240px', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <JCard style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <Avatar label="DT" size={64} />
+                <JHeading size={19}>Dang Tran</JHeading>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: J.inkSoft }}>dang@example.com</div>
+                <JPill tone="jade">Email verified</JPill>
+                <JMuted size={12}>Member since Oct 2026</JMuted>
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <JBtn kind="ghost" small>
+                    Edit profile
+                  </JBtn>
+                  <JBtn kind="ghost" small onClick={onSignOut}>
+                    Sign out
+                  </JBtn>
+                </div>
+              </JCard>
+
+              <div>
+                {sectionTitle('Sign-in methods')}
+                <JCard style={{ overflow: 'hidden' }}>
+                  {methods.map((m, i) => {
+                    const linkedCount = methods.filter((x) => x.linked).length;
+                    return (
+                      <div
+                        key={m.provider}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '12px 14px',
+                          borderTop: i === 0 ? undefined : `1px solid ${J.line}`,
+                        }}
+                      >
+                        <ProviderMark provider={m.provider} />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 800, fontSize: 13.5 }}>{m.name}</div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: m.linked ? J.inkSoft : J.muted,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {m.detail}
+                          </div>
+                        </div>
+                        {m.provider === 'email' ? (
+                          <JBtn kind="text" small>
+                            Change
+                          </JBtn>
+                        ) : m.linked ? (
+                          <JBtn
+                            kind="text"
+                            small
+                            disabled={linkedCount <= 1}
+                            onClick={m.provider === 'facebook' ? () => setFbLinked(false) : undefined}
+                          >
+                            Unlink
+                          </JBtn>
+                        ) : (
+                          <JBtn kind="ghost" small onClick={() => setFbLinked(true)}>
+                            Link
+                          </JBtn>
+                        )}
+                      </div>
+                    );
+                  })}
+                </JCard>
+              </div>
+            </div>
+
+            <div style={{ flex: '2 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <JCard style={{ padding: 22 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <JPill tone="gold">Day pass</JPill>
+                  <JPill tone="jade">Active</JPill>
+                  <span style={{ marginLeft: 'auto' }}>
+                    <JBtn kind="primary" small onClick={onRenew}>
+                      Add 24 hours · $1
+                    </JBtn>
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 24 }}>17h 42m left</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: J.inkSoft }}>Ends Oct 21, 2026 at 8:45 PM</span>
+                </div>
+                <div style={{ height: 10, borderRadius: 999, background: J.cream2, marginTop: 14, overflow: 'hidden' }}>
+                  <div style={{ width: `${(17.7 / 24) * 100}%`, height: '100%', background: J.jade }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                  <JMuted size={11.5}>Started Oct 20 · 8:45 PM</JMuted>
+                  <JMuted size={11.5}>24 hours</JMuted>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                  <JBtn kind="dark" small>
+                    Play with AI
+                  </JBtn>
+                </div>
+              </JCard>
+
+              <UnfinishedGames onResume={onResume} />
+
+              <div>
+                {sectionTitle('Payment history')}
+                <JCard style={{ overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.4fr 1.2fr 0.6fr 0.8fr 0.6fr',
+                      gap: 8,
+                      padding: '10px 16px',
+                      background: J.cream,
+                      borderBottom: `1px solid ${J.line}`,
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      color: J.muted,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <span>DATE</span>
+                    <span>ITEM</span>
+                    <span>AMOUNT</span>
+                    <span>STATUS</span>
+                    <span />
+                  </div>
+                  {PAYMENTS.map(([date, item, amount, status], i) => (
+                    <div
+                      key={date}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1.4fr 1.2fr 0.6fr 0.8fr 0.6fr',
+                        gap: 8,
+                        alignItems: 'center',
+                        padding: '11px 16px',
+                        borderTop: i === 0 ? undefined : `1px solid ${J.line}`,
+                        fontSize: 13,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span style={{ color: J.inkSoft }}>{date}</span>
+                      <span>{item}</span>
+                      <span>{amount}</span>
+                      <span>
+                        <JPill tone={status === 'Paid' ? 'jade' : 'neutral'}>{status}</JPill>
+                      </span>
+                      <span style={{ textAlign: 'right', color: J.jadeDeep, fontWeight: 800, cursor: 'pointer' }}>
+                        Receipt
+                      </span>
+                    </div>
+                  ))}
+                </JCard>
+                <div style={{ marginTop: 8 }}>
+                  <JMuted size={12}>Receipts open the Stripe-hosted receipt page. Charges show as JADE COURT on your statement.</JMuted>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // --- Design notes per screen (canvas chrome) ---
+
+      const NOTES: Record<Screen, { summary: string; rows: [string, string, string][] }> = {
+        signedOut: {
+          summary:
+            'Shown at /play-ai when GET /api/me returns no user. The pitch on the left explains the $1 day pass before anyone signs up.',
+          rows: [
+            ['Signed-out notice', 'After Sign out: "You\'re signed out. Your unfinished games are saved." Dismissible', 'Cookie cleared by POST /api/auth/logout'],
+            ['Google / Facebook buttons', 'Hidden when that provider is not configured', 'GET /api/auth/providers, then /api/auth/:provider/start'],
+            ['Email sign in', 'Rate limited per IP and email; shows a generic error', 'POST /api/auth/login'],
+            ['Create account', 'Sends a verification email; user lands on the paywall', 'POST /api/auth/register'],
+            ['Forgot password', 'Always answers "check your email" (no account enumeration)', 'POST /api/auth/forgot-password'],
+          ],
+        },
+        paywall: {
+          summary:
+            'Signed in, no active pass. One clear call to action. The "no email" variant covers Facebook users who did not share an email.',
+          rows: [
+            ['Buy day pass', 'Redirects to Stripe Checkout, then back to /play-ai?checkout=success', 'POST /api/billing/checkout'],
+            ['Return from Stripe', 'Shows "Confirming payment…" and polls until the pass is active', 'GET /api/me (poll)'],
+            ['Add email (Facebook)', 'Buy stays disabled until the email is verified', 'POST /api/auth/resend-verification'],
+            ['Model chips', 'Preview only; the picker lives on the game screen', 'GET /api/ai/models'],
+          ],
+        },
+        playing: {
+          summary:
+            'Active pass. Board on the left, Master Lin chat on the right (same layout as today\'s Learn screen). The model picker switches the opponent and coach for the next request.',
+          rows: [
+            ['AI labeling', 'Master Lin always carries an AI tag: avatar, chat header, every message, board caption, and a footer disclaimer', 'UI only'],
+            ['Model picker', 'Saved as the user\'s preference; posts a system line in chat', 'modelId on /api/ai/move and /api/coach/*'],
+            ['Ask / Hint / What to look for', 'Streams the reply into the chat bubble', '/api/coach/ask|hint/stream (SSE)'],
+            ['Pass chip', 'Counts down; turns amber with 5 minutes left', 'accessUntil from GET /api/me'],
+            ['Pass expired mid-game', 'Server returns 402; board pauses and the renew banner appears', '402 access_required'],
+          ],
+        },
+        pvcResume: {
+          summary:
+            'Play vs Computer stays free. Signed-in players get autosave and a Continue card on the setup screen. Guests see "Sign in to save your games".',
+          rows: [
+            ['Continue card', 'Shown when a save exists; replays the saved moves through the engine', 'GET /api/games/active/pvc'],
+            ['Autosave', 'After each move pair and after take back; debounced; sends the whole move list', 'PUT /api/games/active/pvc'],
+            ['Start new game', 'Asks to abandon the unfinished game first', 'DELETE /api/games/active/pvc'],
+            ['Other tab saved first', 'Server rejects the stale save; UI offers to reload', '409 stale_revision'],
+          ],
+        },
+        account: {
+          summary:
+            'Reached from the avatar in the top bar. Profile, linked sign-in methods, the current day pass, unfinished games, and payment history.',
+          rows: [
+            ['Quick sign out', 'Avatar menu in the top bar on every page: Account, Sign out. No confirm step, because games autosave', 'POST /api/auth/logout'],
+            ['Unfinished games', 'One row per mode at most; Resume opens that screen, Abandon deletes the save', 'GET /api/games/active'],
+            ['Sign-in methods', 'Unlink is disabled for the last remaining method', 'POST/DELETE /api/auth/identities/:provider'],
+            ['Day pass card', 'Progress bar of the current 24-hour window; Add 24 hours stacks', 'GET /api/me, POST /api/billing/checkout'],
+            ['Payment history', 'Newest first; refunded rows stay visible', 'GET /api/billing/payments'],
+            ['Receipt', 'Opens Stripe\'s hosted receipt in a new tab', 'receipt_url from the payment record'],
+          ],
+        },
+      };
+
+      // --- Canvas root ---
+
+      function PlayWithAiPrototype() {
+        const theme = useHostTheme();
+        const [screen, setScreen] = useCanvasState<Screen>('screen', 'playing');
+        const [lowTime, setLowTime] = useCanvasState('lowTime', false);
+        const [noEmail, setNoEmail] = useCanvasState('noEmail', false);
+        const [signedOutNotice, setSignedOutNotice] = useCanvasState('signedOutNotice', false);
+        const signOut = () => {
+          setSignedOutNotice(true);
+          setScreen('signedOut');
+        };
+        const current = SCREENS.find((s) => s.id === screen) ?? SCREENS[0];
+        const notes = NOTES[screen];
+
+        return (
+          <Stack gap={18} style={{ padding: 4 }}>
+            <Stack gap={6}>
+              <H1>Play with AI and Account page prototype</H1>
+              <Text tone="secondary">
+                Clickable mockup in the Jade Court look. Switch screens below, or click inside the mock: sign-in buttons,
+                Buy, the avatar, the model picker, Hint, and the chat box all respond.
+              </Text>
+            </Stack>
+
+            <Row gap={8} wrap align="center">
+              {SCREENS.map((s) => (
+                <Pill key={s.id} active={s.id === screen} onClick={() => setScreen(s.id)}>
+                  {s.label}
+                </Pill>
+              ))}
+            </Row>
+
+            {(screen === 'playing' || screen === 'paywall') && (
+              <Row gap={8} align="center">
+                <Text size="small" tone="tertiary">
+                  Variant:
+                </Text>
+                {screen === 'playing' ? (
+                  <Pill size="sm" active={lowTime} onClick={() => setLowTime(!lowTime)}>
+                    Pass almost expired
+                  </Pill>
+                ) : (
+                  <Pill size="sm" active={noEmail} onClick={() => setNoEmail(!noEmail)}>
+                    Facebook account without email
+                  </Pill>
+                )}
+              </Row>
+            )}
+
+            <BrowserFrame path={current.path}>
+              <Topbar screen={screen} onNavigate={setScreen} onSignOut={signOut} />
+              <Breadcrumb screen={screen} />
+              {screen === 'signedOut' && (
+                <SignedOutScreen
+                  notice={signedOutNotice}
+                  onDismissNotice={() => setSignedOutNotice(false)}
+                  onSignedIn={() => {
+                    setSignedOutNotice(false);
+                    setScreen('paywall');
+                  }}
+                />
+              )}
+              {screen === 'paywall' && (
+                <PaywallScreen
+                  noEmail={noEmail}
+                  onBought={() => {
+                    setLowTime(false);
+                    setScreen('playing');
+                  }}
+                />
+              )}
+              {screen === 'playing' && <PlayingScreen lowTime={lowTime} onRenew={() => setLowTime(false)} />}
+              {screen === 'pvcResume' && <PvcResumeScreen />}
+              {screen === 'account' && (
+                <AccountScreen
+                  onSignOut={signOut}
+                  onRenew={() => setScreen('paywall')}
+                  onResume={(mode) => setScreen(mode === 'pvc' ? 'pvcResume' : 'playing')}
+                />
+              )}
+            </BrowserFrame>
+
+            <Stack gap={10}>
+              <H2>How this screen behaves</H2>
+              <Text tone="secondary">{notes.summary}</Text>
+              <Table
+                headers={['Element', 'Behavior', 'API (from the plan)']}
+                rows={notes.rows.map(([el, behavior, api]) => [
+                  <Text weight="semibold">{el}</Text>,
+                  behavior,
+                  <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: theme.text.secondary }}>
+                    {api}
+                  </span>,
+                ])}
+              />
+            </Stack>
+
+            <Callout tone="info" title="Open design questions">
+              Should switching models be locked once a game starts, so a game has one opponent? Should the account page
+              also show past Play with AI games? Both are easy to add in Story 7.
+            </Callout>
+          </Stack>
+        );
+      }
+    </script>
+
+    <script>
+      (function () {
+        var root = document.getElementById('root');
+        try {
+          var src =
+            document.getElementById('canvas-shim').textContent +
+            '\n' +
+            document.getElementById('prototype-src').textContent +
+            '\nReactDOM.createRoot(document.getElementById("root")).render(React.createElement(PlayWithAiPrototype));';
+          var out = Babel.transform(src, {
+            filename: 'prototype.tsx',
+            presets: [['typescript', { isTSX: true, allExtensions: true }], 'react'],
+          }).code;
+          new Function(out)();
+        } catch (err) {
+          root.innerHTML =
+            '<p class="load-error">Prototype failed to load: ' + String(err) + '</p>';
+          throw err;
+        }
+      })();
+    </script>
+  </body>
+</html>
