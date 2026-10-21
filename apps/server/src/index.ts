@@ -6,8 +6,10 @@ import { getDb } from './db.js';
 import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engine/config.js';
 import { isLlmConfigured, llmModel, llmProviderId, shouldLogLlmTokenUsage } from './llm/config.js';
 import { warnAdminConfigAtStartup } from './admin/startupWarnings.js';
+import { warnPlayerAuthConfigAtStartup } from './auth/startupWarnings.js';
 
 warnAdminConfigAtStartup();
+warnPlayerAuthConfigAtStartup();
 
 const app = createApp();
 

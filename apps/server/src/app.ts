@@ -9,7 +9,14 @@ import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 import type { Move, Side } from '@jade-court/xiangqi-engine';
 import { saveFinishedGame } from './db.js';
-import { authMiddleware, getGuestId } from './middleware/auth.js';
+import { createAuthMiddleware, getGuestId } from './middleware/auth.js';
+import { createMeRoute, createPlayerAuthRoutes } from './routes/auth.js';
+import { MemorySessionStore } from './users/memorySessionStore.js';
+import { MemoryUserStore } from './users/memoryStore.js';
+import { MongoSessionStore } from './users/mongoSessionStore.js';
+import { MongoUserStore } from './users/mongoStore.js';
+import type { SessionStore } from './users/sessionStore.js';
+import type { UserStore } from './users/store.js';
 import {
   addChatEntry,
   chatRateLimiter,
@@ -100,6 +107,8 @@ async function readDisplayNameFromBody(
 export interface CreateAppDeps {
   newsStore?: NewsStore | null;
   newsImageStorage?: NewsImageStorage | null;
+  userStore?: UserStore;
+  sessionStore?: SessionStore;
 }
 
 /** Build the Hono app with CORS, guest auth, room REST endpoints, and API sub-routers. */
@@ -122,15 +131,34 @@ export function createApp(deps?: CreateAppDeps) {
     newsImageStorage = new DiskNewsImageStorage(defaultNewsImageDir());
   }
 
+  let userStore: UserStore;
+  if (deps?.userStore) {
+    userStore = deps.userStore;
+  } else if (process.env.MONGODB_URI) {
+    userStore = new MongoUserStore();
+  } else {
+    userStore = new MemoryUserStore();
+  }
+
+  let sessionStore: SessionStore;
+  if (deps?.sessionStore) {
+    sessionStore = deps.sessionStore;
+  } else if (process.env.MONGODB_URI) {
+    sessionStore = new MongoSessionStore();
+  } else {
+    sessionStore = new MemorySessionStore();
+  }
+
   app.use(
     '*',
     cors({
       origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
       allowHeaders: ['Content-Type', 'x-guest-id', 'Authorization'],
+      credentials: true,
     }),
   );
 
-  app.use('*', authMiddleware);
+  app.use('*', createAuthMiddleware({ userStore, sessionStore }));
 
   app.post('/api/rooms', async (c) => {
     const nameResult = await readDisplayNameFromBody(c);
@@ -171,6 +199,8 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
   app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));
+  app.route('/api/auth', createPlayerAuthRoutes({ userStore, sessionStore }));
+  app.route('/api', createMeRoute());
   app.route('/api/admin', createAdminRoutes());
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
 
