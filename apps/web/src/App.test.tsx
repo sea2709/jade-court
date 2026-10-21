@@ -1,20 +1,38 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { AuthProvider } from './context/AuthProvider';
+
+const fetchMock = vi.fn<typeof fetch>();
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', fetchMock);
+  fetchMock.mockResolvedValue(json({ user: null, access: { active: false, accessUntil: null } }));
+});
+
+afterEach(() => {
+  fetchMock.mockReset();
+  vi.unstubAllGlobals();
+});
 
 function renderApp(initialPath: string) {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route path="/" element={<App />}>
-          <Route index element={<div>Home page</div>} />
-          <Route path="learn" element={<div>Learn page</div>} />
-          <Route path="multiplayer" element={<div>Multiplayer page</div>} />
-          <Route path="news" element={<div>News page</div>} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<App />}>
+            <Route index element={<div>Home page</div>} />
+            <Route path="learn" element={<div>Learn page</div>} />
+            <Route path="multiplayer" element={<div>Multiplayer page</div>} />
+            <Route path="news" element={<div>News page</div>} />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

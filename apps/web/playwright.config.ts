@@ -45,6 +45,7 @@ export default defineConfig({
         MONGODB_URI: '',
         ADMIN_USERS: 'e2e-admin:e2e-pass',
         ADMIN_SESSION_SECRET: 'e2e-session-secret-0123456789abcdef0123',
+        SESSION_SECRET: 'e2e-player-session-secret-0123456789abcdef',
       },
     },
     {

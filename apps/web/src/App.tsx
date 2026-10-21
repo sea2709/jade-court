@@ -1,8 +1,13 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { AccountAvatarMenu } from './components/AccountAvatarMenu';
 import { Breadcrumb } from './components/Breadcrumb';
+import { useAuth } from './context/useAuth';
+import { BREADCRUMB_NAV } from './lib/breadcrumbNav';
 import { PUBLIC_NAV } from './lib/publicNav';
 
 function Topbar() {
+  const { status, user } = useAuth();
+
   return (
     <div className="topbar">
       <Link to="/" className="brand">
@@ -23,6 +28,12 @@ function Topbar() {
             {label}
           </NavLink>
         ))}
+        {status === 'ready' && !user ? (
+          <Link to="/login" className="nav-link">
+            Sign in
+          </Link>
+        ) : null}
+        {status === 'ready' && user ? <AccountAvatarMenu /> : null}
       </nav>
     </div>
   );
@@ -32,7 +43,7 @@ export function App() {
   return (
     <div className="app-shell">
       <Topbar />
-      <Breadcrumb nav={PUBLIC_NAV} />
+      <Breadcrumb nav={BREADCRUMB_NAV} />
       <div className="rise flex-1">
         <Outlet />
       </div>

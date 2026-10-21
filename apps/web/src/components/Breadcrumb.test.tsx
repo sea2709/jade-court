@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
-import { PUBLIC_NAV } from '../lib/publicNav';
+import { BREADCRUMB_NAV } from '../lib/breadcrumbNav';
 import { Breadcrumb } from './Breadcrumb';
 
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Breadcrumb nav={PUBLIC_NAV} />
+      <Breadcrumb nav={BREADCRUMB_NAV} />
     </MemoryRouter>,
   );
 }
@@ -39,6 +39,13 @@ describe('Breadcrumb', () => {
       'Home/Play with Friends',
     );
     expect(screen.queryByText(/JADE-ABCD/)).not.toBeInTheDocument();
+  });
+
+  it('renders Home / Account on /account', () => {
+    renderAt('/account');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Home/Account',
+    );
   });
 
   it('renders nothing for an unknown path', () => {

@@ -2,11 +2,16 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
+import { AuthProvider } from './context/AuthProvider';
 import { HomeScreen } from './screens/HomeScreen';
 import { LearnScreen } from './screens/LearnScreen';
 import { MultiplayerScreen } from './screens/MultiplayerScreen';
 import { PlayScreen } from './screens/PlayScreen';
+import { PlayAiScreen } from './screens/PlayAiScreen';
 import { NewsScreen } from './screens/NewsScreen';
+import { LoginScreen } from './screens/LoginScreen';
+import { RegisterScreen } from './screens/RegisterScreen';
+import { AccountScreen } from './screens/AccountScreen';
 import { AdminLayout } from './admin/AdminLayout';
 import { AdminDashboardScreen } from './screens/AdminDashboardScreen';
 import { AdminLoginScreen } from './screens/AdminLoginScreen';
@@ -19,20 +24,26 @@ applyTheme();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/admin/login" element={<AdminLoginScreen />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboardScreen />} />
-          <Route path="news" element={<AdminNewsScreen />} />
-        </Route>
-        <Route path="/" element={<App />}>
-          <Route index element={<HomeScreen />} />
-          <Route path="learn" element={<LearnScreen />} />
-          <Route path="play" element={<PlayScreen />} />
-          <Route path="multiplayer" element={<MultiplayerScreen />} />
-          <Route path="news" element={<NewsScreen />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/admin/login" element={<AdminLoginScreen />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardScreen />} />
+            <Route path="news" element={<AdminNewsScreen />} />
+          </Route>
+          <Route path="/" element={<App />}>
+            <Route index element={<HomeScreen />} />
+            <Route path="learn" element={<LearnScreen />} />
+            <Route path="play" element={<PlayScreen />} />
+            <Route path="play-ai" element={<PlayAiScreen />} />
+            <Route path="multiplayer" element={<MultiplayerScreen />} />
+            <Route path="news" element={<NewsScreen />} />
+            <Route path="login" element={<LoginScreen />} />
+            <Route path="register" element={<RegisterScreen />} />
+            <Route path="account" element={<AccountScreen />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 );
