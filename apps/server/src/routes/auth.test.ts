@@ -50,13 +50,13 @@ async function register(
   app: ReturnType<typeof createApp>,
   email: string,
   password: string,
-  displayName?: string,
+  displayName = 'Player',
   extraHeaders?: Record<string, string>,
 ) {
   return app.request('/api/auth/register', {
     method: 'POST',
     headers: { ...JSON_HEADERS, ...extraHeaders },
-    body: JSON.stringify({ email, password, ...(displayName ? { displayName } : {}) }),
+    body: JSON.stringify({ email, password, displayName }),
   });
 }
 
@@ -443,5 +443,31 @@ describe('player auth routes', () => {
     });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'invalid_request' });
+  });
+
+  it.each([
+    ['missing', {}],
+    ['blank', { displayName: '   ' }],
+    ['non-string', { displayName: 42 }],
+    ['too long', { displayName: 'x'.repeat(65) }],
+  ])('register rejects a %s display name', async (_label, extra) => {
+    const { app, userStore } = makeApp();
+    const res = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ email: 'nameless@example.com', password: 'password123', ...extra }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_request' });
+    expect(res.headers.get('set-cookie')).toBeNull();
+    expect(await userStore.findByEmail('nameless@example.com')).toBeNull();
+  });
+
+  it('register trims the display name', async () => {
+    const { app } = makeApp();
+    const res = await register(app, 'trim@example.com', 'password123', '  Dang  ');
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { user: { displayName: string } };
+    expect(body.user.displayName).toBe('Dang');
   });
 });

@@ -93,21 +93,17 @@ export async function fetchPlayerMe(): Promise<MeResponse> {
   return parseMeResponse(data);
 }
 
-/** Create account and establish session cookie. */
+/** Create account and establish session cookie. Display name is required (trimmed). */
 export async function playerRegister(
   email: string,
   password: string,
-  displayName?: string,
+  displayName: string,
 ): Promise<PublicUser> {
-  const body: Record<string, string> = { email, password };
-  if (displayName?.trim()) {
-    body.displayName = displayName.trim();
-  }
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: 'POST',
     credentials: jsonCredentials,
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ email, password, displayName: displayName.trim() }),
   });
   const data = await parseJsonBody(res);
   if (!res.ok) {

@@ -93,35 +93,28 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
     const passwordRaw = (body as { password?: unknown }).password;
     const displayNameRaw = (body as { displayName?: unknown }).displayName;
 
-    if (typeof emailRaw !== 'string' || typeof passwordRaw !== 'string') {
+    if (
+      typeof emailRaw !== 'string' ||
+      typeof passwordRaw !== 'string' ||
+      typeof displayNameRaw !== 'string'
+    ) {
       return invalidRequest(c);
     }
 
     const email = emailRaw.trim().toLowerCase();
     const password = passwordRaw;
+    const displayName = displayNameRaw.trim();
 
     if (
       email.length === 0 ||
       email.length > MAX_EMAIL_LEN ||
       !EMAIL_RE.test(email) ||
       password.length < MIN_PASSWORD_LEN ||
-      password.length > MAX_PASSWORD_LEN
+      password.length > MAX_PASSWORD_LEN ||
+      displayName.length === 0 ||
+      displayName.length > MAX_DISPLAY_NAME_LEN
     ) {
       return invalidRequest(c);
-    }
-
-    let displayName: string | undefined;
-    if (displayNameRaw !== undefined) {
-      if (typeof displayNameRaw !== 'string') {
-        return invalidRequest(c);
-      }
-      const trimmed = displayNameRaw.trim();
-      if (trimmed.length > MAX_DISPLAY_NAME_LEN) {
-        return invalidRequest(c);
-      }
-      if (trimmed.length > 0) {
-        displayName = trimmed;
-      }
     }
 
     if (reserveRegisterAttempt() === 'limited') {

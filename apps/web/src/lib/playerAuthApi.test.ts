@@ -67,9 +67,9 @@ describe('playerLogin', () => {
 });
 
 describe('playerRegister', () => {
-  it('sends displayName when provided', async () => {
+  it('sends the trimmed displayName', async () => {
     fetchMock.mockResolvedValue(json({ user: sampleUser }, 201));
-    await playerRegister('a@example.com', 'password1', 'Alice');
+    await playerRegister('a@example.com', 'password1', '  Alice ');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/auth/register',
       expect.objectContaining({
@@ -84,7 +84,7 @@ describe('playerRegister', () => {
 
   it('maps email_taken to error code', async () => {
     fetchMock.mockResolvedValue(json({ error: 'email_taken' }, 409));
-    await expect(playerRegister('a@example.com', 'password1')).rejects.toBeInstanceOf(
+    await expect(playerRegister('a@example.com', 'password1', 'Alice')).rejects.toBeInstanceOf(
       PlayerAuthApiError,
     );
   });
