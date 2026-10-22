@@ -20,4 +20,6 @@ export interface UserStore {
   create(input: CreateUserInput): Promise<UserRecord>;
   findByEmail(email: string): Promise<UserRecord | null>;
   findById(id: string): Promise<UserRecord | null>;
+  setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null>;
+  updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null>;
 }
