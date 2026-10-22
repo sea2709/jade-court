@@ -10,6 +10,11 @@ const LOGIN_MAX_FAILURES = 10;
 const REGISTER_MAX_GLOBAL = 60;
 /** Process-wide cap on failed login verifications (scrypt) per window. */
 const LOGIN_FAILED_VOLUME_MAX_GLOBAL = 300;
+const RESEND_VERIFY_MAX_PER_USER = 5;
+const FORGOT_PASSWORD_MAX_PER_IP = 20;
+const FORGOT_PASSWORD_MAX_PER_EMAIL = 5;
+const RESET_PASSWORD_MAX_PER_IP = 30;
+const VERIFY_EMAIL_MAX_PER_IP = 30;
 const MAX_BUCKETS = 10_000;
 
 type Bucket = { attempts: number; resetAt: number };
@@ -226,6 +231,60 @@ export function setLoginFailedVolumeMaxForTests(max: number | null): void {
 /** @deprecated use setLoginFailedVolumeMaxForTests */
 export function setLoginVolumeLimitsForTests(_peer: number | null, global: number | null): void {
   setLoginFailedVolumeMaxForTests(global);
+}
+
+/** Per-user resend verification cap. */
+export function reserveResendVerificationAttempt(userId: string, now = Date.now()): ReserveResult {
+  return reserveInMap(
+    loginFailureBuckets,
+    `player:resend-verify:${userId}`,
+    RESEND_VERIFY_MAX_PER_USER,
+    now,
+  );
+}
+
+function forgotPasswordEmailKey(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  const emailHash = createHash('sha256').update(normalized, 'utf8').digest('hex');
+  return `player:forgot:email:${emailHash}`;
+}
+
+function forgotPasswordIpKey(ip: string): string {
+  return `player:forgot:ip:${ip}`;
+}
+
+/** Reserve forgot-password slots (IP + email must both have capacity). */
+export function reserveForgotPasswordAttempt(
+  ip: string,
+  email: string,
+  now = Date.now(),
+): ReserveResult {
+  const keys = [forgotPasswordIpKey(ip), forgotPasswordEmailKey(email)];
+  const reserved: { map: Map<string, Bucket>; key: string }[] = [];
+  for (const key of keys) {
+    const max = key.startsWith('player:forgot:ip:')
+      ? FORGOT_PASSWORD_MAX_PER_IP
+      : FORGOT_PASSWORD_MAX_PER_EMAIL;
+    const result = reserveInMap(loginFailureBuckets, key, max, now);
+    if (result === 'limited') {
+      for (const r of reserved) {
+        rollbackInMap(r.map, r.key);
+      }
+      return 'limited';
+    }
+    reserved.push({ map: loginFailureBuckets, key });
+  }
+  return 'ok';
+}
+
+/** Per-IP reset-password attempts (includes invalid tokens). */
+export function reserveResetPasswordAttempt(ip: string, now = Date.now()): ReserveResult {
+  return reserveInMap(loginFailureBuckets, `player:reset:ip:${ip}`, RESET_PASSWORD_MAX_PER_IP, now);
+}
+
+/** Per-IP verify-email attempts (includes invalid tokens). */
+export function reserveVerifyEmailAttempt(ip: string, now = Date.now()): ReserveResult {
+  return reserveInMap(loginFailureBuckets, `player:verify:ip:${ip}`, VERIFY_EMAIL_MAX_PER_IP, now);
 }
 
 /** Reset buckets (Vitest only). */

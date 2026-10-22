@@ -2,9 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PlayerAuthApiError,
   fetchPlayerMe,
+  playerForgotPassword,
   playerLogin,
   playerLogout,
   playerRegister,
+  playerResendVerification,
+  playerResetPassword,
+  playerVerifyEmail,
 } from './playerAuthApi';
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -86,6 +90,62 @@ describe('playerRegister', () => {
     fetchMock.mockResolvedValue(json({ error: 'email_taken' }, 409));
     await expect(playerRegister('a@example.com', 'password1')).rejects.toBeInstanceOf(
       PlayerAuthApiError,
+    );
+  });
+});
+
+describe('playerVerifyEmail', () => {
+  it('maps wrong_account from 403', async () => {
+    fetchMock.mockResolvedValue(json({ error: 'wrong_account' }, 403));
+    await expect(playerVerifyEmail('tok')).rejects.toMatchObject({
+      code: 'wrong_account',
+      status: 403,
+    });
+  });
+
+  it('POSTs token and returns verified user', async () => {
+    const verified = { ...sampleUser, emailVerified: true };
+    fetchMock.mockResolvedValue(json({ user: verified }));
+    const user = await playerVerifyEmail('opaque-token');
+    expect(user.emailVerified).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/verify',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ token: 'opaque-token' }),
+      }),
+    );
+  });
+});
+
+describe('playerResendVerification', () => {
+  it('POSTs resend with session credentials', async () => {
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await playerResendVerification();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/resend-verification',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+  });
+});
+
+describe('playerForgotPassword', () => {
+  it('returns ok and message on success', async () => {
+    fetchMock.mockResolvedValue(json({ ok: true, message: 'check_your_email' }));
+    const res = await playerForgotPassword('a@example.com');
+    expect(res).toEqual({ ok: true, message: 'check_your_email' });
+  });
+});
+
+describe('playerResetPassword', () => {
+  it('POSTs token and password', async () => {
+    fetchMock.mockResolvedValue(json({ user: sampleUser }));
+    await playerResetPassword('reset-token', 'newpass12');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/reset-password',
+      expect.objectContaining({
+        body: JSON.stringify({ token: 'reset-token', password: 'newpass12' }),
+      }),
     );
   });
 });

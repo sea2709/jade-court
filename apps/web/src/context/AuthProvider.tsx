@@ -2,7 +2,12 @@
  * Player session context: loads `/api/me` on mount and exposes auth actions.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { fetchPlayerMe, type MeAccess, type PublicUser } from '../lib/playerAuthApi';
+import {
+  fetchPlayerMe,
+  type MeAccess,
+  type MeResponse,
+  type PublicUser,
+} from '../lib/playerAuthApi';
 import { AuthContext, type AuthStatus } from './authContext';
 
 const defaultAccess: MeAccess = { active: false, accessUntil: null };
@@ -19,9 +24,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('ready');
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<MeResponse> => {
     const me = await fetchPlayerMe();
     applyMe(me);
+    return me;
   }, [applyMe]);
 
   const setSignedIn = useCallback((signedInUser: PublicUser) => {

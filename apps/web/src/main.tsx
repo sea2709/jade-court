@@ -12,6 +12,10 @@ import { NewsScreen } from './screens/NewsScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { RegisterScreen } from './screens/RegisterScreen';
 import { AccountScreen } from './screens/AccountScreen';
+import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
+import { RegisterSentScreen } from './screens/RegisterSentScreen';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
+import { VerifyEmailScreen } from './screens/VerifyEmailScreen';
 import { AdminLayout } from './admin/AdminLayout';
 import { AdminDashboardScreen } from './screens/AdminDashboardScreen';
 import { AdminLoginScreen } from './screens/AdminLoginScreen';
@@ -40,6 +44,10 @@ createRoot(document.getElementById('root')!).render(
             <Route path="news" element={<NewsScreen />} />
             <Route path="login" element={<LoginScreen />} />
             <Route path="register" element={<RegisterScreen />} />
+            <Route path="register/sent" element={<RegisterSentScreen />} />
+            <Route path="verify-email" element={<VerifyEmailScreen />} />
+            <Route path="forgot-password" element={<ForgotPasswordScreen />} />
+            <Route path="reset-password" element={<ResetPasswordScreen />} />
             <Route path="account" element={<AccountScreen />} />
           </Route>
         </Routes>

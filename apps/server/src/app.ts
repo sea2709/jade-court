@@ -10,6 +10,11 @@ import { WebSocketServer } from 'ws';
 import type { Move, Side } from '@jade-court/xiangqi-engine';
 import { saveFinishedGame } from './db.js';
 import { createAuthMiddleware, getGuestId } from './middleware/auth.js';
+import { createEmailSender } from './email/createEmailSender.js';
+import type { EmailSender } from './email/types.js';
+import { MemoryEmailTokenStore } from './emailTokens/memoryStore.js';
+import { MongoEmailTokenStore } from './emailTokens/mongoStore.js';
+import type { EmailTokenStore } from './emailTokens/store.js';
 import { createMeRoute, createPlayerAuthRoutes } from './routes/auth.js';
 import { MemorySessionStore } from './users/memorySessionStore.js';
 import { MemoryUserStore } from './users/memoryStore.js';
@@ -109,6 +114,8 @@ export interface CreateAppDeps {
   newsImageStorage?: NewsImageStorage | null;
   userStore?: UserStore;
   sessionStore?: SessionStore;
+  emailTokenStore?: EmailTokenStore;
+  emailSender?: EmailSender;
 }
 
 /** Build the Hono app with CORS, guest auth, room REST endpoints, and API sub-routers. */
@@ -148,6 +155,17 @@ export function createApp(deps?: CreateAppDeps) {
   } else {
     sessionStore = new MemorySessionStore();
   }
+
+  let emailTokenStore: EmailTokenStore;
+  if (deps?.emailTokenStore) {
+    emailTokenStore = deps.emailTokenStore;
+  } else if (process.env.MONGODB_URI) {
+    emailTokenStore = new MongoEmailTokenStore();
+  } else {
+    emailTokenStore = new MemoryEmailTokenStore();
+  }
+
+  const emailSender = deps?.emailSender ?? createEmailSender();
 
   app.use(
     '*',
@@ -199,7 +217,10 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
   app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));
-  app.route('/api/auth', createPlayerAuthRoutes({ userStore, sessionStore }));
+  app.route(
+    '/api/auth',
+    createPlayerAuthRoutes({ userStore, sessionStore, emailTokenStore, emailSender }),
+  );
   app.route('/api', createMeRoute());
   app.route('/api/admin', createAdminRoutes());
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));

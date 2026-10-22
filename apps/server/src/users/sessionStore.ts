@@ -11,4 +11,6 @@ export interface SessionStore {
   create(record: SessionRecord): Promise<void>;
   findByTokenHash(tokenHash: string): Promise<SessionRecord | null>;
   deleteByTokenHash(tokenHash: string): Promise<void>;
+  /** Revoke every session for a user (optional keep-current for reset flow). */
+  deleteAllForUser(userId: string, exceptTokenHash?: string): Promise<void>;
 }
