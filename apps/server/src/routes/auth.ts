@@ -10,17 +10,28 @@ import {
 } from '../auth/cookies.js';
 import { isPlayerAuthEnabled } from '../auth/config.js';
 import { isJsonContentType, parseAuthJsonBody } from '../auth/jsonBody.js';
+import { hashEmailToken } from '../auth/emailToken.js';
 import {
   clearLoginFailureAttempts,
   playerLoginEmailKey,
   playerLoginPeerEmailKey,
   beginLoginPasswordCheck,
   recordFailedLoginAtVolumeCap,
+  reserveForgotPasswordAttempt,
   reserveLoginFailureAttempts,
   reserveRegisterAttempt,
+  reserveResendVerificationAttempt,
+  reserveResetPasswordAttempt,
+  reserveVerifyEmailAttempt,
 } from '../auth/rateLimit.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../auth/sendAuthEmails.js';
 import { generateSessionToken, hashSessionToken } from '../auth/sessionToken.js';
+import { isTestEnv } from '../email/config.js';
+import { getConsoleEmailOutbox } from '../email/consoleSender.js';
+import type { EmailSender } from '../email/types.js';
+import type { EmailTokenStore } from '../emailTokens/store.js';
 import { remoteKey } from '../middleware/adminAuth.js';
+import { requireUser } from '../middleware/auth.js';
 import type { AppVariables } from '../types/hono.js';
 import { hashPassword, verifyLoginPassword } from '../users/password.js';
 import type { SessionStore } from '../users/sessionStore.js';
@@ -33,6 +44,12 @@ const MIN_PASSWORD_LEN = 8;
 const MAX_DISPLAY_NAME_LEN = 64;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_TOKEN_LEN = 512;
+
+const FORGOT_PASSWORD_OK = {
+  ok: true as const,
+  message: 'check_your_email' as const,
+};
 
 function noStore(c: { header: (name: string, value: string) => void }) {
   c.header('Cache-Control', 'no-store');
@@ -50,6 +67,18 @@ function authDisabled(c: { json: (body: unknown, status: number) => Response }) 
   return c.json({ error: 'auth_disabled' }, 503);
 }
 
+function invalidToken(c: { json: (body: unknown, status: number) => Response }) {
+  return c.json({ error: 'invalid_token' }, 401);
+}
+
+function wrongAccount(c: { json: (body: unknown, status: number) => Response }) {
+  return c.json({ error: 'wrong_account' }, 403);
+}
+
+function unauthorized(c: { json: (body: unknown, status: number) => Response }) {
+  return c.json({ error: 'unauthorized' }, 401);
+}
+
 async function createSessionForUser(
   c: { header: (name: string, value: string) => void },
   userId: string,
@@ -65,11 +94,14 @@ async function createSessionForUser(
 export type PlayerAuthDeps = {
   userStore: UserStore;
   sessionStore: SessionStore;
+  emailTokenStore: EmailTokenStore;
+  emailSender: EmailSender;
 };
 
 /** Routes under `/api/auth`. */
 export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
-  const { userStore, sessionStore } = deps;
+  const { userStore, sessionStore, emailTokenStore, emailSender } = deps;
+  const emailDeps = { emailSender, emailTokenStore };
   const routes = new Hono<{ Variables: AppVariables }>();
 
   routes.post('/register', async (c) => {
@@ -93,35 +125,28 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
     const passwordRaw = (body as { password?: unknown }).password;
     const displayNameRaw = (body as { displayName?: unknown }).displayName;
 
-    if (typeof emailRaw !== 'string' || typeof passwordRaw !== 'string') {
+    if (
+      typeof emailRaw !== 'string' ||
+      typeof passwordRaw !== 'string' ||
+      typeof displayNameRaw !== 'string'
+    ) {
       return invalidRequest(c);
     }
 
     const email = emailRaw.trim().toLowerCase();
     const password = passwordRaw;
+    const displayName = displayNameRaw.trim();
 
     if (
       email.length === 0 ||
       email.length > MAX_EMAIL_LEN ||
       !EMAIL_RE.test(email) ||
       password.length < MIN_PASSWORD_LEN ||
-      password.length > MAX_PASSWORD_LEN
+      password.length > MAX_PASSWORD_LEN ||
+      displayName.length === 0 ||
+      displayName.length > MAX_DISPLAY_NAME_LEN
     ) {
       return invalidRequest(c);
-    }
-
-    let displayName: string | undefined;
-    if (displayNameRaw !== undefined) {
-      if (typeof displayNameRaw !== 'string') {
-        return invalidRequest(c);
-      }
-      const trimmed = displayNameRaw.trim();
-      if (trimmed.length > MAX_DISPLAY_NAME_LEN) {
-        return invalidRequest(c);
-      }
-      if (trimmed.length > 0) {
-        displayName = trimmed;
-      }
     }
 
     if (reserveRegisterAttempt() === 'limited') {
@@ -132,6 +157,9 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
 
     try {
       const user = await userStore.create({ email, passwordHash, displayName });
+      void sendVerificationEmail(emailDeps, user).catch((err) => {
+        console.warn('Failed to send verification email:', err);
+      });
       await createSessionForUser(c, user.id, sessionStore);
       return c.json({ user: toPublicUser(user) }, 201);
     } catch (err) {
@@ -232,6 +260,201 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
     }
     return c.json({ ok: true }, 200);
   });
+
+  routes.post('/verify', async (c) => {
+    noStore(c);
+
+    if (!isPlayerAuthEnabled()) {
+      return authDisabled(c);
+    }
+
+    const ip = remoteKey(c);
+    if (reserveVerifyEmailAttempt(ip) === 'limited') {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
+
+    const parsed = await parseAuthJsonBody(c);
+    if (!parsed.ok) {
+      return c.json({ error: parsed.error }, parsed.status);
+    }
+    const body = parsed.body;
+    if (typeof body !== 'object' || body === null) {
+      return invalidRequest(c);
+    }
+
+    const tokenRaw = (body as { token?: unknown }).token;
+    if (
+      typeof tokenRaw !== 'string' ||
+      tokenRaw.length === 0 ||
+      tokenRaw.length > MAX_EMAIL_TOKEN_LEN
+    ) {
+      return invalidRequest(c);
+    }
+
+    const tokenHash = hashEmailToken(tokenRaw);
+    const pending = await emailTokenStore.findByTokenHash(tokenHash);
+    if (!pending || pending.kind !== 'verify') {
+      return invalidToken(c);
+    }
+
+    const signedIn = c.get('user');
+    if (signedIn && signedIn.id !== pending.userId) {
+      return wrongAccount(c);
+    }
+
+    const updated = await userStore.setEmailVerified(pending.userId, true);
+    if (!updated) {
+      return invalidToken(c);
+    }
+
+    const consumed = await emailTokenStore.consumeByTokenHash(tokenHash);
+    if (!consumed || consumed.userId !== pending.userId) {
+      return invalidToken(c);
+    }
+
+    if (!signedIn) {
+      await createSessionForUser(c, updated.id, sessionStore);
+    }
+
+    return c.json({ user: toPublicUser(updated) }, 200);
+  });
+
+  routes.post('/resend-verification', requireUser, async (c) => {
+    noStore(c);
+
+    if (!isPlayerAuthEnabled()) {
+      return authDisabled(c);
+    }
+
+    const authUser = c.get('user');
+    if (!authUser) {
+      return unauthorized(c);
+    }
+
+    if (authUser.emailVerified) {
+      return c.json({ ok: true }, 200);
+    }
+
+    if (reserveResendVerificationAttempt(authUser.id) === 'limited') {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
+
+    const user = await userStore.findById(authUser.id);
+    if (!user?.passwordHash) {
+      return c.json({ ok: true }, 200);
+    }
+
+    void sendVerificationEmail(emailDeps, user).catch((err) => {
+      console.warn('Failed to resend verification email:', err);
+    });
+
+    return c.json({ ok: true }, 200);
+  });
+
+  routes.post('/forgot-password', async (c) => {
+    noStore(c);
+
+    if (!isPlayerAuthEnabled()) {
+      return authDisabled(c);
+    }
+
+    const parsed = await parseAuthJsonBody(c);
+    if (!parsed.ok) {
+      return c.json({ error: parsed.error }, parsed.status);
+    }
+    const body = parsed.body;
+    if (typeof body !== 'object' || body === null) {
+      return invalidRequest(c);
+    }
+
+    const emailRaw = (body as { email?: unknown }).email;
+    if (typeof emailRaw !== 'string') {
+      return invalidRequest(c);
+    }
+
+    const email = emailRaw.trim().toLowerCase();
+    if (email.length === 0 || email.length > MAX_EMAIL_LEN || !EMAIL_RE.test(email)) {
+      return invalidRequest(c);
+    }
+
+    const ip = remoteKey(c);
+    if (reserveForgotPasswordAttempt(ip, email) === 'limited') {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
+
+    const user = await userStore.findByEmail(email);
+    if (user?.passwordHash) {
+      void sendPasswordResetEmail(emailDeps, user).catch((err) => {
+        console.warn('Failed to send password reset email:', err);
+      });
+    }
+
+    return c.json(FORGOT_PASSWORD_OK, 200);
+  });
+
+  routes.post('/reset-password', async (c) => {
+    noStore(c);
+
+    if (!isPlayerAuthEnabled()) {
+      return authDisabled(c);
+    }
+
+    const ip = remoteKey(c);
+    if (reserveResetPasswordAttempt(ip) === 'limited') {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
+
+    const parsed = await parseAuthJsonBody(c);
+    if (!parsed.ok) {
+      return c.json({ error: parsed.error }, parsed.status);
+    }
+    const body = parsed.body;
+    if (typeof body !== 'object' || body === null) {
+      return invalidRequest(c);
+    }
+
+    const tokenRaw = (body as { token?: unknown }).token;
+    const passwordRaw = (body as { password?: unknown }).password;
+    if (
+      typeof tokenRaw !== 'string' ||
+      tokenRaw.length === 0 ||
+      tokenRaw.length > MAX_EMAIL_TOKEN_LEN ||
+      typeof passwordRaw !== 'string' ||
+      passwordRaw.length < MIN_PASSWORD_LEN ||
+      passwordRaw.length > MAX_PASSWORD_LEN
+    ) {
+      return invalidRequest(c);
+    }
+
+    const tokenHash = hashEmailToken(tokenRaw);
+    const pending = await emailTokenStore.findByTokenHash(tokenHash);
+    if (!pending || pending.kind !== 'reset') {
+      return invalidToken(c);
+    }
+
+    const passwordHash = await hashPassword(passwordRaw);
+    const updated = await userStore.updatePasswordHash(pending.userId, passwordHash);
+    if (!updated) {
+      return invalidToken(c);
+    }
+
+    const consumed = await emailTokenStore.consumeByTokenHash(tokenHash);
+    if (!consumed || consumed.userId !== pending.userId) {
+      return invalidToken(c);
+    }
+
+    await sessionStore.deleteAllForUser(updated.id);
+    await createSessionForUser(c, updated.id, sessionStore);
+
+    return c.json({ user: toPublicUser(updated) }, 200);
+  });
+
+  if (isTestEnv()) {
+    routes.get('/test-email-outbox', (c) => {
+      noStore(c);
+      return c.json({ messages: getConsoleEmailOutbox() }, 200);
+    });
+  }
 
   return routes;
 }

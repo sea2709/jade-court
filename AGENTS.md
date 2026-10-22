@@ -86,6 +86,7 @@ Then **Attach to Server (9229)**. Stop `pnpm dev` first if port 3001 is in use.
 
 - **Web** reads `VITE_*` only (exposed in the browser if set).
 - **Server** reads the same file at startup (`apps/server/src/loadEnv.ts`); use `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `PORT`, `MONGODB_URI`, `ADMIN_USERS`, `ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_HOURS`, etc. **without** a `VITE_` prefix.
+- **Player email:** `EMAIL_PROVIDER` (`console` \| `resend` \| `smtp`), `PUBLIC_APP_URL` (verify/reset links), `EMAIL_FROM`, optional `EMAIL_VERIFY_TTL_HOURS` / `EMAIL_RESET_TTL_HOURS`; `RESEND_API_KEY` or SMTP vars when using those providers. E2E uses `EMAIL_PROVIDER=console` and `GET /api/auth/test-email-outbox` when `NODE_ENV=test`.
 - **Admin panel:** `ADMIN_USERS` (`user:pass,user2:pass2`), required `ADMIN_SESSION_SECRET` (32+ chars recommended), optional `ADMIN_SESSION_TTL_HOURS` (default 8). Without users or secret, admin routes return `503 admin_disabled`.
 - **LLM:** set `LLM_PROVIDER` (`gemini` \| `openai` \| `anthropic`) and the matching API key; server log shows `LLM: enabled (provider / model)`. Optional `LLM_HISTORY_LIMIT` (default `150`) caps opponent prompt history. Use `PLAY_OPPONENT_PROVIDER=llm` for Play vs Computer with the same backend.
 - Restart `pnpm dev` (or `pnpm dev:docker`) after editing `.env`.

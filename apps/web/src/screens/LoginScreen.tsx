@@ -107,6 +107,14 @@ export function LoginScreen() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
+          <p className="m-0 text-right text-sm font-semibold">
+            <Link
+              to="/forgot-password"
+              className="text-jade-deep font-bold no-underline hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
           {error ? (
             <p className="text-sm font-bold text-red-deep" role="alert">
               {error}

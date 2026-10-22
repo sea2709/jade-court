@@ -130,4 +130,30 @@ export class MongoUserStore implements UserStore {
     );
     return doc ? fromMongo(doc) : null;
   }
+
+  async setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const result = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $set: { emailVerified } },
+      { returnDocument: 'after' },
+    );
+    return result ? fromMongo(result) : null;
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const result = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $set: { passwordHash } },
+      { returnDocument: 'after' },
+    );
+    return result ? fromMongo(result) : null;
+  }
 }

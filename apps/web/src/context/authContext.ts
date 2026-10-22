@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { MeAccess, PublicUser } from '../lib/playerAuthApi';
+import type { MeAccess, MeResponse, PublicUser } from '../lib/playerAuthApi';
 
 export type AuthStatus = 'loading' | 'ready';
 
@@ -7,7 +7,7 @@ export interface AuthContextValue {
   status: AuthStatus;
   user: PublicUser | null;
   access: MeAccess;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<MeResponse>;
   setSignedIn: (user: PublicUser) => void;
   clearAuth: () => void;
 }

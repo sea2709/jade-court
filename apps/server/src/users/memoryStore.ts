@@ -59,4 +59,18 @@ export class MemoryUserStore implements UserStore {
     this.byId.set(userId, updated);
     return { ...updated };
   }
+
+  async setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    user.emailVerified = emailVerified;
+    return { ...user };
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    user.passwordHash = passwordHash;
+    return { ...user };
+  }
 }

@@ -93,21 +93,17 @@ export async function fetchPlayerMe(): Promise<MeResponse> {
   return parseMeResponse(data);
 }
 
-/** Create account and establish session cookie. */
+/** Create account and establish session cookie. Display name is required (trimmed). */
 export async function playerRegister(
   email: string,
   password: string,
-  displayName?: string,
+  displayName: string,
 ): Promise<PublicUser> {
-  const body: Record<string, string> = { email, password };
-  if (displayName?.trim()) {
-    body.displayName = displayName.trim();
-  }
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: 'POST',
     credentials: jsonCredentials,
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ email, password, displayName: displayName.trim() }),
   });
   const data = await parseJsonBody(res);
   if (!res.ok) {
@@ -135,6 +131,88 @@ export async function playerLogin(email: string, password: string): Promise<Publ
   const user = data.user;
   if (!isPublicUser(user)) {
     throw new PlayerAuthApiError(500, 'request_failed', 'Invalid login response.');
+  }
+  return user;
+}
+
+/** Confirm email from verification link token; may set session cookie. */
+export async function playerVerifyEmail(token: string): Promise<PublicUser> {
+  const res = await fetch(`${API_BASE}/api/auth/verify`, {
+    method: 'POST',
+    credentials: jsonCredentials,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  const data = await parseJsonBody(res);
+  if (!res.ok) {
+    throwPlayerError(res.status, data);
+  }
+  const user = data.user;
+  if (!isPublicUser(user)) {
+    throw new PlayerAuthApiError(500, 'request_failed', 'Invalid verify response.');
+  }
+  return user;
+}
+
+/** Resend verification email for the signed-in user. */
+export async function playerResendVerification(): Promise<{ ok: true }> {
+  const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
+    method: 'POST',
+    credentials: jsonCredentials,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: '{}',
+  });
+  const data = await parseJsonBody(res);
+  if (!res.ok) {
+    throwPlayerError(res.status, data);
+  }
+  if (data.ok !== true) {
+    throw new PlayerAuthApiError(500, 'request_failed', 'Invalid resend response.');
+  }
+  return { ok: true };
+}
+
+export interface ForgotPasswordResponse {
+  ok: true;
+  message: string;
+}
+
+/** Request a password reset email (always succeeds with check_your_email when accepted). */
+export async function playerForgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+    method: 'POST',
+    credentials: jsonCredentials,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await parseJsonBody(res);
+  if (!res.ok) {
+    throwPlayerError(res.status, data);
+  }
+  if (data.ok !== true) {
+    throw new PlayerAuthApiError(500, 'request_failed', 'Invalid forgot-password response.');
+  }
+  return {
+    ok: true,
+    message: typeof data.message === 'string' ? data.message : 'check_your_email',
+  };
+}
+
+/** Set a new password from reset link token; establishes a new session cookie. */
+export async function playerResetPassword(token: string, password: string): Promise<PublicUser> {
+  const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+    method: 'POST',
+    credentials: jsonCredentials,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await parseJsonBody(res);
+  if (!res.ok) {
+    throwPlayerError(res.status, data);
+  }
+  const user = data.user;
+  if (!isPublicUser(user)) {
+    throw new PlayerAuthApiError(500, 'request_failed', 'Invalid reset-password response.');
   }
   return user;
 }

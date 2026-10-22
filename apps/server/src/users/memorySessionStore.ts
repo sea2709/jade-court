@@ -20,6 +20,14 @@ export class MemorySessionStore implements SessionStore {
     this.sessions.delete(tokenHash);
   }
 
+  async deleteAllForUser(userId: string, exceptTokenHash?: string): Promise<void> {
+    for (const [hash, row] of this.sessions) {
+      if (row.userId === userId && hash !== exceptTokenHash) {
+        this.sessions.delete(hash);
+      }
+    }
+  }
+
   /** Test helper: force-expire a session by hash. */
   expireForTests(tokenHash: string): void {
     const row = this.sessions.get(tokenHash);

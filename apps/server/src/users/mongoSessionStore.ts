@@ -62,4 +62,15 @@ export class MongoSessionStore implements SessionStore {
     if (!db) return;
     await db.collection<MongoSessionDoc>(COLLECTION).deleteOne({ tokenHash });
   }
+
+  async deleteAllForUser(userId: string, exceptTokenHash?: string): Promise<void> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) return;
+    const filter: { userId: string; tokenHash?: { $ne: string } } = { userId };
+    if (exceptTokenHash) {
+      filter.tokenHash = { $ne: exceptTokenHash };
+    }
+    await db.collection<MongoSessionDoc>(COLLECTION).deleteMany(filter);
+  }
 }
