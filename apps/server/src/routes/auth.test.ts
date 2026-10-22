@@ -79,6 +79,7 @@ describe('player auth routes', () => {
     passwordModule.resetDummyPasswordHashForTests();
     setupAuthEnv();
     vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -337,6 +338,7 @@ describe('player auth routes', () => {
       deleteByTokenHash: async () => {
         throw new Error('db down');
       },
+      deleteAllForUser: (userId, except) => base.deleteAllForUser(userId, except),
     };
     const { app } = makeApp(sessionStore);
     const reg = await register(app, 'fail@example.com', 'password123');

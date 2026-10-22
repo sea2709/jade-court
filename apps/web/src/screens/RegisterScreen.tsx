@@ -48,7 +48,7 @@ export function RegisterScreen() {
 
   useEffect(() => {
     if (status === 'ready' && user) {
-      navigate('/play', { replace: true });
+      navigate(user.emailVerified ? '/play' : '/register/sent', { replace: true });
     }
   }, [status, user, navigate]);
 
@@ -69,7 +69,7 @@ export function RegisterScreen() {
     try {
       const signedIn = await playerRegister(trimmedEmail, password, trimmedDisplayName);
       setSignedIn(signedIn);
-      navigate('/play', { replace: true });
+      navigate('/register/sent', { replace: true });
     } catch (err) {
       setError(registerErrorMessage(err));
     } finally {

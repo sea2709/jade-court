@@ -18,6 +18,7 @@ function renderRegister() {
       <AuthProvider>
         <Routes>
           <Route path="/register" element={<RegisterScreen />} />
+          <Route path="/register/sent" element={<div>Check inbox page</div>} />
           <Route path="/play" element={<div>Play page</div>} />
         </Routes>
       </AuthProvider>
@@ -102,7 +103,7 @@ describe('RegisterScreen', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/already registered/i);
   });
 
-  it('creates account and navigates to play', async () => {
+  it('creates account and navigates to check inbox', async () => {
     renderRegister();
     await screen.findByRole('heading', { name: 'Create account' });
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
@@ -131,6 +132,7 @@ describe('RegisterScreen', () => {
     await userEvent.type(screen.getByLabelText(/^Email/), 'new@example.com');
     await userEvent.type(screen.getByLabelText(/^Password/), 'password12');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+<<<<<<< HEAD
     expect(await screen.findByText('Play page')).toBeInTheDocument();
     const [, init] = registerCalls()[0];
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -138,5 +140,8 @@ describe('RegisterScreen', () => {
       password: 'password12',
       displayName: 'New',
     });
+=======
+    expect(await screen.findByText('Check inbox page')).toBeInTheDocument();
+>>>>>>> ec34786be7853fc156946d8aa58dfe0d1c8f4df8
   });
 });

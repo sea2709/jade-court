@@ -6,6 +6,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { SIGN_OUT_FAILED_MESSAGE, SIGN_OUT_NOTICE } from '../components/AccountAvatarMenu';
 import { useAuth } from '../context/useAuth';
 import { formatAccessTimeLeft } from '../lib/formatAccessUntil';
+import { ResendVerificationButton } from '../components/ResendVerificationButton';
 import { playerLogout } from '../lib/playerAuthApi';
 
 /** Signed-in profile and sign out. */
@@ -57,6 +58,18 @@ export function AccountScreen() {
         <p className="section-subtitle">Profile and session. Saved games will appear here later.</p>
       </div>
       <div className="news-panel border border-line-soft p-8 shadow-md max-w-lg">
+        {!user.emailVerified ? (
+          <div
+            className="mb-6 rounded-[var(--r-md)] border border-line-soft bg-[#FBEAC4] p-4"
+            role="region"
+            aria-label="Email verification"
+          >
+            <p className="m-0 mb-3 text-sm font-semibold text-ink">
+              Verify your email to unlock billing and other account features.
+            </p>
+            <ResendVerificationButton />
+          </div>
+        ) : null}
         <dl className="m-0 flex flex-col gap-4 text-sm font-semibold">
           <div>
             <dt className="text-muted mb-1">Display name</dt>
