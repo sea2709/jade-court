@@ -102,4 +102,32 @@ export class MongoUserStore implements UserStore {
     const doc = await db.collection<MongoUserDoc>(COLLECTION).findOne({ _id: new ObjectId(id) });
     return doc ? fromMongo(doc) : null;
   }
+
+  async extendAccess(userId: string, ms: number, now: Date): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) return null;
+    if (!ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const doc = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      [
+        {
+          $set: {
+            accessUntil: {
+              $dateAdd: {
+                startDate: {
+                  $max: [now, { $ifNull: ['$accessUntil', now] }],
+                },
+                unit: 'millisecond',
+                amount: ms,
+              },
+            },
+          },
+        },
+      ],
+      { returnDocument: 'after' },
+    );
+    return doc ? fromMongo(doc) : null;
+  }
 }

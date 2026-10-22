@@ -20,4 +20,6 @@ export interface UserStore {
   create(input: CreateUserInput): Promise<UserRecord>;
   findByEmail(email: string): Promise<UserRecord | null>;
   findById(id: string): Promise<UserRecord | null>;
+  /** Atomically extend `accessUntil` by `ms` from max(now, current access). */
+  extendAccess(userId: string, ms: number, now: Date): Promise<UserRecord | null>;
 }

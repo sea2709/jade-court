@@ -201,7 +201,7 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));
   app.route('/api/auth', createPlayerAuthRoutes({ userStore, sessionStore }));
   app.route('/api', createMeRoute());
-  app.route('/api/admin', createAdminRoutes());
+  app.route('/api/admin', createAdminRoutes({ userStore }));
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
 
   return app;

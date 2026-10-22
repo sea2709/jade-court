@@ -4,17 +4,16 @@
 import { Hono } from 'hono';
 import { computeLlmOpponentMove } from '../opponent/llmOpponentMove.js';
 import { parseOpponentMoveBody } from '../opponent/parseRequest.js';
-import { checkRateLimit } from '../llm/rateLimit.js';
-import { getGuestId } from '../middleware/auth.js';
+import { llmUserRateLimit } from '../middleware/llmUserRateLimit.js';
+import { requirePlayAccess } from '../middleware/playAccess.js';
+import type { AppVariables } from '../types/hono.js';
 
-const ai = new Hono();
+const ai = new Hono<{ Variables: AppVariables }>();
+
+ai.use('*', requirePlayAccess);
+ai.use('*', llmUserRateLimit);
 
 ai.post('/move', async (c) => {
-  const guestId = getGuestId(c);
-  if (!checkRateLimit(guestId)) {
-    return c.json({ error: 'rate_limit_exceeded' }, 429);
-  }
-
   let body: unknown;
   try {
     body = await c.req.json();

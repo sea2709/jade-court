@@ -9,6 +9,7 @@ import type {
   Move,
 } from '@jade-court/xiangqi-engine';
 import type { Hono } from 'hono';
+import type { AppVariables } from '../types/hono.js';
 import { coachSseResponse, type CoachSseEvent } from '../coach/sse.js';
 import {
   isLlmConfigured,
@@ -16,8 +17,6 @@ import {
   llmHistoryLimit,
   llmStreamCoachText,
 } from '../llm/client.js';
-import { checkRateLimit } from '../llm/rateLimit.js';
-import { getGuestId } from '../middleware/auth.js';
 
 const MAX_QUESTION_LEN = 500;
 
@@ -74,13 +73,8 @@ async function streamPlainText(
   }
 }
 
-export function registerCoachStreamRoutes(coach: Hono): void {
+export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables }>): void {
   coach.post('/feedback/stream', async (c) => {
-    const guestId = getGuestId(c);
-    if (!checkRateLimit(guestId)) {
-      return c.json({ error: 'rate_limit_exceeded' }, 429);
-    }
-
     let body: unknown;
     try {
       body = await c.req.json();
@@ -141,11 +135,6 @@ export function registerCoachStreamRoutes(coach: Hono): void {
   });
 
   coach.post('/hint/stream', async (c) => {
-    const guestId = getGuestId(c);
-    if (!checkRateLimit(guestId)) {
-      return c.json({ error: 'rate_limit_exceeded' }, 429);
-    }
-
     let body: unknown;
     try {
       body = await c.req.json();
@@ -209,11 +198,6 @@ export function registerCoachStreamRoutes(coach: Hono): void {
   });
 
   coach.post('/ask/stream', async (c) => {
-    const guestId = getGuestId(c);
-    if (!checkRateLimit(guestId)) {
-      return c.json({ error: 'rate_limit_exceeded' }, 429);
-    }
-
     let body: unknown;
     try {
       body = await c.req.json();
@@ -261,11 +245,6 @@ export function registerCoachStreamRoutes(coach: Hono): void {
   });
 
   coach.post('/ask', async (c) => {
-    const guestId = getGuestId(c);
-    if (!checkRateLimit(guestId)) {
-      return c.json({ error: 'rate_limit_exceeded' }, 429);
-    }
-
     let body: unknown;
     try {
       body = await c.req.json();
