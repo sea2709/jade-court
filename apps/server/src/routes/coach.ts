@@ -20,11 +20,14 @@ import {
   llmGenerateCoachOpeningJson,
   llmHistoryLimit,
 } from '../llm/client.js';
-import { checkRateLimit } from '../llm/rateLimit.js';
-import { getGuestId } from '../middleware/auth.js';
+import { llmUserRateLimit } from '../middleware/llmUserRateLimit.js';
+import { requirePlayAccess } from '../middleware/playAccess.js';
+import type { AppVariables } from '../types/hono.js';
 import { registerCoachStreamRoutes } from './coachStreams.js';
 
-const coach = new Hono();
+const coach = new Hono<{ Variables: AppVariables }>();
+coach.use('*', requirePlayAccess);
+coach.use('*', llmUserRateLimit);
 registerCoachStreamRoutes(coach);
 
 function isBoard(v: unknown): v is Board {
@@ -78,11 +81,6 @@ function templateHint(req: CoachHintRequest): CoachHintResponse | null {
 }
 
 coach.post('/feedback', async (c) => {
-  const guestId = getGuestId(c);
-  if (!checkRateLimit(guestId)) {
-    return c.json({ error: 'rate_limit_exceeded' }, 429);
-  }
-
   let body: unknown;
   try {
     body = await c.req.json();
@@ -153,11 +151,6 @@ coach.post('/feedback', async (c) => {
 });
 
 coach.post('/hint', async (c) => {
-  const guestId = getGuestId(c);
-  if (!checkRateLimit(guestId)) {
-    return c.json({ error: 'rate_limit_exceeded' }, 429);
-  }
-
   let body: unknown;
   try {
     body = await c.req.json();
@@ -231,11 +224,6 @@ coach.post('/hint', async (c) => {
 });
 
 coach.post('/opening', async (c) => {
-  const guestId = getGuestId(c);
-  if (!checkRateLimit(guestId)) {
-    return c.json({ error: 'rate_limit_exceeded' }, 429);
-  }
-
   let difficulty: Difficulty | undefined;
   try {
     const body = await c.req.json();

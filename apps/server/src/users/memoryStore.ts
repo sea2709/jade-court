@@ -50,6 +50,16 @@ export class MemoryUserStore implements UserStore {
     return user ? { ...user } : null;
   }
 
+  async extendAccess(userId: string, ms: number, now: Date): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    const base = Math.max(now.getTime(), user.accessUntil?.getTime() ?? now.getTime());
+    const accessUntil = new Date(base + ms);
+    const updated: UserRecord = { ...user, accessUntil };
+    this.byId.set(userId, updated);
+    return { ...updated };
+  }
+
   async setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null> {
     const user = this.byId.get(userId);
     if (!user) return null;

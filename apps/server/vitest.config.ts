@@ -10,7 +10,7 @@ export default defineConfig({
       exclude: ['src/**/*.test.ts', 'src/index.ts', 'src/loadEnv.ts'],
       reporter: ['text-summary', 'html'],
       // Floors just below current coverage — raise as tests are added, never lower.
-      thresholds: { statements: 67, branches: 71, functions: 61, lines: 67 },
+      thresholds: { statements: 75, branches: 75, functions: 80, lines: 75 },
     },
   },
 });

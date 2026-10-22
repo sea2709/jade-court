@@ -12,10 +12,17 @@ import {
   recordFailure,
   remoteKey,
 } from '../middleware/adminAuth.js';
+import { extendAccess } from '../billing/access.js';
+import { MAX_PLAY_AI_ACCESS_HOURS, playAiAccessHours } from '../billing/config.js';
 import type { AppVariables } from '../types/hono.js';
+import type { UserStore } from '../users/store.js';
+import { accessInfo, toPublicUser } from '../users/types.js';
 
 const MAX_USERNAME_LEN = 128;
 const MAX_PASSWORD_LEN = 1024;
+export type CreateAdminRoutesDeps = {
+  userStore: UserStore;
+};
 
 function noStore(c: { header: (name: string, value: string) => void }) {
   c.header('Cache-Control', 'no-store');
@@ -25,9 +32,10 @@ function invalidCredentials(c: { json: (body: unknown, status: number) => Respon
   return c.json({ error: 'invalid_credentials' }, 401);
 }
 
-/** Routes under `/api/admin` (login is public; `/me` uses `adminAuth` per route). */
-export function createAdminRoutes() {
+/** Routes under `/api/admin` (login is public; protected routes use `adminAuth` per route). */
+export function createAdminRoutes(deps: CreateAdminRoutesDeps) {
   const routes = new Hono<{ Variables: AppVariables }>();
+  const { userStore } = deps;
 
   routes.post('/login', async (c) => {
     noStore(c);
@@ -83,6 +91,49 @@ export function createAdminRoutes() {
   routes.get('/me', adminAuth, (c) => {
     noStore(c);
     return c.json({ username: c.get('adminUser') }, 200);
+  });
+
+  routes.post('/users/:id/grant', adminAuth, async (c) => {
+    noStore(c);
+
+    let body: unknown = {};
+    const raw = await c.req.text();
+    if (raw.trim() !== '') {
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        return c.json({ error: 'invalid_request' }, 400);
+      }
+    }
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      return c.json({ error: 'invalid_request' }, 400);
+    }
+
+    const hoursRaw = (body as { hours?: unknown }).hours;
+    let hours = playAiAccessHours();
+    if (hoursRaw !== undefined) {
+      if (typeof hoursRaw !== 'number' || !Number.isFinite(hoursRaw) || hoursRaw <= 0) {
+        return c.json({ error: 'invalid_request' }, 400);
+      }
+      if (hoursRaw > MAX_PLAY_AI_ACCESS_HOURS) {
+        return c.json({ error: 'invalid_request' }, 400);
+      }
+      hours = hoursRaw;
+    }
+
+    const userId = c.req.param('id');
+    const updated = await extendAccess(userStore, userId, hours, new Date());
+    if (!updated) {
+      return c.json({ error: 'user_not_found' }, 404);
+    }
+
+    return c.json(
+      {
+        user: toPublicUser(updated),
+        access: accessInfo(updated),
+      },
+      200,
+    );
   });
 
   return routes;

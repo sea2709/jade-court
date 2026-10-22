@@ -43,6 +43,7 @@ test.describe('player auth', () => {
     const password = 'e2e-password-12';
 
     await page.goto('/register');
+    await page.getByLabel(/Display name/).fill('E2E Verifier');
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Password/).fill(password);
     await page.getByRole('button', { name: 'Create account' }).click();

@@ -222,7 +222,7 @@ export function createApp(deps?: CreateAppDeps) {
     createPlayerAuthRoutes({ userStore, sessionStore, emailTokenStore, emailSender }),
   );
   app.route('/api', createMeRoute());
-  app.route('/api/admin', createAdminRoutes());
+  app.route('/api/admin', createAdminRoutes({ userStore }));
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
 
   return app;

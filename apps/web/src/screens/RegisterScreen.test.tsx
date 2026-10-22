@@ -132,16 +132,12 @@ describe('RegisterScreen', () => {
     await userEvent.type(screen.getByLabelText(/^Email/), 'new@example.com');
     await userEvent.type(screen.getByLabelText(/^Password/), 'password12');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
-<<<<<<< HEAD
-    expect(await screen.findByText('Play page')).toBeInTheDocument();
+    expect(await screen.findByText('Check inbox page')).toBeInTheDocument();
     const [, init] = registerCalls()[0];
     expect(JSON.parse(String(init?.body))).toEqual({
       email: 'new@example.com',
       password: 'password12',
       displayName: 'New',
     });
-=======
-    expect(await screen.findByText('Check inbox page')).toBeInTheDocument();
->>>>>>> ec34786be7853fc156946d8aa58dfe0d1c8f4df8
   });
 });

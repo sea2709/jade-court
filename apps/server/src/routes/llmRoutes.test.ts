@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Coach, X } from '@jade-court/xiangqi-engine';
 import { createApp } from '../app.js';
+import { SESSION_COOKIE_NAME } from '../auth/config.js';
 import type * as LlmClient from '../llm/client.js';
+import { resetRateLimitsForTests } from '../llm/rateLimit.js';
+import { MemorySessionStore } from '../users/memorySessionStore.js';
+import { MemoryUserStore } from '../users/memoryStore.js';
+import { hashPassword } from '../users/password.js';
 
 const llm = vi.hoisted(() => ({
   configured: true,
@@ -28,26 +33,65 @@ vi.mock('../llm/client.js', async (importOriginal) => {
   };
 });
 
-const app = createApp();
+const SESSION_SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
+
+let app: ReturnType<typeof createApp>;
+let userStore: MemoryUserStore;
+let sessionCookie = '';
 let guestSeq = 0;
 
-beforeEach(() => {
+function cookieFromResponse(res: Response): string | undefined {
+  const raw = res.headers.get('set-cookie');
+  if (!raw) return undefined;
+  const re = new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`);
+  return raw.match(re)?.[1];
+}
+
+async function ensureSignedInWithPass() {
+  const email = `llm-player-${++guestSeq}@example.com`;
+  const hash = await hashPassword('password123');
+  const user = await userStore.create({ email, passwordHash: hash });
+  await userStore.extendAccess(user.id, 48 * 3600_000, new Date());
+  const login = await app.request('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: 'password123' }),
+  });
+  const token = cookieFromResponse(login);
+  if (!token) throw new Error('login failed');
+  sessionCookie = token;
+}
+
+beforeEach(async () => {
+  process.env.SESSION_SECRET = SESSION_SECRET;
+  process.env.NODE_ENV = 'test';
+  resetRateLimitsForTests();
+  userStore = new MemoryUserStore();
+  app = createApp({ newsStore: null, userStore, sessionStore: new MemorySessionStore() });
   llm.configured = true;
+  await ensureSignedInWithPass();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {
+  delete process.env.SESSION_SECRET;
+  delete process.env.NODE_ENV;
+  resetRateLimitsForTests();
   vi.restoreAllMocks();
   for (const fn of [llm.move, llm.feedback, llm.hint, llm.opening, llm.ask, llm.stream]) {
     fn.mockReset();
   }
 });
 
-/** Each request uses a fresh guest id so the per-guest rate limit never interferes. */
+/** Authenticated request with active day pass; fresh guest id per call unless overridden. */
 function post(path: string, body?: unknown, guestId = `llm-guest-${++guestSeq}`) {
   return app.request(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-guest-id': guestId },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-guest-id': guestId,
+      Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie}`,
+    },
     body: typeof body === 'string' ? body : JSON.stringify(body ?? {}),
   });
 }
@@ -100,10 +144,20 @@ describe('LLM routes when the LLM is not configured', () => {
 });
 
 describe('request validation', () => {
-  it('rejects malformed JSON', async () => {
+  it('rejects malformed JSON when signed in with pass', async () => {
     const res = await post('/api/coach/feedback', '{oops');
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'invalid_json' });
+  });
+
+  it('returns 401 before body validation for guests', async () => {
+    const res = await app.request('/api/coach/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-guest-id': 'anon' },
+      body: '{oops',
+    });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'auth_required' });
   });
 
   it.each([
@@ -119,13 +173,14 @@ describe('request validation', () => {
     expect(await res.json()).toEqual({ error: 'invalid_request' });
   });
 
-  it('rate limits a guest after 30 requests', async () => {
+  it('rate limits per user after 30 requests', async () => {
     llm.configured = false;
-    const guest = 'llm-rate-limited';
+    const guestA = 'llm-rate-guest-a';
+    const guestB = 'llm-rate-guest-b';
     for (let i = 0; i < 30; i++) {
-      expect((await post('/api/coach/opening', {}, guest)).status).toBe(503);
+      expect((await post('/api/coach/opening', {}, guestA)).status).toBe(503);
     }
-    const res = await post('/api/coach/opening', {}, guest);
+    const res = await post('/api/coach/opening', {}, guestB);
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: 'rate_limit_exceeded' });
   });

@@ -73,7 +73,7 @@ async function register(app: ReturnType<typeof createApp>, email: string, passwo
   return app.request('/api/auth/register', {
     method: 'POST',
     headers: JSON_HEADERS,
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, displayName: 'Tester' }),
   });
 }
 

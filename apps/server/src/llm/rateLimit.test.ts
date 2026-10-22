@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkRateLimit } from './rateLimit.js';
+import { checkRateLimit, resetRateLimitsForTests } from './rateLimit.js';
 
 beforeEach(() => {
+  resetRateLimitsForTests();
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
 });
