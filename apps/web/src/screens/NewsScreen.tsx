@@ -158,8 +158,8 @@ export function NewsScreen() {
             Our curators are gathering the first stories. In the meantime, sharpen your game with
             Master Lin.
           </p>
-          <Link to="/learn" className="btn btn-primary news-empty-cta">
-            Start learning →
+          <Link to="/play-ai" className="btn btn-primary news-empty-cta">
+            Play with AI →
           </Link>
         </div>
       ) : null}

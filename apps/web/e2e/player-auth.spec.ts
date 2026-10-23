@@ -32,7 +32,8 @@ test.describe('player auth', () => {
     await expect(page.getByRole('status')).toContainText(
       "You're signed out. Your unfinished games are saved to your account.",
     );
-    await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Play with Master Lin/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sign in' }).first()).toBeVisible();
   });
 
   test('register, verify email via test outbox, account shows verified', async ({

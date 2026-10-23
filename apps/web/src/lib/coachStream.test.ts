@@ -49,6 +49,14 @@ describe('streamCoachPost', () => {
     expect(JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)).toEqual({ a: 1 });
   });
 
+  it('serializes modelId in the POST body when provided', async () => {
+    fetchMock.mockResolvedValue(sseResponse([ev({ type: 'done', source: 'llm' })]));
+    await streamCoachPost('/api/coach/hint/stream', { board: {}, modelId: 'stream-model' }, {});
+    expect(JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)).toMatchObject({
+      modelId: 'stream-model',
+    });
+  });
+
   it('reassembles events split across chunk boundaries', async () => {
     const full =
       ev({ type: 'token', text: 'split across chunks' }) + ev({ type: 'done', source: 'template' });

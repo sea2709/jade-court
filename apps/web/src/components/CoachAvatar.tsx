@@ -1,9 +1,12 @@
 export function CoachAvatar({
   size = 54,
   mood = 'happy',
+  showAiTag = false,
 }: {
   size?: number;
   mood?: 'happy' | 'think';
+  /** Small "AI" badge for Play with AI surfaces. */
+  showAiTag?: boolean;
 }) {
   return (
     <div
@@ -18,18 +21,27 @@ export function CoachAvatar({
       }}
     >
       師
-      <span
-        className="absolute grid place-items-center font-body text-[#4a3208] bg-gold border-2 border-paper rounded-full"
-        style={{
-          right: -2,
-          bottom: -2,
-          width: size * 0.34,
-          height: size * 0.34,
-          fontSize: size * 0.2,
-        }}
-      >
-        {mood === 'think' ? '…' : '✦'}
-      </span>
+      {showAiTag ? (
+        <span
+          className="absolute font-body font-extrabold text-[10px] uppercase tracking-wide text-white bg-ink-soft border-2 border-paper rounded-md px-1 py-0.5"
+          style={{ right: -4, bottom: -4 }}
+        >
+          AI
+        </span>
+      ) : (
+        <span
+          className="absolute grid place-items-center font-body text-[#4a3208] bg-gold border-2 border-paper rounded-full"
+          style={{
+            right: -2,
+            bottom: -2,
+            width: size * 0.34,
+            height: size * 0.34,
+            fontSize: size * 0.2,
+          }}
+        >
+          {mood === 'think' ? '…' : '✦'}
+        </span>
+      )}
     </div>
   );
 }

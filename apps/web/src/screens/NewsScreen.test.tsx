@@ -12,7 +12,7 @@ function renderNews() {
     <MemoryRouter initialEntries={['/news']}>
       <Routes>
         <Route path="/news" element={<NewsScreen />} />
-        <Route path="/learn" element={<div>Learn page</div>} />
+        <Route path="/play-ai" element={<div>Play AI page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -58,9 +58,9 @@ describe('NewsScreen', () => {
       await screen.findByRole('heading', { name: 'No news yet — check back soon' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Our curators are gathering the first stories/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start learning →' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Play with AI →' })).toHaveAttribute(
       'href',
-      '/learn',
+      '/play-ai',
     );
   });
 

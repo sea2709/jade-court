@@ -67,8 +67,8 @@ export function HomeScreen() {
             your level — from your very first game to beating a friend across the river.
           </p>
           <div className="flex gap-3.5 flex-wrap">
-            <Link to="/learn" className="btn btn-primary btn-lg">
-              Start learning →
+            <Link to="/play-ai" className="btn btn-primary btn-lg">
+              Play with AI →
             </Link>
             <Link to="/play" className="btn btn-ghost btn-lg">
               Play vs computer
@@ -93,12 +93,12 @@ export function HomeScreen() {
           tagClass="pill-jade"
           glyph="師"
           accent="linear-gradient(150deg,#2BB495,#157A63)"
-          title="Learn with AI"
+          title="Play with AI"
           zh="學"
-          desc="Play a real game while Master Lin highlights moves, suggests the best one, and grades each move you make."
-          cta="Learn now"
+          desc="Play a real game against Master Lin (AI) — move grading, hints, and coach chat while you learn."
+          cta="Play with AI"
           ctaClass="btn-primary"
-          to="/learn"
+          to="/play-ai"
         />
         <ModeCard
           tag="Compete"

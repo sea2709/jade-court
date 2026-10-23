@@ -25,8 +25,9 @@ export function ChatBubble({ m }: { m: ChatMessage }) {
 
   return (
     <div className="pop flex gap-2.5 items-start">
-      <CoachAvatar size={34} mood={m.think ? 'think' : 'happy'} />
+      <CoachAvatar size={34} mood={m.think ? 'think' : 'happy'} showAiTag />
       <div className="chat-bubble">
+        <div className="text-[11px] font-extrabold text-muted mb-1">Master Lin · AI</div>
         {m.verdict && !m.think && (
           <div className="flex items-center gap-[7px] mb-1">
             <span

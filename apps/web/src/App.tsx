@@ -51,8 +51,8 @@ export function App() {
         <span className="brand-mark w-[30px] h-[30px] rounded-[9px] text-[17px]">象</span>
         <span className="text-ink-soft">Jade Court · Learn &amp; play Xiangqi</span>
         <nav className="ml-auto flex gap-5">
-          <Link to="/learn" className="nav-link p-0 text-[13.5px] font-bold">
-            Learn
+          <Link to="/play-ai" className="nav-link p-0 text-[13.5px] font-bold">
+            Play with AI
           </Link>
           <Link to="/multiplayer" className="nav-link p-0 text-[13.5px] font-bold">
             Play with Friends

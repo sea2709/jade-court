@@ -37,6 +37,7 @@ export async function streamCoachPost(
       'Content-Type': 'application/json',
       'x-guest-id': getGuestId(),
     },
+    credentials: 'include',
     body: JSON.stringify(body),
     signal,
   });

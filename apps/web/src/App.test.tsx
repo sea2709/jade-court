@@ -27,7 +27,7 @@ function renderApp(initialPath: string) {
         <Routes>
           <Route path="/" element={<App />}>
             <Route index element={<div>Home page</div>} />
-            <Route path="learn" element={<div>Learn page</div>} />
+            <Route path="play-ai" element={<div>Play AI page</div>} />
             <Route path="multiplayer" element={<div>Multiplayer page</div>} />
             <Route path="news" element={<div>News page</div>} />
           </Route>
@@ -39,7 +39,7 @@ function renderApp(initialPath: string) {
 
 describe('App shell', () => {
   it('brand link returns home', async () => {
-    renderApp('/learn');
+    renderApp('/play-ai');
     const brand = screen.getByRole('link', { name: /Jade Court/ });
     expect(brand).toHaveAttribute('href', '/');
     await userEvent.click(brand);
@@ -54,10 +54,10 @@ describe('App shell', () => {
     expect(screen.getByText('Home page')).toBeInTheDocument();
   });
 
-  it('footer links point to Learn, Play with Friends, and News', async () => {
+  it('footer links point to Play with AI, Play with Friends, and News', async () => {
     renderApp('/');
     const footer = within(screen.getByRole('contentinfo'));
-    expect(footer.getByRole('link', { name: 'Learn' })).toHaveAttribute('href', '/learn');
+    expect(footer.getByRole('link', { name: 'Play with AI' })).toHaveAttribute('href', '/play-ai');
     expect(footer.getByRole('link', { name: 'Play with Friends' })).toHaveAttribute(
       'href',
       '/multiplayer',
