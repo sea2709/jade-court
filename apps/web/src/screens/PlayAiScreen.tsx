@@ -1,20 +1,36 @@
 /**
- * Play vs Computer at `/play-ai` (issue #76 sign-out landing).
+ * Play with AI at `/play-ai`: gating, sign-out notice, checkout return polling.
  */
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { PlayScreen } from './PlayScreen';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { PlayAiPaywall } from '../components/play-ai/PlayAiPaywall';
+import { PlayAiPitch } from '../components/play-ai/PlayAiPitch';
+import { useAuth } from '../context/useAuth';
+import { usePlayAccessClock } from '../hooks/usePlayAccessClock';
+import { PlayAiGame } from './PlayAiGame';
 
 type LocationNotice = { notice?: string };
 
-/** Same as Play vs Computer, with optional flash notice from navigation state. */
+const CHECKOUT_POLL_MS = 500;
+const CHECKOUT_POLL_MAX = 20_000;
+
 export function PlayAiScreen() {
+  const { status, user, access, refresh } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [notice, setNotice] = useState<string | null>(() => {
     const state = location.state as LocationNotice | null;
     return state?.notice ?? null;
   });
+  const [checkoutDone, setCheckoutDone] = useState(false);
+  const [checkoutPollExhausted, setCheckoutPollExhausted] = useState(false);
+  const accessUntil = user ? (access.accessUntil ?? user.accessUntil) : null;
+  const { active: accessLive } = usePlayAccessClock(accessUntil);
+  const hasActivePass = access.active && accessLive;
+  const checkoutReturn = searchParams.get('checkout') === 'success';
+  const checkoutWaiting =
+    checkoutReturn && !checkoutDone && !hasActivePass && !checkoutPollExhausted;
 
   useEffect(() => {
     const state = location.state as LocationNotice | null;
@@ -22,6 +38,32 @@ export function PlayAiScreen() {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (!checkoutReturn || checkoutDone || hasActivePass) return;
+    const started = Date.now();
+    let cancelled = false;
+
+    const poll = async () => {
+      while (!cancelled && Date.now() - started < CHECKOUT_POLL_MAX) {
+        const me = await refresh();
+        if (me.access.active) {
+          setCheckoutDone(true);
+          setSearchParams({}, { replace: true });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, CHECKOUT_POLL_MS));
+      }
+      if (!cancelled) setCheckoutPollExhausted(true);
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutReturn, checkoutDone, hasActivePass, refresh, setSearchParams]);
+
+  const showGame = status === 'ready' && user != null && hasActivePass;
 
   return (
     <>
@@ -38,7 +80,16 @@ export function PlayAiScreen() {
           </button>
         </div>
       ) : null}
-      <PlayScreen />
+      {checkoutWaiting ? (
+        <div className="page-container-md rise py-8 text-center text-muted font-bold">
+          Activating your day pass…
+        </div>
+      ) : null}
+      {status === 'ready' && !user ? <PlayAiPitch /> : null}
+      {status === 'ready' && user && !hasActivePass && !checkoutWaiting ? <PlayAiPaywall /> : null}
+      {showGame && !checkoutWaiting ? (
+        <PlayAiGame accessUntil={accessUntil} preferredModelId={user.preferredModelId} />
+      ) : null}
     </>
   );
 }

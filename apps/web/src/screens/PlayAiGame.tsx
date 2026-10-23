@@ -1,3 +1,6 @@
+/**
+ * Active Play with AI game: board, coach chat, model picker, day-pass bar.
+ */
 import { useCallback, useEffect, useState } from 'react';
 import { Coach } from '@jade-court/xiangqi-engine';
 import type {
@@ -9,16 +12,22 @@ import type {
 } from '@jade-court/xiangqi-engine';
 import { CoachAskInput } from '../components/coach/CoachAskInput';
 import { CoachChatPanel } from '../components/coach/CoachChatPanel';
-import { createCoachMessage, useCoachChat } from '../hooks/useCoachChat';
+import { PlayAiAccessOverlay } from '../components/play-ai/PlayAiAccessOverlay';
+import { PlayAiDayPassBar } from '../components/play-ai/PlayAiDayPassBar';
 import { XQBoard } from '../components/XQBoard';
+import { useAiModels } from '../hooks/useAiModels';
+import { createCoachMessage, useCoachChat } from '../hooks/useCoachChat';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
+import { assignCheckoutUrl, BillingApiError, postBillingCheckout } from '../lib/billingApi';
 import { streamCoachPost } from '../lib/coachStream';
 import {
   fetchCoachAsk,
   fetchCoachFeedback,
   fetchCoachHint,
   fetchCoachOpening,
+  isAuthRequired,
   isLlmUnconfigured,
+  isPlayAccessRequired,
 } from '../lib/gemmaApi';
 
 function feedbackToPatch(fb: CoachFeedbackResponse) {
@@ -37,17 +46,43 @@ function historyPayload(history: { side: Side; from: [number, number]; to: [numb
   return history.length ? history : undefined;
 }
 
-export function LearnScreen() {
+export interface PlayAiGameProps {
+  accessUntil: string | null;
+  preferredModelId: string | null;
+}
+
+export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
   const [coachBusy, setCoachBusy] = useState(false);
+  const [accessOverlay, setAccessOverlay] = useState<'auth' | 'access' | null>(null);
+  const [extendBusy, setExtendBusy] = useState(false);
+
+  const aiModels = useAiModels(preferredModelId);
+  const modelId = aiModels.modelId ?? undefined;
 
   const chat = useCoachChat([createCoachMessage('coach', { text: Coach.opening() })]);
   const { setMessages, pushCoach } = chat;
 
+  const handleGatedError = useCallback((kind: 'auth' | 'access') => {
+    setAccessOverlay(kind);
+  }, []);
+
+  const handleCoachGated = useCallback((err: unknown) => {
+    if (isAuthRequired(err)) {
+      setAccessOverlay('auth');
+      return true;
+    }
+    if (isPlayAccessRequired(err)) {
+      setAccessOverlay('access');
+      return true;
+    }
+    return false;
+  }, []);
+
   const loadOpening = useCallback(
     async (replaceFirst = false) => {
       try {
-        const { text } = await fetchCoachOpening({ difficulty });
+        const { text } = await fetchCoachOpening({ difficulty, modelId });
         if (replaceFirst) {
           setMessages((ms) => {
             if (!ms.length || ms[0].from !== 'coach') return ms;
@@ -57,17 +92,20 @@ export function LearnScreen() {
           pushCoach({ text });
         }
       } catch (err) {
+        if (handleCoachGated(err)) return;
         if (!isLlmUnconfigured(err)) {
           console.warn('[coach] fetchCoachOpening failed:', err);
         }
       }
     },
-    [difficulty, setMessages, pushCoach],
+    [difficulty, modelId, setMessages, pushCoach, handleCoachGated],
   );
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- mount-only welcome refresh */
     void loadOpening(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only welcome refresh
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const requestCoachFeedback = useCallback(
@@ -106,6 +144,7 @@ export function LearnScreen() {
             depth: 2,
             difficulty,
             history: historyPayload(history),
+            ...(modelId ? { modelId } : {}),
           },
           {
             onMeta: (meta) => {
@@ -123,8 +162,9 @@ export function LearnScreen() {
           },
           signal,
         );
-      } catch {
+      } catch (err) {
         if (signal.aborted) return;
+        if (handleCoachGated(err)) return;
         try {
           const fb = await fetchCoachFeedback({
             boardBefore,
@@ -133,9 +173,11 @@ export function LearnScreen() {
             depth: 2,
             difficulty,
             history,
+            modelId,
           });
           chat.replaceMessage(pendingId, feedbackToPatch(fb));
         } catch (batchErr) {
+          if (handleCoachGated(batchErr)) return;
           if (!isLlmUnconfigured(batchErr)) {
             console.warn('[coach] feedback failed, using template:', batchErr);
           }
@@ -145,13 +187,16 @@ export function LearnScreen() {
         if (!signal.aborted) setCoachBusy(false);
       }
     },
-    [chat, difficulty],
+    [chat, difficulty, modelId, handleCoachGated],
   );
 
   const game = useXiangqiGame({
     aiSide: 'b',
     difficulty,
     aiProvider: 'llm',
+    modelId,
+    locked: accessOverlay !== null,
+    onGatedError: handleGatedError,
     onSelect: (piece, count) => {
       chat.pushCoach({ text: Coach.pieceTip(piece.t, count), tone: 'info' });
     },
@@ -206,6 +251,7 @@ export function LearnScreen() {
           side: game.turn,
           depth: 2,
           difficulty,
+          ...(modelId ? { modelId } : {}),
         },
         {
           onMeta: (meta) => {
@@ -220,18 +266,21 @@ export function LearnScreen() {
         },
         signal,
       );
-    } catch {
+    } catch (err) {
       if (signal.aborted) return;
+      if (handleCoachGated(err)) return;
       try {
         const h = await fetchCoachHint({
           board: game.board,
           side: game.turn,
           depth: 2,
           difficulty,
+          modelId,
         });
         game.revealHint(h.move);
         chat.replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip });
       } catch (batchErr) {
+        if (handleCoachGated(batchErr)) return;
         if (!isLlmUnconfigured(batchErr)) {
           console.warn('[coach] fetchCoachHint failed, using template:', batchErr);
         }
@@ -262,6 +311,7 @@ export function LearnScreen() {
             question,
             difficulty,
             history: historyPayload(gameHistory()),
+            ...(modelId ? { modelId } : {}),
           },
           {
             onToken: (text) => chat.appendToMessage(pendingId, text),
@@ -269,8 +319,9 @@ export function LearnScreen() {
           },
           signal,
         );
-      } catch {
+      } catch (err) {
         if (signal.aborted) return;
+        if (handleCoachGated(err)) return;
         try {
           const res = await fetchCoachAsk({
             board: game.board,
@@ -278,9 +329,11 @@ export function LearnScreen() {
             question,
             difficulty,
             history: gameHistory(),
+            modelId,
           });
           chat.replaceMessage(pendingId, { text: res.text, tone: 'info' });
         } catch (batchErr) {
+          if (handleCoachGated(batchErr)) return;
           if (!isLlmUnconfigured(batchErr)) {
             console.warn('[coach] ask failed, using template:', batchErr);
           }
@@ -290,49 +343,85 @@ export function LearnScreen() {
         if (!signal.aborted) setCoachBusy(false);
       }
     },
-    [chat, difficulty, game.board, game.turn, gameHistory],
+    [chat, difficulty, game.board, game.turn, gameHistory, modelId, handleCoachGated],
   );
 
   const onExplain = () => {
     void askCoach('What should I focus on this turn?');
   };
 
+  const onModelChange = (id: string) => {
+    const label = aiModels.models.find((m) => m.id === id)?.label ?? id;
+    aiModels.pickModel(id);
+    chat.pushSys(`Master Lin (AI) now runs on ${label}`);
+  };
+
   const newGame = () => {
+    if (accessOverlay !== null) return;
     game.reset();
     chat.resetMessages([createCoachMessage('coach', { text: Coach.opening() })]);
     void loadOpening(true);
   };
 
+  const startExtendCheckout = async () => {
+    setExtendBusy(true);
+    try {
+      const { url } = await postBillingCheckout();
+      assignCheckoutUrl(url);
+    } catch (err) {
+      if (!(err instanceof BillingApiError && err.status === 503)) {
+        console.warn('[billing] checkout failed:', err);
+      }
+      setExtendBusy(false);
+    }
+  };
+
   const yourTurn = game.turn === 'r' && !game.status;
-  const inputDisabled = coachBusy || !!game.status;
+  const inputDisabled = coachBusy || !!game.status || accessOverlay !== null;
+
+  const statusLine = game.status
+    ? 'Game over'
+    : game.aiThinking
+      ? 'Master Lin (AI) is thinking…'
+      : yourTurn
+        ? 'Your move (Red) · vs Master Lin (AI)'
+        : 'vs Master Lin (AI)';
 
   return (
-    <div className="learn-layout">
-      <div>
+    <div className="learn-layout" data-testid="play-ai-game">
+      <div className="relative">
+        <PlayAiDayPassBar
+          accessUntil={accessUntil}
+          onExtend={() => void startExtendCheckout()}
+          extendBusy={extendBusy}
+        />
         <div className="flex items-center gap-3 mb-3.5">
-          <span className="pill pill-jade">Learn mode</span>
-          <span className="font-extrabold text-ink-soft text-sm">
-            {game.status
-              ? 'Game over'
-              : game.aiThinking
-                ? 'Master Lin is thinking…'
-                : yourTurn
-                  ? 'Your move (Red)'
-                  : 'Opponent to move'}
-          </span>
+          <span className="pill pill-jade">Play with AI</span>
+          <span className="font-extrabold text-ink-soft text-sm">{statusLine}</span>
           {game.checkSide && !game.status && <span className="pill pill-red">Check!</span>}
         </div>
-        <XQBoard
-          board={game.board}
-          cell={56}
-          selected={game.selected}
-          targets={game.targets}
-          lastMove={game.lastMove}
-          checkPos={game.checkPos}
-          hint={game.hint}
-          onPoint={game.onPoint}
-          interactive={yourTurn}
-        />
+        <div className="relative">
+          <XQBoard
+            board={game.board}
+            cell={56}
+            selected={game.selected}
+            targets={game.targets}
+            lastMove={game.lastMove}
+            checkPos={game.checkPos}
+            hint={game.hint}
+            onPoint={game.onPoint}
+            interactive={yourTurn && accessOverlay === null}
+          />
+          {accessOverlay ? (
+            <PlayAiAccessOverlay kind={accessOverlay} onRenew={() => void startExtendCheckout()} />
+          ) : null}
+        </div>
+        <p className="mt-3 mb-0 text-[13px] font-bold text-muted">
+          Master Lin, AI player · running {aiModels.modelLabel}
+        </p>
+        <p className="mt-1 mb-0 text-[12px] font-semibold text-muted">
+          Master Lin is an AI. Its moves and advice can be wrong.
+        </p>
       </div>
 
       <CoachChatPanel
@@ -341,6 +430,11 @@ export function LearnScreen() {
         difficulty={difficulty}
         onDifficultyChange={setDifficulty}
         coachThinking={game.aiThinking || coachBusy}
+        models={aiModels.models}
+        modelId={aiModels.modelId}
+        onModelChange={onModelChange}
+        modelsDisabled={aiModels.modelsDisabled}
+        modelsLoading={aiModels.status === 'loading'}
         footer={
           <>
             <CoachAskInput disabled={inputDisabled} onAsk={(q) => void askCoach(q)} />
@@ -348,7 +442,7 @@ export function LearnScreen() {
               <button
                 type="button"
                 className="btn btn-primary btn-sm flex-1"
-                disabled={!yourTurn || coachBusy}
+                disabled={!yourTurn || coachBusy || accessOverlay !== null}
                 onClick={() => void onHint()}
               >
                 💡 Show me a hint
@@ -356,7 +450,7 @@ export function LearnScreen() {
               <button
                 type="button"
                 className="btn btn-ghost btn-sm flex-1"
-                disabled={!yourTurn || coachBusy}
+                disabled={!yourTurn || coachBusy || accessOverlay !== null}
                 onClick={onExplain}
               >
                 What should I look for?
@@ -366,12 +460,17 @@ export function LearnScreen() {
               <button
                 type="button"
                 className="btn btn-ghost btn-sm flex-1"
-                disabled={game.history.length === 0}
+                disabled={game.history.length === 0 || accessOverlay !== null}
                 onClick={() => game.undoLast(game.turn === 'r' ? 2 : 1)}
               >
                 ↶ Take back
               </button>
-              <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={newGame}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm flex-1"
+                disabled={accessOverlay !== null}
+                onClick={newGame}
+              >
                 ↻ New game
               </button>
             </div>

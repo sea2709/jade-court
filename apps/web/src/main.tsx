@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { AuthProvider } from './context/AuthProvider';
 import { HomeScreen } from './screens/HomeScreen';
-import { LearnScreen } from './screens/LearnScreen';
+import { LearnRedirect } from './screens/LearnRedirect';
 import { MultiplayerScreen } from './screens/MultiplayerScreen';
 import { PlayScreen } from './screens/PlayScreen';
 import { PlayAiScreen } from './screens/PlayAiScreen';
@@ -37,7 +37,7 @@ createRoot(document.getElementById('root')!).render(
           </Route>
           <Route path="/" element={<App />}>
             <Route index element={<HomeScreen />} />
-            <Route path="learn" element={<LearnScreen />} />
+            <Route path="learn" element={<LearnRedirect />} />
             <Route path="play" element={<PlayScreen />} />
             <Route path="play-ai" element={<PlayAiScreen />} />
             <Route path="multiplayer" element={<MultiplayerScreen />} />

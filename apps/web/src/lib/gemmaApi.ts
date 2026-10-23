@@ -25,6 +25,7 @@ export interface FetchAiMoveParams {
   difficulty: Difficulty;
   lastMove?: { from: Coord; to: Coord } | null;
   history?: AiMoveRequest['history'];
+  modelId?: string;
 }
 
 export class GemmaApiError extends Error {
@@ -45,6 +46,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
       'Content-Type': 'application/json',
       'x-guest-id': getGuestId(),
     },
+    credentials: 'include',
     body: JSON.stringify(body),
   });
   const data = (await res.json()) as T & { error?: string };
@@ -61,6 +63,7 @@ export async function fetchAiMove(params: FetchAiMoveParams): Promise<AiMoveResp
     difficulty: params.difficulty,
     ...(params.lastMove ? { lastMove: params.lastMove } : {}),
     ...(params.history?.length ? { history: params.history } : {}),
+    ...(params.modelId ? { modelId: params.modelId } : {}),
   };
   return postJson<AiMoveResponse>('/api/ai/move', body);
 }
@@ -84,6 +87,7 @@ export interface FetchCoachFeedbackParams {
   depth?: number;
   difficulty?: Difficulty;
   history?: CoachFeedbackRequest['history'];
+  modelId?: string;
 }
 
 export interface FetchCoachHintParams {
@@ -91,6 +95,7 @@ export interface FetchCoachHintParams {
   side: Side;
   depth?: number;
   difficulty?: Difficulty;
+  modelId?: string;
 }
 
 export async function fetchCoachFeedback(
@@ -103,6 +108,7 @@ export async function fetchCoachFeedback(
     depth: params.depth,
     difficulty: params.difficulty,
     ...(params.history?.length ? { history: params.history } : {}),
+    ...(params.modelId ? { modelId: params.modelId } : {}),
   };
   return postJson<CoachFeedbackResponse>('/api/coach/feedback', body);
 }
@@ -113,12 +119,13 @@ export async function fetchCoachHint(params: FetchCoachHintParams): Promise<Coac
     side: params.side,
     depth: params.depth,
     difficulty: params.difficulty,
+    ...(params.modelId ? { modelId: params.modelId } : {}),
   };
   return postJson<CoachHintResponse>('/api/coach/hint', body);
 }
 
 export async function fetchCoachOpening(
-  params: Pick<CoachOpeningRequest, 'difficulty'> = {},
+  params: Pick<CoachOpeningRequest, 'difficulty'> & { modelId?: string } = {},
 ): Promise<CoachOpeningResponse> {
   return postJson<CoachOpeningResponse>('/api/coach/opening', params);
 }
@@ -129,6 +136,7 @@ export interface FetchCoachAskParams {
   question: string;
   difficulty?: Difficulty;
   history?: CoachAskRequest['history'];
+  modelId?: string;
 }
 
 export async function fetchCoachAsk(params: FetchCoachAskParams): Promise<CoachAskResponse> {
@@ -138,12 +146,21 @@ export async function fetchCoachAsk(params: FetchCoachAskParams): Promise<CoachA
     question: params.question,
     difficulty: params.difficulty,
     ...(params.history?.length ? { history: params.history } : {}),
+    ...(params.modelId ? { modelId: params.modelId } : {}),
   };
   return postJson<CoachAskResponse>('/api/coach/ask', body);
 }
 
 export function isLlmUnconfigured(err: unknown): boolean {
   return err instanceof GemmaApiError && err.status === 503 && err.code === 'llm_unconfigured';
+}
+
+export function isPlayAccessRequired(err: unknown): boolean {
+  return err instanceof GemmaApiError && err.status === 402 && err.code === 'access_required';
+}
+
+export function isAuthRequired(err: unknown): boolean {
+  return err instanceof GemmaApiError && err.status === 401;
 }
 
 /** @deprecated Use isLlmUnconfigured */

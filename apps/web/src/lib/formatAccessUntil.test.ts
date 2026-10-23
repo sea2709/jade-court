@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { formatAccessTimeLeft } from './formatAccessUntil';
+import {
+  accessMinutesRemaining,
+  formatAccessTimeLeft,
+  isPlayAccessActive,
+} from './formatAccessUntil';
 
 describe('formatAccessTimeLeft', () => {
   beforeEach(() => {
@@ -23,5 +27,19 @@ describe('formatAccessTimeLeft', () => {
   it('reports expired access', () => {
     const until = new Date('2026-01-01T11:00:00.000Z').toISOString();
     expect(formatAccessTimeLeft(until)).toBe('Day pass expired');
+  });
+
+  it('isPlayAccessActive matches expiry cutoff', () => {
+    const until = new Date('2026-01-01T12:30:00.000Z').toISOString();
+    expect(isPlayAccessActive(until, Date.parse('2026-01-01T12:29:59.000Z'))).toBe(true);
+    expect(isPlayAccessActive(until, Date.parse('2026-01-01T12:30:00.000Z'))).toBe(false);
+    expect(isPlayAccessActive(null)).toBe(false);
+  });
+
+  it('computes minutes remaining for countdown warnings', () => {
+    const until = new Date('2026-01-01T12:04:30.000Z').toISOString();
+    expect(accessMinutesRemaining(until)).toBe(5);
+    expect(accessMinutesRemaining('2026-01-01T11:00:00.000Z')).toBe(0);
+    expect(accessMinutesRemaining(null)).toBeNull();
   });
 });

@@ -20,9 +20,9 @@ test.describe('home and navigation', () => {
     await expect(page).toHaveURL(/\/multiplayer$/);
     await expect(page.getByRole('heading', { name: 'Play with a Friend' })).toBeVisible();
 
-    await nav.getByRole('link', { name: 'Learn with AI' }).click();
-    await expect(page).toHaveURL(/\/learn$/);
-    await expect(page.getByText('Learn mode')).toBeVisible();
+    await nav.getByRole('link', { name: 'Play with AI' }).click();
+    await expect(page).toHaveURL(/\/play-ai$/);
+    await expect(page.getByRole('heading', { name: /Play with Master Lin/i })).toBeVisible();
 
     await page.route('**/api/news**', (route) => json(route, { items: [], nextCursor: null }));
     await nav.getByRole('link', { name: 'News' }).click();
@@ -78,10 +78,10 @@ test.describe('home and navigation', () => {
     await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
   });
 
-  test('home call-to-action links open Learn and Play', async ({ page }) => {
+  test('home call-to-action links open Play with AI and Play', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'Start learning →' }).click();
-    await expect(page).toHaveURL(/\/learn$/);
+    await page.getByRole('link', { name: 'Play with AI →' }).click();
+    await expect(page).toHaveURL(/\/play-ai$/);
 
     await page.goto('/');
     await page.getByRole('link', { name: 'Play vs computer', exact: true }).click();

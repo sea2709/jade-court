@@ -9,7 +9,7 @@ function renderHome() {
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<HomeScreen />} />
-        <Route path="/learn" element={<div>Learn page</div>} />
+        <Route path="/play-ai" element={<div>Play AI page</div>} />
         <Route path="/play" element={<div>Play page</div>} />
         <Route path="/multiplayer" element={<div>Multiplayer page</div>} />
       </Routes>
@@ -24,16 +24,17 @@ afterEach(() => {
 describe('HomeScreen', () => {
   it('renders hero calls to action as links', () => {
     renderHome();
-    expect(screen.getByRole('link', { name: 'Start learning →' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Play with AI →' })).toHaveAttribute(
       'href',
-      '/learn',
+      '/play-ai',
     );
     expect(screen.getByRole('link', { name: 'Play vs computer' })).toHaveAttribute('href', '/play');
   });
 
   it('renders each mode card as a link to its screen', () => {
     renderHome();
-    expect(screen.getByRole('link', { name: /Learn with AI/ })).toHaveAttribute('href', '/learn');
+    const playAiLinks = screen.getAllByRole('link', { name: /Play with AI/ });
+    expect(playAiLinks.some((l) => l.getAttribute('href') === '/play-ai')).toBe(true);
     expect(screen.getByRole('link', { name: /Play vs Computer/ })).toHaveAttribute('href', '/play');
     expect(screen.getByRole('link', { name: /Play with Friends/ })).toHaveAttribute(
       'href',

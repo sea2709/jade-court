@@ -19,7 +19,7 @@ describe('Breadcrumb', () => {
   });
 
   it.each([
-    ['/learn', 'Learn with AI'],
+    ['/play-ai', 'Play with AI'],
     ['/play', 'Play vs Computer'],
     ['/multiplayer', 'Play with Friends'],
     ['/news', 'News'],

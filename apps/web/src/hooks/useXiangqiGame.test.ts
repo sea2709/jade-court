@@ -224,6 +224,30 @@ describe('useXiangqiGame: vs computer', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it('calls onGatedError for 402 access_required on llm moves', async () => {
+    const onGatedError = vi.fn();
+    fetchMock.mockResolvedValue(json({ error: 'access_required' }, 402));
+    const { result } = setup({
+      ...aiConfig,
+      aiProvider: 'llm',
+      onGatedError,
+    });
+    playCentralCannon(result);
+
+    await waitFor(() => expect(onGatedError).toHaveBeenCalledWith('access'));
+    expect(result.current.turn).toBe('b');
+    expect(result.current.history).toHaveLength(1);
+  });
+
+  it('sends modelId on llm opponent requests', async () => {
+    fetchMock.mockResolvedValue(json({ move: { from: [0, 1], to: [2, 2] }, source: 'llm' }));
+    const { result } = setup({ ...aiConfig, aiProvider: 'llm', modelId: 'gemini-flash' });
+    playCentralCannon(result);
+    await waitFor(() => expect(result.current.turn).toBe('r'));
+    const body = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string);
+    expect(body.modelId).toBe('gemini-flash');
+  });
+
   it('plays first when the computer is Red', async () => {
     fetchMock.mockResolvedValue(json({ move: { from: [7, 1], to: [7, 4] }, source: 'engine' }));
     const { result } = setup({ ...aiConfig, aiSide: 'r' });

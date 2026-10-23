@@ -1,5 +1,12 @@
 import { AI, Coach, X } from '@jade-court/xiangqi-engine';
-import { fetchAiMove, fetchOpponentMove, GemmaApiError, isLlmUnconfigured } from '../lib/gemmaApi';
+import {
+  fetchAiMove,
+  fetchOpponentMove,
+  GemmaApiError,
+  isAuthRequired,
+  isLlmUnconfigured,
+  isPlayAccessRequired,
+} from '../lib/gemmaApi';
 import type {
   Board,
   Coord,
@@ -44,6 +51,10 @@ export interface GameConfig {
   /** Pause after an AI ply so the move is easier to notice (ms). Default 1200; 0 = off. */
   revealOpponentMoveMs?: number;
   locked?: boolean;
+  /** Optional LLM model id for `aiProvider: 'llm'`. */
+  modelId?: string;
+  /** When AI move fails with 401/402 instead of falling back to local AI. */
+  onGatedError?: (kind: 'auth' | 'access') => void;
   onMove?: (move: Move, boardBefore: Board, side: Side, meta: MoveMeta) => void;
   onSelect?: (piece: Piece, count: number, pos: Coord) => void;
   onAIThinking?: (thinking: boolean) => void;
@@ -474,6 +485,7 @@ export function useXiangqiGame(config: GameConfig = {}) {
         difficulty,
         lastMove: lastMove ?? undefined,
         history: historyPayload,
+        ...(cfg.modelId ? { modelId: cfg.modelId } : {}),
       };
 
       try {
@@ -491,6 +503,18 @@ export function useXiangqiGame(config: GameConfig = {}) {
         }
       } catch (err) {
         if (cancelled) return;
+        if (provider === 'llm' && err instanceof GemmaApiError) {
+          if (isAuthRequired(err)) {
+            cfg.onGatedError?.('auth');
+            finishThinking();
+            return;
+          }
+          if (isPlayAccessRequired(err)) {
+            cfg.onGatedError?.('access');
+            finishThinking();
+            return;
+          }
+        }
         const quiet = err instanceof GemmaApiError && isLlmUnconfigured(err);
         if (!quiet) {
           console.warn(`[${provider}] opponent move failed, using local AI:`, err);
