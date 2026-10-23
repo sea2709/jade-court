@@ -22,6 +22,8 @@ export interface UserStore {
   findById(id: string): Promise<UserRecord | null>;
   /** Atomically extend `accessUntil` by `ms` from max(now, current access). */
   extendAccess(userId: string, ms: number, now: Date): Promise<UserRecord | null>;
+  /** Raise `accessUntil` to at least `until` without shortening existing access. */
+  ensureAccessUntilAtLeast(userId: string, until: Date): Promise<UserRecord | null>;
   setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null>;
   updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null>;
 }
