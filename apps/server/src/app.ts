@@ -3,6 +3,7 @@
  * Kept free of `listen()` and env loading so tests can import it directly.
  */
 import { Hono, type Context } from 'hono';
+import type Stripe from 'stripe';
 import { cors } from 'hono/cors';
 import type { Server } from 'http';
 import type { WebSocket } from 'ws';
@@ -54,6 +55,10 @@ import {
 } from './news/imageStorage.js';
 import { MongoNewsStore } from './news/mongoStore.js';
 import type { NewsStore } from './news/store.js';
+import { MemoryPaymentStore } from './billing/payments/memoryStore.js';
+import { MongoPaymentStore } from './billing/payments/mongoStore.js';
+import type { PaymentStore } from './billing/payments/store.js';
+import { createBillingRoutes } from './routes/billing.js';
 
 /** Open room sockets, shared by REST joins and WebSocket messages for broadcasts. */
 const sockets = new Map<WebSocket, { guestId: string; code?: string }>();
@@ -116,6 +121,8 @@ export interface CreateAppDeps {
   sessionStore?: SessionStore;
   emailTokenStore?: EmailTokenStore;
   emailSender?: EmailSender;
+  paymentStore?: PaymentStore;
+  stripe?: Stripe | null;
 }
 
 /** Build the Hono app with CORS, guest auth, room REST endpoints, and API sub-routers. */
@@ -166,6 +173,15 @@ export function createApp(deps?: CreateAppDeps) {
   }
 
   const emailSender = deps?.emailSender ?? createEmailSender();
+
+  let paymentStore: PaymentStore;
+  if (deps?.paymentStore) {
+    paymentStore = deps.paymentStore;
+  } else if (process.env.MONGODB_URI) {
+    paymentStore = new MongoPaymentStore();
+  } else {
+    paymentStore = new MemoryPaymentStore();
+  }
 
   app.use(
     '*',
@@ -224,6 +240,14 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api', createMeRoute());
   app.route('/api/admin', createAdminRoutes({ userStore }));
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
+  app.route(
+    '/api/billing',
+    createBillingRoutes({
+      userStore,
+      paymentStore,
+      ...(deps && 'stripe' in deps ? { stripe: deps.stripe } : {}),
+    }),
+  );
 
   return app;
 }
