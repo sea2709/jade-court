@@ -41,3 +41,14 @@ export async function extendAccess(
   if (ms === null) return null;
   return store.extendAccess(userId, ms, now);
 }
+
+/**
+ * Ensures stored access covers at least `until` (webhook replay healing without stacking hours).
+ */
+export async function ensureAccessUntilAtLeast(
+  store: UserStore,
+  userId: string,
+  until: Date,
+): Promise<UserRecord | null> {
+  return store.ensureAccessUntilAtLeast(userId, until);
+}

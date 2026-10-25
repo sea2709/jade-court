@@ -91,7 +91,7 @@ describe('PlayAiScreen gating', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Unlock Play with AI/i })).toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: /Add 24 hours/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Buy day pass/i })).toBeInTheDocument();
   });
 
   it('renders the game when access is active', async () => {
@@ -150,10 +150,55 @@ describe('PlayAiScreen gating', () => {
       return Promise.resolve(json({}));
     });
     renderPlayAi();
-    await waitFor(() => screen.getByRole('button', { name: /Add 24 hours/i }));
-    await userEvent.click(screen.getByRole('button', { name: /Add 24 hours/i }));
+    await waitFor(() => screen.getByRole('button', { name: /Buy day pass/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Buy day pass/i }));
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/not available right now/i);
     });
+  });
+
+  it('polls /api/me after checkout=success until access is active', async () => {
+    let meCalls = 0;
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/me')) {
+        meCalls += 1;
+        if (meCalls >= 2) {
+          return Promise.resolve(json(signedInActive));
+        }
+        return Promise.resolve(json(signedInNoPass));
+      }
+      if (url.includes('/api/ai/models')) {
+        return Promise.resolve(
+          json({ models: [{ id: 'm1', label: 'Model One' }], defaultId: 'm1' }),
+        );
+      }
+      if (url.includes('/api/coach/opening')) {
+        return Promise.resolve(json({ text: 'Hi', source: 'llm' }));
+      }
+      return Promise.resolve(json({}));
+    });
+    renderPlayAi('/play-ai?checkout=success');
+    expect(screen.getByText(/Confirming payment/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('play-ai-game')).toBeInTheDocument();
+    });
+    expect(meCalls).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not show confirming state without checkout success param', async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/me')) return Promise.resolve(json(signedInNoPass));
+      if (url.includes('/api/ai/models')) {
+        return Promise.resolve(json({ models: [], defaultId: 'm1' }));
+      }
+      return Promise.resolve(json({}));
+    });
+    renderPlayAi('/play-ai');
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Unlock Play with AI/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Confirming payment/i)).not.toBeInTheDocument();
   });
 });

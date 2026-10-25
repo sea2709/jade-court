@@ -7,6 +7,7 @@ import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engi
 import { isLlmConfigured, llmModel, llmProviderId, shouldLogLlmTokenUsage } from './llm/config.js';
 import { warnAdminConfigAtStartup } from './admin/startupWarnings.js';
 import { warnPlayerAuthConfigAtStartup } from './auth/startupWarnings.js';
+import { isStripeConfigured } from './billing/config.js';
 
 warnAdminConfigAtStartup();
 warnPlayerAuthConfigAtStartup();
@@ -39,6 +40,13 @@ httpServer.listen(port, () => {
   } else {
     console.log(
       `LLM: disabled (set API key for LLM_PROVIDER=${llmProviderId()} — Learn coach and PLAY_OPPONENT_PROVIDER=llm)`,
+    );
+  }
+  if (isStripeConfigured()) {
+    console.log('Billing: Stripe Checkout enabled — POST /api/billing/checkout');
+  } else {
+    console.log(
+      'Billing: disabled (set STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET)',
     );
   }
 });

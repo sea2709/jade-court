@@ -18,6 +18,25 @@ export interface CheckoutResponse {
   url: string;
 }
 
+export type PaymentStatus = 'paid' | 'refunded';
+
+/** Row from `GET /api/billing/payments` (newest first). */
+export interface PublicPayment {
+  id: string;
+  stripeSessionId: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  createdAt: string;
+  grantedFrom: string;
+  grantedUntil: string;
+  receiptUrl?: string;
+}
+
+export interface PaymentsResponse {
+  payments: PublicPayment[];
+}
+
 const ALLOWED_CHECKOUT_HOSTS = new Set(['checkout.stripe.com', 'billing.stripe.com']);
 
 /** Returns true for same-origin relative paths or allowlisted Stripe checkout hosts. */
@@ -63,4 +82,17 @@ export async function postBillingCheckout(): Promise<CheckoutResponse> {
     throw new BillingApiError('invalid_checkout_url', res.status, 'invalid_checkout_url');
   }
   return { url: data.url };
+}
+
+/** Lists the signed-in user's day-pass payments (newest first). */
+export async function fetchBillingPayments(): Promise<PaymentsResponse> {
+  const res = await fetch(`${API_BASE}/api/billing/payments`, {
+    credentials: 'include',
+  });
+  const data = (await res.json().catch(() => ({}))) as PaymentsResponse & { error?: string };
+  if (!res.ok) {
+    throw new BillingApiError(data.error ?? res.statusText, res.status, data.error);
+  }
+  const payments = Array.isArray(data.payments) ? data.payments : [];
+  return { payments };
 }

@@ -38,6 +38,9 @@ beforeEach(() => {
   fetchMock.mockImplementation((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
     if (url.includes('/api/me')) return Promise.resolve(signedInMe);
+    if (url.includes('/api/billing/payments')) {
+      return Promise.resolve(json({ payments: [] }));
+    }
     return Promise.resolve(json({ error: 'unexpected' }, 500));
   });
 });
@@ -60,6 +63,6 @@ describe('AccountScreen', () => {
       return Promise.resolve(json({ error: 'unexpected' }, 500));
     });
     await userEvent.click(screen.getByRole('button', { name: /Resend verification email/i }));
-    expect(await screen.findByRole('status')).toHaveTextContent(/Check your inbox/i);
+    expect(await screen.findByText(/Check your inbox/i)).toBeInTheDocument();
   });
 });

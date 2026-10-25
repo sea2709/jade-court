@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  billingPublicAppUrl,
+  billingRequiresVerifiedEmail,
+  isStripeConfigured,
   MAX_PLAY_AI_ACCESS_HOURS,
   playAiAccessHours,
   resetBillingConfigForTests,
@@ -34,5 +37,32 @@ describe('playAiAccessHours', () => {
   it('allows the max cap exactly', () => {
     process.env.PLAY_AI_ACCESS_HOURS = String(MAX_PLAY_AI_ACCESS_HOURS);
     expect(playAiAccessHours()).toBe(MAX_PLAY_AI_ACCESS_HOURS);
+  });
+});
+
+describe('Stripe billing config', () => {
+  afterEach(() => {
+    resetBillingConfigForTests();
+  });
+
+  it('isStripeConfigured requires all three secrets', () => {
+    expect(isStripeConfigured()).toBe(false);
+    process.env.STRIPE_SECRET_KEY = 'sk_test';
+    expect(isStripeConfigured()).toBe(false);
+    process.env.STRIPE_PRICE_ID = 'price_1';
+    expect(isStripeConfigured()).toBe(false);
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_1';
+    expect(isStripeConfigured()).toBe(true);
+  });
+
+  it('billingPublicAppUrl strips trailing slashes', () => {
+    process.env.PUBLIC_APP_URL = 'http://localhost:5173///';
+    expect(billingPublicAppUrl()).toBe('http://localhost:5173');
+  });
+
+  it('billingRequiresVerifiedEmail defaults to true and respects env', () => {
+    expect(billingRequiresVerifiedEmail()).toBe(true);
+    process.env.BILLING_REQUIRE_VERIFIED_EMAIL = 'false';
+    expect(billingRequiresVerifiedEmail()).toBe(false);
   });
 });

@@ -4,8 +4,10 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { SIGN_OUT_FAILED_MESSAGE, SIGN_OUT_NOTICE } from '../components/AccountAvatarMenu';
+import { AccountDayPassCard } from '../components/account/AccountDayPassCard';
+import { PaymentHistoryTable } from '../components/account/PaymentHistoryTable';
 import { useAuth } from '../context/useAuth';
-import { formatAccessTimeLeft } from '../lib/formatAccessUntil';
+import { fetchBillingPayments, type PublicPayment } from '../lib/billingApi';
 import { ResendVerificationButton } from '../components/ResendVerificationButton';
 import { playerLogout } from '../lib/playerAuthApi';
 
@@ -15,10 +17,27 @@ export function AccountScreen() {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [payments, setPayments] = useState<PublicPayment[]>([]);
 
   useEffect(() => {
     document.title = 'Account · Jade Court';
   }, []);
+
+  useEffect(() => {
+    if (status !== 'ready' || !user) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { payments: rows } = await fetchBillingPayments();
+        if (!cancelled) setPayments(rows);
+      } catch {
+        if (!cancelled) setPayments([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, user]);
 
   if (status === 'loading') {
     return (
@@ -33,7 +52,7 @@ export function AccountScreen() {
   }
 
   const name = user.displayName?.trim() || 'Player';
-  const accessLabel = formatAccessTimeLeft(access.accessUntil ?? user.accessUntil);
+  const accessUntil = access.accessUntil ?? user.accessUntil;
 
   const onSignOut = async () => {
     if (signingOut) return;
@@ -85,12 +104,6 @@ export function AccountScreen() {
               {user.emailVerified ? 'Yes' : 'Not yet'}
             </dd>
           </div>
-          {accessLabel ? (
-            <div>
-              <dt className="text-muted mb-1">Day pass</dt>
-              <dd className="m-0 text-ink font-bold text-base">{accessLabel}</dd>
-            </div>
-          ) : null}
         </dl>
         {signOutError ? (
           <p className="mt-6 text-sm font-bold text-red-deep" role="alert">
@@ -111,6 +124,13 @@ export function AccountScreen() {
           </Link>
         </div>
       </div>
+      <AccountDayPassCard
+        accessUntil={accessUntil}
+        emailVerified={user.emailVerified}
+        hasEmail={user.email != null && user.email.trim() !== ''}
+        payments={payments}
+      />
+      <PaymentHistoryTable payments={payments} />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   accessMinutesRemaining,
+  dayPassWindowProgress,
+  formatAccessCountdownShort,
   formatAccessTimeLeft,
   isPlayAccessActive,
 } from './formatAccessUntil';
@@ -41,5 +43,17 @@ describe('formatAccessTimeLeft', () => {
     expect(accessMinutesRemaining(until)).toBe(5);
     expect(accessMinutesRemaining('2026-01-01T11:00:00.000Z')).toBe(0);
     expect(accessMinutesRemaining(null)).toBeNull();
+  });
+
+  it('formats short countdown for account card', () => {
+    const until = new Date('2026-01-02T05:42:00.000Z').toISOString();
+    expect(formatAccessCountdownShort(until)).toBe('17h 42m left');
+  });
+
+  it('computes day-pass window progress', () => {
+    const from = '2026-01-01T00:00:00.000Z';
+    const until = '2026-01-02T00:00:00.000Z';
+    const mid = Date.parse('2026-01-01T12:00:00.000Z');
+    expect(dayPassWindowProgress(from, until, mid)).toBe(0.5);
   });
 });

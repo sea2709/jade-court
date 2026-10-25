@@ -81,12 +81,21 @@ export function PlayAiScreen() {
         </div>
       ) : null}
       {checkoutWaiting ? (
-        <div className="page-container-md rise py-8 text-center text-muted font-bold">
-          Activating your day pass…
+        <div
+          className="page-container-md rise py-8 text-center text-muted font-bold"
+          role="status"
+          aria-live="polite"
+        >
+          Confirming payment…
         </div>
       ) : null}
       {status === 'ready' && !user ? <PlayAiPitch /> : null}
-      {status === 'ready' && user && !hasActivePass && !checkoutWaiting ? <PlayAiPaywall /> : null}
+      {status === 'ready' && user && !hasActivePass && !checkoutWaiting ? (
+        <PlayAiPaywall
+          emailVerified={user.emailVerified}
+          hasEmail={user.email != null && user.email.trim() !== ''}
+        />
+      ) : null}
       {showGame && !checkoutWaiting ? (
         <PlayAiGame accessUntil={accessUntil} preferredModelId={user.preferredModelId} />
       ) : null}

@@ -60,6 +60,18 @@ export class MemoryUserStore implements UserStore {
     return { ...updated };
   }
 
+  async ensureAccessUntilAtLeast(userId: string, until: Date): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    const current = user.accessUntil?.getTime() ?? 0;
+    if (current >= until.getTime()) {
+      return { ...user };
+    }
+    const updated: UserRecord = { ...user, accessUntil: new Date(until) };
+    this.byId.set(userId, updated);
+    return { ...updated };
+  }
+
   async setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null> {
     const user = this.byId.get(userId);
     if (!user) return null;

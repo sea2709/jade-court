@@ -131,6 +131,21 @@ export class MongoUserStore implements UserStore {
     return doc ? fromMongo(doc) : null;
   }
 
+  async ensureAccessUntilAtLeast(userId: string, until: Date): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) return null;
+    if (!ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const epoch = new Date(0);
+    const doc = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      [{ $set: { accessUntil: { $max: [{ $ifNull: ['$accessUntil', epoch] }, until] } } }],
+      { returnDocument: 'after' },
+    );
+    return doc ? fromMongo(doc) : null;
+  }
+
   async setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null> {
     await ensureIndexes();
     const db = await getDb();

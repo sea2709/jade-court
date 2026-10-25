@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extendAccess, grantHoursToMs, hasPlayAccess } from './access.js';
+import { ensureAccessUntilAtLeast, extendAccess, grantHoursToMs, hasPlayAccess } from './access.js';
 import { MAX_PLAY_AI_ACCESS_HOURS } from './config.js';
 import { MemoryUserStore } from '../users/memoryStore.js';
 
@@ -76,5 +76,33 @@ describe('extendAccess', () => {
     const second = await extendAccess(store, user.id, 24, mid);
     expect(first?.accessUntil?.getTime()).toBe(now.getTime() + 24 * hourMs);
     expect(second?.accessUntil?.getTime()).toBe(now.getTime() + 48 * hourMs);
+  });
+});
+
+describe('ensureAccessUntilAtLeast', () => {
+  const now = new Date('2026-06-01T00:00:00.000Z');
+  const target = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  it('raises access when below the payment grant end', async () => {
+    const store = new MemoryUserStore();
+    const user = await store.create({
+      email: 'heal@example.com',
+      passwordHash: 'hash',
+    });
+    const updated = await ensureAccessUntilAtLeast(store, user.id, target);
+    expect(updated?.accessUntil?.getTime()).toBe(target.getTime());
+  });
+
+  it('does not shorten access that already exceeds the grant end', async () => {
+    const store = new MemoryUserStore();
+    const user = await store.create({
+      email: 'no-shrink@example.com',
+      passwordHash: 'hash',
+    });
+    await store.extendAccess(user.id, 48 * 60 * 60 * 1000, now);
+    const afterExtend = await store.findById(user.id);
+    const updated = await ensureAccessUntilAtLeast(store, user.id, target);
+    expect(updated?.accessUntil?.getTime()).toBe(afterExtend?.accessUntil?.getTime());
+    expect(updated?.accessUntil?.getTime()).toBeGreaterThan(target.getTime());
   });
 });
