@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LlmProviderId } from './types.js';
 import {
   getLlmProvider,
+  getLlmProviderFor,
   llmGenerateCoachAskJson,
   llmGenerateCoachFeedbackJson,
   llmGenerateCoachHintJson,
@@ -18,17 +19,14 @@ const { generateJson, streamText } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock('./providers/index.js', async () => {
-  const config = await import('./config.js');
-  return {
-    createProvider: (id: LlmProviderId) => ({
-      id,
-      model: config.llmModel(id),
-      generateJson,
-      streamText,
-    }),
-  };
-});
+vi.mock('./providers/index.js', () => ({
+  createProvider: (id: LlmProviderId, model: string) => ({
+    id,
+    model,
+    generateJson,
+    streamText,
+  }),
+}));
 
 const envSnapshot = { ...process.env };
 
@@ -58,6 +56,17 @@ describe('getLlmProvider', () => {
     const openai = getLlmProvider();
     expect(openai.id).toBe('openai');
     expect(openai).not.toBe(gemini);
+  });
+
+  it('caches separate providers per provider:model key', () => {
+    process.env.LLM_PROVIDER = 'gemini';
+    process.env.GEMINI_API_KEY = 'gemini-key';
+    const flash = getLlmProviderFor({ provider: 'gemini', model: 'gemini-2.0-flash' });
+    const gemma = getLlmProviderFor({ provider: 'gemini', model: 'gemma-4-26b-a4b-it' });
+    expect(flash.model).toBe('gemini-2.0-flash');
+    expect(gemma.model).toBe('gemma-4-26b-a4b-it');
+    expect(flash).not.toBe(gemma);
+    expect(getLlmProviderFor({ provider: 'gemini', model: 'gemini-2.0-flash' })).toBe(flash);
   });
 
   it('recreates provider when LLM_MODEL changes for the same provider', () => {

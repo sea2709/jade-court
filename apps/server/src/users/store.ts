@@ -26,4 +26,5 @@ export interface UserStore {
   ensureAccessUntilAtLeast(userId: string, until: Date): Promise<UserRecord | null>;
   setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null>;
   updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null>;
+  setPreferredModelId(userId: string, preferredModelId: string): Promise<UserRecord | null>;
 }

@@ -1,12 +1,12 @@
 /**
- * OpenAI provider — structured JSON via Chat Completions + json_schema.
+ * OpenAI provider — structured JSON and streaming via Chat Completions.
  */
 import OpenAI from 'openai';
-import { apiKeyForProvider, llmModel } from '../config.js';
-import { assertLlmConfigured, streamTextNotImplemented } from '../errors.js';
+import { apiKeyForProvider } from '../config.js';
+import { assertLlmConfigured } from '../errors.js';
 import { logLlmTokenUsage } from '../logUsage.js';
 import { llmAbortSignal } from '../timeout.js';
-import type { GenerateJsonParams, LlmProvider } from '../types.js';
+import type { GenerateJsonParams, LlmProvider, StreamTextParams } from '../types.js';
 
 let client: OpenAI | null = null;
 
@@ -17,8 +17,7 @@ function getClient(): OpenAI {
   return client;
 }
 
-export function createOpenaiProvider(): LlmProvider {
-  const model = llmModel('openai');
+export function createOpenaiProvider(model: string): LlmProvider {
   return {
     id: 'openai',
     model,
@@ -43,13 +42,49 @@ export function createOpenaiProvider(): LlmProvider {
         },
         { signal },
       );
-      logLlmTokenUsage('openai', {
-        promptTokens: response.usage?.prompt_tokens,
-        outputTokens: response.usage?.completion_tokens,
-        totalTokens: response.usage?.total_tokens,
-      });
+      logLlmTokenUsage(
+        'openai',
+        {
+          promptTokens: response.usage?.prompt_tokens,
+          outputTokens: response.usage?.completion_tokens,
+          totalTokens: response.usage?.total_tokens,
+        },
+        { model, logContext: params.logContext },
+      );
       return response.choices[0]?.message?.content ?? '';
     },
-    streamText: streamTextNotImplemented,
+    async *streamText(params: StreamTextParams) {
+      const openai = getClient();
+      const signal = llmAbortSignal(params.signal);
+      const stream = await openai.chat.completions.create(
+        {
+          model,
+          messages: [
+            { role: 'system', content: params.system },
+            { role: 'user', content: params.user },
+          ],
+          stream: true,
+          stream_options: { include_usage: true },
+        },
+        { signal },
+      );
+      let usage: OpenAI.Completions.CompletionUsage | undefined;
+      for await (const chunk of stream) {
+        if (chunk.usage) usage = chunk.usage;
+        const text = chunk.choices[0]?.delta?.content;
+        if (text) yield text;
+      }
+      logLlmTokenUsage(
+        'openai',
+        usage
+          ? {
+              promptTokens: usage.prompt_tokens,
+              outputTokens: usage.completion_tokens,
+              totalTokens: usage.total_tokens,
+            }
+          : undefined,
+        { model, logContext: params.logContext },
+      );
+    },
   };
 }

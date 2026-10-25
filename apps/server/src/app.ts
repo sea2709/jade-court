@@ -41,8 +41,8 @@ import {
   seatFor,
   type RoomState,
 } from './rooms.js';
-import aiRoutes from './routes/ai.js';
-import coachRoutes from './routes/coach.js';
+import { createAiRoutes } from './routes/ai.js';
+import { createCoachRoutes } from './routes/coach.js';
 import engineRoutes from './routes/engine.js';
 import opponentRoutes from './routes/opponent.js';
 import { createAdminRoutes } from './routes/admin.js';
@@ -228,8 +228,8 @@ export function createApp(deps?: CreateAppDeps) {
 
   app.get('/health', (c) => c.json({ ok: true }));
 
-  app.route('/api/ai', aiRoutes);
-  app.route('/api/coach', coachRoutes);
+  app.route('/api/ai', createAiRoutes({ userStore }));
+  app.route('/api/coach', createCoachRoutes({ userStore }));
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
   app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));

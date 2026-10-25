@@ -85,4 +85,12 @@ export class MemoryUserStore implements UserStore {
     user.passwordHash = passwordHash;
     return { ...user };
   }
+
+  async setPreferredModelId(userId: string, preferredModelId: string): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    const updated: UserRecord = { ...user, preferredModelId };
+    this.byId.set(userId, updated);
+    return { ...updated };
+  }
 }

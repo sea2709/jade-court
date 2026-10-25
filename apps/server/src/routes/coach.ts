@@ -14,21 +14,18 @@ import type {
   Move,
 } from '@jade-court/xiangqi-engine';
 import {
-  isLlmConfigured,
   llmGenerateCoachFeedbackJson,
   llmGenerateCoachHintJson,
   llmGenerateCoachOpeningJson,
   llmHistoryLimit,
 } from '../llm/client.js';
+import { resolveModelRouteContext, isResolvedLlmAvailable } from '../llm/routeHelpers.js';
+import { savePreferredModelIfAuthenticated } from '../llm/preferredModel.js';
 import { llmUserRateLimit } from '../middleware/llmUserRateLimit.js';
 import { requirePlayAccess } from '../middleware/playAccess.js';
 import type { AppVariables } from '../types/hono.js';
+import type { UserStore } from '../users/store.js';
 import { registerCoachStreamRoutes } from './coachStreams.js';
-
-const coach = new Hono<{ Variables: AppVariables }>();
-coach.use('*', requirePlayAccess);
-coach.use('*', llmUserRateLimit);
-registerCoachStreamRoutes(coach);
 
 function isBoard(v: unknown): v is Board {
   if (!Array.isArray(v) || v.length !== X.ROWS) return false;
@@ -80,181 +77,209 @@ function templateHint(req: CoachHintRequest): CoachHintResponse | null {
   return { move: h.move, text: h.text, tip: h.tip, source: 'template' };
 }
 
-coach.post('/feedback', async (c) => {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'invalid_json' }, 400);
-  }
+export function createCoachRoutes(deps: { userStore: UserStore }) {
+  const coach = new Hono<{ Variables: AppVariables }>();
+  coach.use('*', requirePlayAccess);
+  coach.use('*', llmUserRateLimit);
+  registerCoachStreamRoutes(coach, deps);
 
-  if (!body || typeof body !== 'object') return c.json({ error: 'invalid_request' }, 400);
-  const o = body as Record<string, unknown>;
-  if (!isBoard(o.boardBefore) || !isMove(o.move)) return c.json({ error: 'invalid_request' }, 400);
-  if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
+  coach.post('/feedback', async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'invalid_json' }, 400);
+    }
 
-  const req: CoachFeedbackRequest = {
-    boardBefore: o.boardBefore,
-    move: o.move,
-    side: o.side,
-    depth: typeof o.depth === 'number' ? o.depth : undefined,
-    difficulty: parseDifficulty(o.difficulty),
-    history: o.history as CoachFeedbackRequest['history'],
-  };
+    if (!body || typeof body !== 'object') return c.json({ error: 'invalid_request' }, 400);
+    const o = body as Record<string, unknown>;
+    if (!isBoard(o.boardBefore) || !isMove(o.move))
+      return c.json({ error: 'invalid_request' }, 400);
+    if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
 
-  const depth = req.depth ?? 2;
-  const grade = AI.gradeMove(req.boardBefore, req.side, req.move, depth);
-  const v = Coach.VERDICT[grade.verdict];
-  const moveDescription = Coach.describeMove(req.boardBefore, req.move);
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
+    }
+    if (!isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
 
-  if (!isLlmConfigured()) {
-    return c.json({ error: 'llm_unconfigured' }, 503);
-  }
+    const req: CoachFeedbackRequest = {
+      boardBefore: o.boardBefore,
+      move: o.move,
+      side: o.side,
+      depth: typeof o.depth === 'number' ? o.depth : undefined,
+      difficulty: parseDifficulty(o.difficulty),
+      history: o.history as CoachFeedbackRequest['history'],
+    };
 
-  try {
-    const system = LLM.coachFeedbackSystem();
-    const user = LLM.coachFeedbackUser({
-      boardBefore: req.boardBefore,
-      move: req.move,
-      side: req.side,
-      verdict: grade.verdict,
-      lossCp: grade.lossCp,
-      moveDescription,
-      bestMove: grade.best,
-      difficulty: req.difficulty,
-      history: req.history,
-      historyLimit: llmHistoryLimit(),
-    });
-    const raw = await llmGenerateCoachFeedbackJson(system, user);
-    const copy = LLM.parseCoachFeedbackJson(raw);
-    if (!copy) {
-      console.warn('[llm] invalid coach feedback JSON, using template');
+    const depth = req.depth ?? 2;
+    const grade = AI.gradeMove(req.boardBefore, req.side, req.move, depth);
+    const v = Coach.VERDICT[grade.verdict];
+    const moveDescription = Coach.describeMove(req.boardBefore, req.move);
+
+    try {
+      const system = LLM.coachFeedbackSystem();
+      const user = LLM.coachFeedbackUser({
+        boardBefore: req.boardBefore,
+        move: req.move,
+        side: req.side,
+        verdict: grade.verdict,
+        lossCp: grade.lossCp,
+        moveDescription,
+        bestMove: grade.best,
+        difficulty: req.difficulty,
+        history: req.history,
+        historyLimit: llmHistoryLimit(),
+      });
+      const raw = await llmGenerateCoachFeedbackJson(system, user, modelRoute.ctx.llmOptions);
+      const copy = LLM.parseCoachFeedbackJson(raw);
+      if (!copy) {
+        console.warn('[llm] invalid coach feedback JSON, using template');
+        return c.json(templateFeedback(req));
+      }
+      const res: CoachFeedbackResponse = {
+        verdict: grade.verdict,
+        label: v.label,
+        emoji: v.emoji,
+        tone: v.tone,
+        lossCp: grade.lossCp,
+        desc: copy.desc,
+        body: copy.body,
+        source: 'llm',
+      };
+      return c.json(res);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
+      console.warn('[llm] coach feedback error, template fallback:', msg);
       return c.json(templateFeedback(req));
     }
-    const res: CoachFeedbackResponse = {
-      verdict: grade.verdict,
-      label: v.label,
-      emoji: v.emoji,
-      tone: v.tone,
-      lossCp: grade.lossCp,
-      desc: copy.desc,
-      body: copy.body,
-      source: 'llm',
+  });
+
+  coach.post('/hint', async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'invalid_json' }, 400);
+    }
+
+    if (!body || typeof body !== 'object') return c.json({ error: 'invalid_request' }, 400);
+    const o = body as Record<string, unknown>;
+    if (!isBoard(o.board)) return c.json({ error: 'invalid_request' }, 400);
+    if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
+
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
+    }
+    if (!isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
+
+    const req: CoachHintRequest = {
+      board: o.board,
+      side: o.side,
+      depth: typeof o.depth === 'number' ? o.depth : undefined,
+      difficulty: parseDifficulty(o.difficulty),
     };
-    return c.json(res);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
-    console.warn('[llm] coach feedback error, template fallback:', msg);
-    return c.json(templateFeedback(req));
-  }
-});
 
-coach.post('/hint', async (c) => {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'invalid_json' }, 400);
-  }
+    const depth = req.depth ?? 2;
+    const { move } = AI.bestMove(req.board, req.side, depth);
+    if (!move) return c.json({ error: 'no_legal_moves' }, 400);
 
-  if (!body || typeof body !== 'object') return c.json({ error: 'invalid_request' }, 400);
-  const o = body as Record<string, unknown>;
-  if (!isBoard(o.board)) return c.json({ error: 'invalid_request' }, 400);
-  if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
+    const piece = req.board[move.from[0]]?.[move.from[1]];
+    const captured = req.board[move.to[0]]?.[move.to[1]];
+    const after = X.applyMove(req.board, move);
+    const givesCheck = piece ? X.inCheck(after, X.opp(piece.s)) : false;
+    const from = X.squareName(req.side, move.from[0], move.from[1]);
+    const to = X.squareName(req.side, move.to[0], move.to[1]);
+    const capLabel = captured ? X.NAME[captured.t] : '';
+    const moveDescription = piece
+      ? `${X.NAME[piece.t]} ${from} → ${to}${capLabel ? ` (captures ${capLabel})` : ''}`
+      : 'Best move';
 
-  const req: CoachHintRequest = {
-    board: o.board,
-    side: o.side,
-    depth: typeof o.depth === 'number' ? o.depth : undefined,
-    difficulty: parseDifficulty(o.difficulty),
-  };
-
-  const depth = req.depth ?? 2;
-  const { move } = AI.bestMove(req.board, req.side, depth);
-  if (!move) return c.json({ error: 'no_legal_moves' }, 400);
-
-  const piece = req.board[move.from[0]]?.[move.from[1]];
-  const captured = req.board[move.to[0]]?.[move.to[1]];
-  const after = X.applyMove(req.board, move);
-  const givesCheck = piece ? X.inCheck(after, X.opp(piece.s)) : false;
-  const from = X.squareName(req.side, move.from[0], move.from[1]);
-  const to = X.squareName(req.side, move.to[0], move.to[1]);
-  const capLabel = captured ? X.NAME[captured.t] : '';
-  const moveDescription = piece
-    ? `${X.NAME[piece.t]} ${from} → ${to}${capLabel ? ` (captures ${capLabel})` : ''}`
-    : 'Best move';
-
-  if (!isLlmConfigured()) {
-    return c.json({ error: 'llm_unconfigured' }, 503);
-  }
-
-  try {
-    const system = LLM.coachHintSystem();
-    const user = LLM.coachHintUser({
-      board: req.board,
-      side: req.side,
-      bestMove: move,
-      moveDescription,
-      givesCheck,
-      captures: Boolean(captured),
-      difficulty: req.difficulty,
-    });
-    const raw = await llmGenerateCoachHintJson(system, user);
-    const copy = LLM.parseCoachHintJson(raw);
-    if (!copy) {
-      console.warn('[llm] invalid coach hint JSON, using template');
+    try {
+      const system = LLM.coachHintSystem();
+      const user = LLM.coachHintUser({
+        board: req.board,
+        side: req.side,
+        bestMove: move,
+        moveDescription,
+        givesCheck,
+        captures: Boolean(captured),
+        difficulty: req.difficulty,
+      });
+      const raw = await llmGenerateCoachHintJson(system, user, modelRoute.ctx.llmOptions);
+      const copy = LLM.parseCoachHintJson(raw);
+      if (!copy) {
+        console.warn('[llm] invalid coach hint JSON, using template');
+        const fallback = templateHint(req);
+        return fallback ? c.json(fallback) : c.json({ error: 'no_legal_moves' }, 400);
+      }
+      const res: CoachHintResponse = {
+        move,
+        text: copy.text,
+        tip: copy.tip,
+        source: 'llm',
+      };
+      return c.json(res);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
+      console.warn('[llm] coach hint error, template fallback:', msg);
       const fallback = templateHint(req);
       return fallback ? c.json(fallback) : c.json({ error: 'no_legal_moves' }, 400);
     }
-    const res: CoachHintResponse = {
-      move,
-      text: copy.text,
-      tip: copy.tip,
-      source: 'llm',
-    };
-    return c.json(res);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
-    console.warn('[llm] coach hint error, template fallback:', msg);
-    const fallback = templateHint(req);
-    return fallback ? c.json(fallback) : c.json({ error: 'no_legal_moves' }, 400);
-  }
-});
+  });
 
-coach.post('/opening', async (c) => {
-  let difficulty: Difficulty | undefined;
-  try {
-    const body = await c.req.json();
-    if (body && typeof body === 'object') {
-      difficulty = parseDifficulty((body as Record<string, unknown>).difficulty);
+  coach.post('/opening', async (c) => {
+    let difficulty: Difficulty | undefined;
+    let o: Record<string, unknown> = {};
+    try {
+      const body = await c.req.json();
+      if (body && typeof body === 'object') {
+        o = body as Record<string, unknown>;
+        difficulty = parseDifficulty(o.difficulty);
+      }
+    } catch {
+      /* empty body is fine */
     }
-  } catch {
-    /* empty body is fine */
-  }
 
-  if (!isLlmConfigured()) {
-    return c.json({ error: 'llm_unconfigured' }, 503);
-  }
-
-  try {
-    const raw = await llmGenerateCoachOpeningJson(
-      LLM.coachOpeningSystem(),
-      LLM.coachOpeningUser(difficulty),
-    );
-    const copy = LLM.parseCoachOpeningJson(raw);
-    if (!copy) {
-      const res: CoachOpeningResponse = { text: Coach.opening(), source: 'template' };
-      return c.json(res);
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
     }
-    return c.json({ text: copy.text, source: 'llm' } satisfies CoachOpeningResponse);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
-    console.warn('[llm] coach opening error, template fallback:', msg);
-    return c.json({ text: Coach.opening(), source: 'template' } satisfies CoachOpeningResponse);
-  }
-});
+    if (!isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
 
-export default coach;
+    try {
+      const raw = await llmGenerateCoachOpeningJson(
+        LLM.coachOpeningSystem(),
+        LLM.coachOpeningUser(difficulty),
+        modelRoute.ctx.llmOptions,
+      );
+      const copy = LLM.parseCoachOpeningJson(raw);
+      if (!copy) {
+        const res: CoachOpeningResponse = { text: Coach.opening(), source: 'template' };
+        return c.json(res);
+      }
+      return c.json({ text: copy.text, source: 'llm' } satisfies CoachOpeningResponse);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'llm_unconfigured') return c.json({ error: 'llm_unconfigured' }, 503);
+      console.warn('[llm] coach opening error, template fallback:', msg);
+      return c.json({ text: Coach.opening(), source: 'template' } satisfies CoachOpeningResponse);
+    }
+  });
+
+  return coach;
+}
+
+export default createCoachRoutes;

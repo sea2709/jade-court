@@ -12,11 +12,20 @@ import type { Hono } from 'hono';
 import type { AppVariables } from '../types/hono.js';
 import { coachSseResponse, type CoachSseEvent } from '../coach/sse.js';
 import {
-  isLlmConfigured,
   llmGenerateCoachAskJson,
+  llmGenerateCoachFeedbackJson,
+  llmGenerateCoachHintJson,
   llmHistoryLimit,
   llmStreamCoachText,
+  type LlmCallOptions,
 } from '../llm/client.js';
+import {
+  resolveModelRouteContext,
+  isResolvedLlmAvailable,
+  isLlmAvailableForCall,
+} from '../llm/routeHelpers.js';
+import { savePreferredModelIfAuthenticated } from '../llm/preferredModel.js';
+import type { UserStore } from '../users/store.js';
 
 const MAX_QUESTION_LEN = 500;
 
@@ -48,32 +57,44 @@ function parseDifficulty(v: unknown): Difficulty | undefined {
   return undefined;
 }
 
-async function streamPlainText(
+async function streamCoachLlmText(
   send: (event: CoachSseEvent) => void,
+  llmOptions: LlmCallOptions,
   system: string,
   user: string,
   templateText: string,
+  batchFallback?: () => Promise<string>,
 ): Promise<'llm' | 'template'> {
-  if (!isLlmConfigured()) {
+  const selection = llmOptions.selection ?? { provider: 'gemini', model: '' };
+  const configured = isLlmAvailableForCall(selection);
+  if (!configured) {
     send({ type: 'token', text: templateText });
     return 'template';
   }
   try {
-    for await (const chunk of llmStreamCoachText(system, user)) {
+    for await (const chunk of llmStreamCoachText(system, user, llmOptions)) {
       send({ type: 'token', text: chunk });
     }
     return 'llm';
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'llm_stream_not_implemented' || msg === 'llm_unconfigured') {
+    if (msg === 'llm_unconfigured') {
       send({ type: 'token', text: templateText });
       return 'template';
+    }
+    if (msg === 'llm_stream_not_implemented' && batchFallback) {
+      const text = await batchFallback();
+      send({ type: 'token', text });
+      return 'llm';
     }
     throw err;
   }
 }
 
-export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables }>): void {
+export function registerCoachStreamRoutes(
+  coach: Hono<{ Variables: AppVariables }>,
+  deps: { userStore: UserStore },
+): void {
   coach.post('/feedback/stream', async (c) => {
     let body: unknown;
     try {
@@ -87,6 +108,15 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     if (!isBoard(o.boardBefore) || !isMove(o.move))
       return c.json({ error: 'invalid_request' }, 400);
     if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
+
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
+    }
+    if (modelRoute.ctx.modelId && !isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
 
     const req: CoachFeedbackRequest = {
       boardBefore: o.boardBefore,
@@ -103,6 +133,19 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     const moveDescription = Coach.describeMove(req.boardBefore, req.move);
     const templateFb = Coach.feedbackFor(req.boardBefore, req.move, req.side, depth);
     const templateText = `${templateFb.desc} ${templateFb.body}`;
+    const userPrompt = LLM.coachFeedbackUser({
+      boardBefore: req.boardBefore,
+      move: req.move,
+      side: req.side,
+      verdict: grade.verdict,
+      lossCp: grade.lossCp,
+      moveDescription,
+      bestMove: grade.best,
+      difficulty: req.difficulty,
+      history: req.history,
+      historyLimit: llmHistoryLimit(),
+    });
+    const llmOptions = modelRoute.ctx.llmOptions;
 
     return coachSseResponse(async (send) => {
       send({
@@ -113,22 +156,22 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
         tone: v.tone,
         lossCp: grade.lossCp,
       });
-      const source = await streamPlainText(
+      const source = await streamCoachLlmText(
         send,
+        llmOptions,
         LLM.coachFeedbackStreamSystem(),
-        LLM.coachFeedbackUser({
-          boardBefore: req.boardBefore,
-          move: req.move,
-          side: req.side,
-          verdict: grade.verdict,
-          lossCp: grade.lossCp,
-          moveDescription,
-          bestMove: grade.best,
-          difficulty: req.difficulty,
-          history: req.history,
-          historyLimit: llmHistoryLimit(),
-        }),
+        userPrompt,
         templateText,
+        async () => {
+          const raw = await llmGenerateCoachFeedbackJson(
+            LLM.coachFeedbackSystem(),
+            userPrompt,
+            llmOptions,
+          );
+          const copy = LLM.parseCoachFeedbackJson(raw);
+          if (!copy) throw new Error('invalid_coach_json');
+          return `${copy.desc} ${copy.body}`;
+        },
       );
       send({ type: 'done', source });
     });
@@ -146,6 +189,15 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     const o = body as Record<string, unknown>;
     if (!isBoard(o.board)) return c.json({ error: 'invalid_request' }, 400);
     if (o.side !== 'r' && o.side !== 'b') return c.json({ error: 'invalid_request' }, 400);
+
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
+    }
+    if (modelRoute.ctx.modelId && !isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
 
     const req: CoachHintRequest = {
       board: o.board,
@@ -173,25 +225,34 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     const templateText = templateHint.tip
       ? `${templateHint.text} ${templateHint.tip}`
       : templateHint.text;
+    const userPrompt = LLM.coachHintUser({
+      board: req.board,
+      side: req.side,
+      bestMove: move,
+      moveDescription,
+      givesCheck,
+      captures: Boolean(captured),
+      difficulty: req.difficulty,
+    });
+    const llmOptions = modelRoute.ctx.llmOptions;
 
     return coachSseResponse(async (send) => {
       send({
         type: 'meta',
         move: { from: move.from, to: move.to },
       });
-      const source = await streamPlainText(
+      const source = await streamCoachLlmText(
         send,
+        llmOptions,
         LLM.coachHintStreamSystem(),
-        LLM.coachHintUser({
-          board: req.board,
-          side: req.side,
-          bestMove: move,
-          moveDescription,
-          givesCheck,
-          captures: Boolean(captured),
-          difficulty: req.difficulty,
-        }),
+        userPrompt,
         templateText,
+        async () => {
+          const raw = await llmGenerateCoachHintJson(LLM.coachHintSystem(), userPrompt, llmOptions);
+          const copy = LLM.parseCoachHintJson(raw);
+          if (!copy) throw new Error('invalid_coach_json');
+          return copy.tip ? `${copy.text} ${copy.tip}` : copy.text;
+        },
       );
       send({ type: 'done', source });
     });
@@ -214,6 +275,15 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     }
     const question = o.question.trim().slice(0, MAX_QUESTION_LEN);
 
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
+    }
+    if (modelRoute.ctx.modelId && !isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
+
     const req: CoachAskRequest = {
       board: o.board,
       side: o.side,
@@ -224,21 +294,30 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
 
     const inCheck = X.inCheck(req.board, req.side);
     const templateText = Coach.askReply();
+    const userPrompt = LLM.coachAskUser({
+      board: req.board,
+      side: req.side,
+      question: req.question,
+      difficulty: req.difficulty,
+      history: req.history,
+      historyLimit: llmHistoryLimit(),
+      inCheck,
+    });
+    const llmOptions = modelRoute.ctx.llmOptions;
 
     return coachSseResponse(async (send) => {
-      const source = await streamPlainText(
+      const source = await streamCoachLlmText(
         send,
+        llmOptions,
         LLM.coachAskSystem(),
-        LLM.coachAskUser({
-          board: req.board,
-          side: req.side,
-          question: req.question,
-          difficulty: req.difficulty,
-          history: req.history,
-          historyLimit: llmHistoryLimit(),
-          inCheck,
-        }),
+        userPrompt,
         templateText,
+        async () => {
+          const raw = await llmGenerateCoachAskJson(LLM.coachAskSystem(), userPrompt, llmOptions);
+          const copy = LLM.parseCoachAskJson(raw);
+          if (!copy) throw new Error('invalid_coach_json');
+          return copy.text;
+        },
       );
       send({ type: 'done', source });
     });
@@ -261,6 +340,15 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     }
     const question = o.question.trim().slice(0, MAX_QUESTION_LEN);
 
+    const modelRoute = resolveModelRouteContext(c, o);
+    if (!modelRoute.ok) {
+      return c.json({ error: modelRoute.error }, modelRoute.status);
+    }
+    if (!isResolvedLlmAvailable(modelRoute.ctx)) {
+      return c.json({ error: 'llm_unconfigured' }, 503);
+    }
+    await savePreferredModelIfAuthenticated(c, deps.userStore, modelRoute.ctx.modelId);
+
     const req: CoachAskRequest = {
       board: o.board,
       side: o.side,
@@ -270,10 +358,6 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
     };
 
     const inCheck = X.inCheck(req.board, req.side);
-
-    if (!isLlmConfigured()) {
-      return c.json({ error: 'llm_unconfigured' }, 503);
-    }
 
     try {
       const raw = await llmGenerateCoachAskJson(
@@ -287,6 +371,7 @@ export function registerCoachStreamRoutes(coach: Hono<{ Variables: AppVariables 
           historyLimit: llmHistoryLimit(),
           inCheck,
         }),
+        modelRoute.ctx.llmOptions,
       );
       const copy = LLM.parseCoachAskJson(raw);
       if (!copy) {

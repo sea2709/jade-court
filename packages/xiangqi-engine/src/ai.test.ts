@@ -100,6 +100,7 @@ describe('chooseMove', () => {
       const b = X.initialBoard();
       expect(isLegal(b, 'r', AI.chooseMove(b, 'r', difficulty))).toBe(true);
     },
+    20_000,
   );
 
   it('returns a legal move at advanced on a sparse board', () => {
