@@ -38,6 +38,27 @@ export function toPublicUser(user: UserRecord): PublicUser {
   };
 }
 
+/** Admin user list row (`GET /api/admin/users`). */
+export type AdminUserSummary = {
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  emailVerified: boolean;
+  accessUntil: string | null;
+  createdAt: string;
+};
+
+export function toAdminUserSummary(user: UserRecord): AdminUserSummary {
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    displayName: user.displayName ?? null,
+    emailVerified: user.emailVerified,
+    accessUntil: user.accessUntil ? user.accessUntil.toISOString() : null,
+    createdAt: user.createdAt.toISOString(),
+  };
+}
+
 export function accessInfo(user: UserRecord | null): {
   active: boolean;
   accessUntil: string | null;

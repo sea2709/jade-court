@@ -252,7 +252,7 @@ export function createApp(deps?: CreateAppDeps) {
     createPlayerAuthRoutes({ userStore, sessionStore, emailTokenStore, emailSender }),
   );
   app.route('/api', createMeRoute());
-  app.route('/api/admin', createAdminRoutes({ userStore }));
+  app.route('/api/admin', createAdminRoutes({ userStore, paymentStore }));
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
   app.route(
     '/api/billing',

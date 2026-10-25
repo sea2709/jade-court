@@ -20,6 +20,8 @@ import { AdminLayout } from './admin/AdminLayout';
 import { AdminDashboardScreen } from './screens/AdminDashboardScreen';
 import { AdminLoginScreen } from './screens/AdminLoginScreen';
 import { AdminNewsScreen } from './screens/AdminNewsScreen';
+import { AdminUsersScreen } from './screens/AdminUsersScreen';
+import { AdminPaymentsScreen } from './screens/AdminPaymentsScreen';
 import './index.css';
 import { applyTheme } from './lib/theme';
 
@@ -34,6 +36,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboardScreen />} />
             <Route path="news" element={<AdminNewsScreen />} />
+            <Route path="users" element={<AdminUsersScreen />} />
+            <Route path="payments" element={<AdminPaymentsScreen />} />
           </Route>
           <Route path="/" element={<App />}>
             <Route index element={<HomeScreen />} />
