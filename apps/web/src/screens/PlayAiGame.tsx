@@ -1,7 +1,7 @@
 /**
  * Active Play with AI game: board, coach chat, model picker, day-pass bar.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Coach } from '@jade-court/xiangqi-engine';
 import type {
   Board,
@@ -15,9 +15,14 @@ import { CoachChatPanel } from '../components/coach/CoachChatPanel';
 import { PlayAiAccessOverlay } from '../components/play-ai/PlayAiAccessOverlay';
 import { PlayAiDayPassBar } from '../components/play-ai/PlayAiDayPassBar';
 import { XQBoard } from '../components/XQBoard';
+import { ConfirmNewGameDialog } from '../components/ConfirmNewGameDialog';
+import { SavedGameAlertBanner } from '../components/SavedGameAlertBanner';
 import { useAiModels } from '../hooks/useAiModels';
 import { createCoachMessage, useCoachChat } from '../hooks/useCoachChat';
+import { useSavedGame, type UseSavedGameResult } from '../hooks/useSavedGame';
 import { useXiangqiGame } from '../hooks/useXiangqiGame';
+import { formatResumedAt } from '../lib/formatGameTime';
+import type { ActiveGameSave, AiGameConfig } from '../lib/gamesApi';
 import { assignCheckoutUrl, BillingApiError, postBillingCheckout } from '../lib/billingApi';
 import { streamCoachPost } from '../lib/coachStream';
 import {
@@ -72,19 +77,37 @@ async function coachStreamErrorFallback(
 export interface PlayAiGameProps {
   accessUntil: string | null;
   preferredModelId: string | null;
+  resumeSave?: ActiveGameSave;
+  saved?: UseSavedGameResult;
 }
 
-export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
-  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
+type PlayAiGameSessionProps = PlayAiGameProps & { saved: UseSavedGameResult };
+
+function PlayAiGameSession({
+  accessUntil,
+  preferredModelId,
+  resumeSave,
+  saved,
+}: PlayAiGameSessionProps) {
+  const resumeCfg = resumeSave?.config as AiGameConfig | undefined;
+
+  const [difficulty, setDifficulty] = useState<Difficulty>(resumeCfg?.difficulty ?? 'beginner');
   const [coachBusy, setCoachBusy] = useState(false);
   const [accessOverlay, setAccessOverlay] = useState<'auth' | 'access' | null>(null);
   const [extendBusy, setExtendBusy] = useState(false);
+  const [confirmNewGame, setConfirmNewGame] = useState(false);
+  const resumedLineRef = useRef(false);
 
-  const aiModels = useAiModels(preferredModelId);
+  const aiModels = useAiModels(resumeCfg?.modelId ?? preferredModelId);
   const modelId = aiModels.modelId ?? undefined;
 
-  const chat = useCoachChat([createCoachMessage('coach', { text: Coach.opening() })]);
-  const { setMessages, pushCoach } = chat;
+  const initialChat = useMemo(() => {
+    if (resumeSave?.chat?.length) return resumeSave.chat;
+    return [createCoachMessage('coach', { text: Coach.opening() })];
+  }, [resumeSave]);
+
+  const chat = useCoachChat(initialChat);
+  const { setMessages, pushCoach, pushSys } = chat;
 
   const handleGatedError = useCallback((kind: 'auth' | 'access') => {
     setAccessOverlay(kind);
@@ -125,9 +148,12 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
   );
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- mount-only welcome refresh */
+    if (resumeSave && !resumedLineRef.current) {
+      resumedLineRef.current = true;
+      pushSys(`Resumed your game from ${formatResumedAt(resumeSave.updatedAt)}`);
+      return;
+    }
     void loadOpening(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -237,6 +263,7 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
     difficulty,
     aiProvider: 'llm',
     modelId,
+    initialMoves: resumeSave?.moves,
     locked: accessOverlay !== null,
     onGatedError: handleGatedError,
     onSelect: (piece, count) => {
@@ -260,6 +287,32 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
       }
     },
   });
+
+  useEffect(() => {
+    if (!saved.signedIn || !modelId) return;
+    const settled = !game.aiThinking && !game.revealingOpponentMove;
+    const config: AiGameConfig = {
+      modelId,
+      difficulty,
+      side: 'r',
+    };
+    const moves = game.history.map((h) => ({
+      from: h.move.from as [number, number],
+      to: h.move.to as [number, number],
+    }));
+    saved.scheduleAutosave({ config, moves, chat: chat.messages }, { enabled: settled });
+  }, [
+    saved,
+    saved.signedIn,
+    modelId,
+    difficulty,
+    game.history,
+    game.aiThinking,
+    game.revealingOpponentMove,
+    game.status,
+    chat.messages,
+    resumeCfg?.modelId,
+  ]);
 
   const gameHistory = useCallback(
     () =>
@@ -432,13 +485,41 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
     const label = aiModels.models.find((m) => m.id === id)?.label ?? id;
     aiModels.pickModel(id);
     chat.pushSys(`Master Lin (AI) now runs on ${label}`);
+    if (saved.signedIn) {
+      const config: AiGameConfig = {
+        modelId: id,
+        difficulty,
+        side: 'r',
+      };
+      const moves = game.history.map((h) => ({
+        from: h.move.from as [number, number],
+        to: h.move.to as [number, number],
+      }));
+      saved.scheduleAutosave({ config, moves, chat: chat.messages });
+    }
   };
 
-  const newGame = () => {
+  const startFreshGame = () => {
     if (accessOverlay !== null) return;
     game.reset();
     chat.resetMessages([createCoachMessage('coach', { text: Coach.opening() })]);
     void loadOpening(true);
+    setConfirmNewGame(false);
+  };
+
+  const newGame = () => {
+    if (accessOverlay !== null) return;
+    if (saved.save && game.history.length > 0) {
+      setConfirmNewGame(true);
+      return;
+    }
+    void saved.abandon();
+    startFreshGame();
+  };
+
+  const confirmAbandonAndNew = async () => {
+    await saved.abandon();
+    startFreshGame();
   };
 
   const startExtendCheckout = async () => {
@@ -467,6 +548,12 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
 
   return (
     <div className="learn-layout" data-testid="play-ai-game">
+      {confirmNewGame ? (
+        <ConfirmNewGameDialog
+          onConfirm={() => void confirmAbandonAndNew()}
+          onCancel={() => setConfirmNewGame(false)}
+        />
+      ) : null}
       <div className="relative">
         <PlayAiDayPassBar
           accessUntil={accessUntil}
@@ -556,5 +643,32 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
         }
       />
     </div>
+  );
+}
+
+/** Shell: save alerts + remountable session after server reload. */
+export function PlayAiGame(props: PlayAiGameProps) {
+  const savedFallback = useSavedGame('ai');
+  const saved = props.saved ?? savedFallback;
+  const [reloadSave, setReloadSave] = useState<ActiveGameSave | undefined>();
+  const [sessionKey, setSessionKey] = useState(0);
+  const sessionResume = reloadSave ?? props.resumeSave;
+
+  const reloadGameFromServer = async () => {
+    const loaded = await saved.reloadFromServer();
+    if (!loaded) return;
+    setReloadSave(loaded);
+    setSessionKey((k) => k + 1);
+  };
+
+  return (
+    <>
+      <SavedGameAlertBanner
+        staleRevisionError={saved.staleRevisionError}
+        saveError={saved.saveError}
+        onReloadSave={() => void reloadGameFromServer()}
+      />
+      <PlayAiGameSession key={sessionKey} {...props} resumeSave={sessionResume} saved={saved} />
+    </>
   );
 }

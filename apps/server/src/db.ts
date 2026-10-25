@@ -13,12 +13,26 @@ export async function getDb() {
   return client.db(process.env.MONGODB_DB ?? 'jade_court');
 }
 
-/** Persist finished games when MongoDB is configured. */
+/** Persist finished online room games when MongoDB is configured. */
 export async function saveFinishedGame(doc: {
   code?: string;
   redGuestId?: string;
   blackGuestId?: string;
   history: unknown[];
+  status: string;
+  endedAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  await db.collection('games').insertOne(doc);
+}
+
+/** Persist a finished pvc / ai game for a registered user. */
+export async function saveUserFinishedGame(doc: {
+  userId: string;
+  mode: 'pvc' | 'ai';
+  config: unknown;
+  moves: unknown[];
   status: string;
   endedAt: Date;
 }) {

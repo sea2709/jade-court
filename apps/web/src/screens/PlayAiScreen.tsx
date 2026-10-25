@@ -3,10 +3,13 @@
  */
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { ContinueSavedGameCard } from '../components/ContinueSavedGameCard';
 import { PlayAiPaywall } from '../components/play-ai/PlayAiPaywall';
 import { PlayAiPitch } from '../components/play-ai/PlayAiPitch';
 import { useAuth } from '../context/useAuth';
 import { usePlayAccessClock } from '../hooks/usePlayAccessClock';
+import { useSavedGame } from '../hooks/useSavedGame';
+import type { ActiveGameSave } from '../lib/gamesApi';
 import { PlayAiGame } from './PlayAiGame';
 
 type LocationNotice = { notice?: string };
@@ -31,6 +34,22 @@ export function PlayAiScreen() {
   const checkoutReturn = searchParams.get('checkout') === 'success';
   const checkoutWaiting =
     checkoutReturn && !checkoutDone && !hasActivePass && !checkoutPollExhausted;
+  const savedAi = useSavedGame('ai');
+  type AiSession = 'pending' | 'new' | ActiveGameSave;
+  const [aiSession, setAiSession] = useState<AiSession>('pending');
+  const showGame = status === 'ready' && user != null && hasActivePass;
+
+  const showResumeGate =
+    showGame &&
+    !checkoutWaiting &&
+    !savedAi.loading &&
+    savedAi.save != null &&
+    aiSession === 'pending';
+  const showAiGame =
+    showGame &&
+    !checkoutWaiting &&
+    !savedAi.loading &&
+    (aiSession !== 'pending' || savedAi.save == null);
 
   useEffect(() => {
     const state = location.state as LocationNotice | null;
@@ -63,8 +82,6 @@ export function PlayAiScreen() {
     };
   }, [checkoutReturn, checkoutDone, hasActivePass, refresh, setSearchParams]);
 
-  const showGame = status === 'ready' && user != null && hasActivePass;
-
   return (
     <>
       {notice ? (
@@ -96,8 +113,40 @@ export function PlayAiScreen() {
           hasEmail={user.email != null && user.email.trim() !== ''}
         />
       ) : null}
-      {showGame && !checkoutWaiting ? (
-        <PlayAiGame accessUntil={accessUntil} preferredModelId={user.preferredModelId} />
+      {showResumeGate ? (
+        <div className="page-container-md rise py-6">
+          <ContinueSavedGameCard
+            save={savedAi.save!}
+            onContinue={() => {
+              if (savedAi.save) setAiSession(savedAi.save);
+            }}
+            onAbandon={async () => {
+              await savedAi.abandon();
+              setAiSession('new');
+            }}
+            abandonBusy={savedAi.abandonBusy}
+          />
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setAiSession('new')}
+          >
+            Start a new game instead
+          </button>
+        </div>
+      ) : null}
+      {showAiGame ? (
+        <PlayAiGame
+          key={
+            aiSession === 'pending' || aiSession === 'new'
+              ? String(aiSession)
+              : `${aiSession.updatedAt}-${aiSession.revision}`
+          }
+          accessUntil={accessUntil}
+          preferredModelId={user.preferredModelId}
+          resumeSave={aiSession !== 'pending' && aiSession !== 'new' ? aiSession : undefined}
+          saved={savedAi}
+        />
       ) : null}
     </>
   );

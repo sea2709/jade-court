@@ -59,6 +59,10 @@ import { MemoryPaymentStore } from './billing/payments/memoryStore.js';
 import { MongoPaymentStore } from './billing/payments/mongoStore.js';
 import type { PaymentStore } from './billing/payments/store.js';
 import { createBillingRoutes } from './routes/billing.js';
+import { MemorySavedGameStore } from './games/memoryStore.js';
+import { MongoSavedGameStore } from './games/mongoStore.js';
+import type { SavedGameStore } from './games/store.js';
+import { createGamesRoutes } from './routes/games.js';
 
 /** Open room sockets, shared by REST joins and WebSocket messages for broadcasts. */
 const sockets = new Map<WebSocket, { guestId: string; code?: string }>();
@@ -122,6 +126,7 @@ export interface CreateAppDeps {
   emailTokenStore?: EmailTokenStore;
   emailSender?: EmailSender;
   paymentStore?: PaymentStore;
+  savedGameStore?: SavedGameStore;
   stripe?: Stripe | null;
 }
 
@@ -181,6 +186,15 @@ export function createApp(deps?: CreateAppDeps) {
     paymentStore = new MongoPaymentStore();
   } else {
     paymentStore = new MemoryPaymentStore();
+  }
+
+  let savedGameStore: SavedGameStore;
+  if (deps?.savedGameStore) {
+    savedGameStore = deps.savedGameStore;
+  } else if (process.env.MONGODB_URI) {
+    savedGameStore = new MongoSavedGameStore();
+  } else {
+    savedGameStore = new MemorySavedGameStore();
   }
 
   app.use(
@@ -248,6 +262,7 @@ export function createApp(deps?: CreateAppDeps) {
       ...(deps && 'stripe' in deps ? { stripe: deps.stripe } : {}),
     }),
   );
+  app.route('/api/games', createGamesRoutes({ savedGameStore }));
 
   return app;
 }

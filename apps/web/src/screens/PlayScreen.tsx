@@ -7,10 +7,15 @@ import {
   type Side,
 } from '@jade-court/xiangqi-engine';
 import { CapturedTray } from '../components/CapturedTray';
+import { ConfirmNewGameDialog } from '../components/ConfirmNewGameDialog';
+import { ContinueSavedGameCard, SignInToSaveGamesNote } from '../components/ContinueSavedGameCard';
 import { GameOverCard } from '../components/GameOverCard';
+import { SavedGameAlertBanner } from '../components/SavedGameAlertBanner';
 import { XQBoard } from '../components/XQBoard';
 import { LEVELS } from '../content/levels';
-import { useXiangqiGame } from '../hooks/useXiangqiGame';
+import { useSavedGame, type UseSavedGameResult } from '../hooks/useSavedGame';
+import { useXiangqiGame, type InitialMovePlies } from '../hooks/useXiangqiGame';
+import type { PvcGameConfig } from '../lib/gamesApi';
 
 function Stars({ n }: { n: number }) {
   return (
@@ -21,7 +26,21 @@ function Stars({ n }: { n: number }) {
   );
 }
 
-function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }) {
+function Setup({
+  saved,
+  onStart,
+  onContinue,
+  pendingStart,
+  onConfirmNew,
+  onCancelNew,
+}: {
+  saved: UseSavedGameResult;
+  onStart: (level: Difficulty, side: Side) => void;
+  onContinue: () => void;
+  pendingStart: { level: Difficulty; side: Side } | null;
+  onConfirmNew: () => void;
+  onCancelNew: () => void;
+}) {
   const [level, setLevel] = useState<Difficulty>('intermediate');
   const [side, setSide] = useState<Side>('r');
 
@@ -34,6 +53,15 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
           Pick your challenge. No hints here — just you and the board.
         </p>
       </div>
+      {!saved.signedIn ? <SignInToSaveGamesNote /> : null}
+      {saved.signedIn && saved.save && !saved.loading ? (
+        <ContinueSavedGameCard
+          save={saved.save}
+          onContinue={onContinue}
+          onAbandon={() => void saved.abandon()}
+          abandonBusy={saved.abandonBusy}
+        />
+      ) : null}
       <div className="grid grid-cols-3 gap-[18px] mb-[30px]">
         {LEVELS.map((l) => {
           const selected = level === l.id;
@@ -96,6 +124,9 @@ function Setup({ onStart }: { onStart: (level: Difficulty, side: Side) => void }
           Start game →
         </button>
       </div>
+      {pendingStart ? (
+        <ConfirmNewGameDialog onConfirm={onConfirmNew} onCancel={onCancelNew} />
+      ) : null}
     </div>
   );
 }
@@ -132,7 +163,19 @@ function PlayerStrip({
   );
 }
 
-function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<GameCfg | null>> }) {
+function Game({
+  cfg,
+  setCfg,
+  initialMoves,
+  saved,
+  onReloadSave,
+}: {
+  cfg: GameCfg;
+  setCfg: Dispatch<SetStateAction<GameCfg | null>>;
+  initialMoves?: InitialMovePlies;
+  saved: UseSavedGameResult;
+  onReloadSave: () => void;
+}) {
   const { level, side: humanSide } = cfg;
   const aiSide = X.opp(humanSide);
   const game = useXiangqiGame({
@@ -140,6 +183,7 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
     difficulty: level,
     aiProvider: 'server',
     revealOpponentMoveMs: 0,
+    initialMoves,
   });
   const flip = humanSide === 'b';
   const yourTurn = game.turn === humanSide && !game.status;
@@ -156,9 +200,6 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
         ? 'Your move'
         : 'Waiting…';
 
-  // --- Move-session controls (undo / redo) ---
-  // Mirror the disabled conditions of the buttons below so keyboard shortcuts
-  // fire only when the corresponding button would also fire on click.
   const canUndo = game.history.length >= 2 && yourTurn && !game.aiThinking;
   const canRedo = game.redoCount >= 2 && yourTurn && !game.aiThinking;
 
@@ -169,10 +210,26 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
       : 'Wait for the computer to move'
     : 'Redo the moves you took back (Ctrl+Shift+Z)';
 
-  // --- Keyboard shortcuts: Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl+Y to redo.
-  // Mounted only while a game is active (Setup is the parent's no-game state).
-  // Ignores key events from text-entry fields and contentEditable, and only
-  // preempts the browser default when the action actually fires.
+  useEffect(() => {
+    if (!saved.signedIn) return;
+    const settled = !game.aiThinking && !game.revealingOpponentMove;
+    const pvcConfig: PvcGameConfig = { level, side: humanSide };
+    const moves = game.history.map((h) => ({
+      from: h.move.from as [number, number],
+      to: h.move.to as [number, number],
+    }));
+    saved.scheduleAutosave({ config: pvcConfig, moves }, { enabled: settled });
+  }, [
+    saved,
+    saved.signedIn,
+    level,
+    humanSide,
+    game.history,
+    game.aiThinking,
+    game.revealingOpponentMove,
+    game.status,
+  ]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
@@ -187,14 +244,12 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
       const isZ = key === 'z';
       const isY = key === 'y';
       if (!isZ && !isY) return;
-      // Redo: Ctrl/Cmd+Shift+Z (any platform), or Ctrl+Y on Windows/Linux.
       if ((isZ && e.shiftKey) || (isY && e.ctrlKey)) {
         if (!canRedo) return;
         e.preventDefault();
         game.redoLast(2);
         return;
       }
-      // Undo: Ctrl/Cmd+Z (no Shift).
       if (isZ && !e.shiftKey) {
         if (!canUndo) return;
         e.preventDefault();
@@ -205,9 +260,19 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [canUndo, canRedo, game]);
 
+  const leaveToSetup = () => {
+    void saved.flushAutosave();
+    setCfg(null);
+  };
+
   return (
     <div className="game-layout-wide">
       <div className="relative">
+        <SavedGameAlertBanner
+          staleRevisionError={saved.staleRevisionError}
+          saveError={saved.saveError}
+          onReloadSave={onReloadSave}
+        />
         <div className="flex items-center gap-3 mb-3.5 flex-wrap">
           <span className="pill pill-red">
             {levelMeta.name} · {levelMeta.zh}
@@ -234,7 +299,7 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
             status={game.status}
             won={!!won}
             onRematch={() => game.reset()}
-            onMenu={() => setCfg(null)}
+            onMenu={leaveToSetup}
           />
         )}
       </div>
@@ -306,7 +371,7 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => game.reset()}>
             ↻ Restart
           </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCfg(null)}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={leaveToSetup}>
             New game
           </button>
         </div>
@@ -316,7 +381,67 @@ function Game({ cfg, setCfg }: { cfg: GameCfg; setCfg: Dispatch<SetStateAction<G
 }
 
 export function PlayScreen() {
+  const saved = useSavedGame('pvc');
   const [cfg, setCfg] = useState<GameCfg | null>(null);
-  if (!cfg) return <Setup onStart={(level, side) => setCfg({ level, side })} />;
-  return <Game cfg={cfg} setCfg={setCfg} />;
+  const [initialMoves, setInitialMoves] = useState<InitialMovePlies | undefined>(undefined);
+  const [gameSessionKey, setGameSessionKey] = useState(0);
+  const [pendingStart, setPendingStart] = useState<{ level: Difficulty; side: Side } | null>(null);
+
+  const tryStart = (level: Difficulty, side: Side) => {
+    if (saved.save) {
+      setPendingStart({ level, side });
+      return;
+    }
+    setInitialMoves(undefined);
+    setCfg({ level, side });
+  };
+
+  const confirmNewGame = async () => {
+    if (pendingStart) {
+      await saved.abandon();
+      setInitialMoves(undefined);
+      setCfg(pendingStart);
+      setPendingStart(null);
+    }
+  };
+
+  const onContinue = () => {
+    if (!saved.save) return;
+    const c = saved.save.config as PvcGameConfig;
+    setInitialMoves(saved.save.moves);
+    setCfg({ level: c.level, side: c.side });
+    setGameSessionKey((k) => k + 1);
+  };
+
+  const reloadGameFromServer = async () => {
+    const loaded = await saved.reloadFromServer();
+    if (!loaded) return;
+    const c = loaded.config as PvcGameConfig;
+    setInitialMoves(loaded.moves);
+    setCfg({ level: c.level, side: c.side });
+    setGameSessionKey((k) => k + 1);
+  };
+
+  if (!cfg) {
+    return (
+      <Setup
+        saved={saved}
+        onStart={tryStart}
+        onContinue={onContinue}
+        pendingStart={pendingStart}
+        onConfirmNew={() => void confirmNewGame()}
+        onCancelNew={() => setPendingStart(null)}
+      />
+    );
+  }
+  return (
+    <Game
+      key={gameSessionKey}
+      cfg={cfg}
+      setCfg={setCfg}
+      initialMoves={initialMoves}
+      saved={saved}
+      onReloadSave={() => void reloadGameFromServer()}
+    />
+  );
 }

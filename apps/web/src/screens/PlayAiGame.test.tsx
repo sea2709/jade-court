@@ -1,7 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthProvider } from '../context/AuthProvider';
 import { PlayAiGame } from './PlayAiGame';
+
+function renderGame(ui: React.ReactElement) {
+  return render(<AuthProvider>{ui}</AuthProvider>);
+}
 
 const { streamCoachPostMock } = vi.hoisted(() => ({
   streamCoachPostMock: vi.fn(),
@@ -26,6 +31,27 @@ beforeEach(() => {
   });
   fetchMock.mockImplementation((input) => {
     const url = String(input);
+    if (url.includes('/api/me')) {
+      return Promise.resolve(
+        json({
+          user: {
+            id: '1',
+            email: 'a@b.com',
+            emailVerified: true,
+            displayName: 'A',
+            accessUntil: new Date(Date.now() + 3600_000).toISOString(),
+            preferredModelId: null,
+          },
+          access: {
+            active: true,
+            accessUntil: new Date(Date.now() + 3600_000).toISOString(),
+          },
+        }),
+      );
+    }
+    if (url.includes('/api/games/active/ai')) {
+      return Promise.resolve(json({ error: 'not_found' }, 404));
+    }
     if (url.includes('/api/ai/models')) {
       return Promise.resolve(
         json({
@@ -55,7 +81,7 @@ afterEach(() => {
 
 describe('PlayAiGame model UI', () => {
   it('shows running model label and blurb under the board', async () => {
-    render(
+    renderGame(
       <PlayAiGame
         accessUntil={new Date(Date.now() + 3600_000).toISOString()}
         preferredModelId={null}
@@ -98,7 +124,7 @@ describe('PlayAiGame model UI', () => {
       return Promise.resolve(json({}));
     });
 
-    render(
+    renderGame(
       <PlayAiGame
         accessUntil={new Date(Date.now() + 3600_000).toISOString()}
         preferredModelId={null}
@@ -111,7 +137,7 @@ describe('PlayAiGame model UI', () => {
   });
 
   it('posts a system message when the model picker changes', async () => {
-    render(
+    renderGame(
       <PlayAiGame
         accessUntil={new Date(Date.now() + 3600_000).toISOString()}
         preferredModelId={null}
@@ -125,7 +151,7 @@ describe('PlayAiGame model UI', () => {
 
 describe('PlayAiGame 402 handling', () => {
   it('shows renew overlay when opponent move returns access_required', async () => {
-    render(
+    renderGame(
       <PlayAiGame
         accessUntil={new Date(Date.now() + 3600_000).toISOString()}
         preferredModelId={null}
