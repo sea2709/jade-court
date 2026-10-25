@@ -2,8 +2,11 @@
  * Player registration at `/register`.
  */
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
+import { useAuthProviders } from '../hooks/useAuthProviders';
 import { useAuth } from '../context/useAuth';
+import { googleSignInProviderId, oauthErrorMessage } from '../lib/oauthAuthApi';
 import { PlayerAuthApiError, playerRegister } from '../lib/playerAuthApi';
 
 function registerErrorMessage(err: unknown): string {
@@ -34,7 +37,12 @@ function RequiredMark() {
 /** Create a player account with email and password. */
 export function RegisterScreen() {
   const navigate = useNavigate();
-  const { status, user, setSignedIn } = useAuth();
+  const [searchParams] = useSearchParams();
+  const oauthError = searchParams.get('oauth_error');
+  const { status, user, setSignedIn, refresh } = useAuth();
+  const { providers, loading: providersLoading } = useAuthProviders();
+  const googleProvider = googleSignInProviderId(providers);
+  const oauthReturnTo = '/play';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,6 +59,12 @@ export function RegisterScreen() {
       navigate(user.emailVerified ? '/play' : '/register/sent', { replace: true });
     }
   }, [status, user, navigate]);
+
+  useEffect(() => {
+    if (status === 'ready' && user && oauthError) {
+      void refresh();
+    }
+  }, [status, user, oauthError, refresh]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,9 +100,22 @@ export function RegisterScreen() {
         <p className="mb-6 text-center text-sm font-semibold text-muted">
           Free to join — your games sync when you sign in.
         </p>
+        {oauthError ? (
+          <p className="mb-4 text-sm font-bold text-red-deep" role="alert">
+            {oauthErrorMessage(oauthError)}
+          </p>
+        ) : null}
         <p className="mb-4 text-xs font-semibold text-muted">
           <RequiredMark /> Required field
         </p>
+        {!providersLoading && googleProvider ? (
+          <div className="mb-4 flex flex-col gap-4">
+            <GoogleSignInButton provider={googleProvider} returnTo={oauthReturnTo} />
+            <p className="m-0 text-center text-xs font-bold uppercase tracking-wide text-muted">
+              or create account with email
+            </p>
+          </div>
+        ) : null}
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
           <label
             htmlFor="register-display-name"

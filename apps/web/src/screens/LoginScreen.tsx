@@ -3,8 +3,12 @@
  */
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
+import { useAuthProviders } from '../hooks/useAuthProviders';
 import { useAuth } from '../context/useAuth';
+import { googleSignInProviderId, oauthErrorMessage } from '../lib/oauthAuthApi';
 import { PlayerAuthApiError, playerLogin } from '../lib/playerAuthApi';
+import { safeLoginNextPath } from '../lib/safeReturnTo';
 
 function loginErrorMessage(err: unknown): string {
   if (!(err instanceof PlayerAuthApiError)) {
@@ -20,19 +24,15 @@ function loginErrorMessage(err: unknown): string {
   }
 }
 
-function safeNextPath(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/play';
-  if (raw === '/login' || raw.startsWith('/login?')) return '/play';
-  if (raw === '/register' || raw.startsWith('/register?')) return '/play';
-  return raw;
-}
-
 /** Email/password login for player accounts. */
 export function LoginScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get('next'));
-  const { status, user, setSignedIn } = useAuth();
+  const nextPath = safeLoginNextPath(searchParams.get('next'));
+  const oauthError = searchParams.get('oauth_error');
+  const { status, user, setSignedIn, refresh } = useAuth();
+  const { providers, loading: providersLoading } = useAuthProviders();
+  const googleProvider = googleSignInProviderId(providers);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,6 +48,12 @@ export function LoginScreen() {
       navigate(nextPath, { replace: true });
     }
   }, [status, user, navigate, nextPath]);
+
+  useEffect(() => {
+    if (status === 'ready' && user && oauthError) {
+      void refresh();
+    }
+  }, [status, user, oauthError, refresh]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,6 +82,19 @@ export function LoginScreen() {
         <p className="mb-6 text-center text-sm font-semibold text-muted">
           Save progress and pick up your games on any device.
         </p>
+        {oauthError ? (
+          <p className="mb-4 text-sm font-bold text-red-deep" role="alert">
+            {oauthErrorMessage(oauthError)}
+          </p>
+        ) : null}
+        {!providersLoading && googleProvider ? (
+          <div className="mb-4 flex flex-col gap-4">
+            <GoogleSignInButton provider={googleProvider} returnTo={nextPath} />
+            <p className="m-0 text-center text-xs font-bold uppercase tracking-wide text-muted">
+              or sign in with email
+            </p>
+          </div>
+        ) : null}
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
           <label
             htmlFor="login-email"
