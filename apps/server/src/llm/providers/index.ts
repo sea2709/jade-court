@@ -3,14 +3,14 @@ import { createAnthropicProvider } from './anthropic.js';
 import { createGeminiProvider } from './gemini.js';
 import { createOpenaiProvider } from './openai.js';
 
-/** Construct a provider implementation for the given id. */
-export function createProvider(id: LlmProviderId): LlmProvider {
+/** Construct a provider implementation for the given id and model id. */
+export function createProvider(id: LlmProviderId, model: string): LlmProvider {
   switch (id) {
     case 'gemini':
-      return createGeminiProvider();
+      return createGeminiProvider(model);
     case 'openai':
-      return createOpenaiProvider();
+      return createOpenaiProvider(model);
     case 'anthropic':
-      return createAnthropicProvider();
+      return createAnthropicProvider(model);
   }
 }

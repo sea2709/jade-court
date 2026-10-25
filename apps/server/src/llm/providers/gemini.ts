@@ -2,7 +2,7 @@
  * Google Gemini / Gemma provider — structured JSON via @google/genai.
  */
 import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
-import { apiKeyForProvider, llmModel } from '../config.js';
+import { apiKeyForProvider } from '../config.js';
 import { assertLlmConfigured } from '../errors.js';
 import { logLlmTokenUsage } from '../logUsage.js';
 import { llmAbortSignal } from '../timeout.js';
@@ -27,8 +27,7 @@ function usageFromResponse(response: GenerateContentResponse): LlmUsage | undefi
   };
 }
 
-export function createGeminiProvider(): LlmProvider {
-  const model = llmModel('gemini');
+export function createGeminiProvider(model: string): LlmProvider {
   return {
     id: 'gemini',
     model,
@@ -45,7 +44,10 @@ export function createGeminiProvider(): LlmProvider {
           abortSignal: signal,
         },
       });
-      logLlmTokenUsage('gemini', usageFromResponse(response));
+      logLlmTokenUsage('gemini', usageFromResponse(response), {
+        model,
+        logContext: params.logContext,
+      });
       return response.text ?? '';
     },
     async *streamText(params: StreamTextParams) {
@@ -65,7 +67,12 @@ export function createGeminiProvider(): LlmProvider {
         const text = chunk.text;
         if (text) yield text;
       }
-      if (lastResponse) logLlmTokenUsage('gemini', usageFromResponse(lastResponse));
+      if (lastResponse) {
+        logLlmTokenUsage('gemini', usageFromResponse(lastResponse), {
+          model,
+          logContext: params.logContext,
+        });
+      }
     },
   };
 }

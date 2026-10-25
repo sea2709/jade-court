@@ -1,14 +1,20 @@
 import { LLM, X } from '@jade-court/xiangqi-engine';
 import type { AiMoveRequest, AiMoveResponse } from '@jade-court/xiangqi-engine';
-import { isLlmConfigured, llmGenerateMoveJson, llmHistoryLimit } from '../llm/client.js';
+import { llmGenerateMoveJson, llmHistoryLimit, type LlmCallOptions } from '../llm/client.js';
+import { envDefaultSelection } from '../llm/modelSelection.js';
+import { isLlmAvailableForCall } from '../llm/routeHelpers.js';
 import { negamaxFallback } from '../engine/move.js';
 
 export type OpponentMoveResult =
   { ok: true; body: AiMoveResponse } | { ok: false; status: number; error: string };
 
 /** LLM opponent move with negamax fallback (Learn / PLAY_OPPONENT_PROVIDER=llm). */
-export async function computeLlmOpponentMove(req: AiMoveRequest): Promise<OpponentMoveResult> {
-  if (!isLlmConfigured()) {
+export async function computeLlmOpponentMove(
+  req: AiMoveRequest,
+  llmOptions?: LlmCallOptions,
+): Promise<OpponentMoveResult> {
+  const selection = llmOptions?.selection ?? envDefaultSelection();
+  if (!isLlmAvailableForCall(selection)) {
     return { ok: false, status: 503, error: 'llm_unconfigured' };
   }
 
@@ -26,7 +32,7 @@ export async function computeLlmOpponentMove(req: AiMoveRequest): Promise<Oppone
       history: req.history,
       historyLimit: llmHistoryLimit(),
     });
-    const raw = await llmGenerateMoveJson(system, user);
+    const raw = await llmGenerateMoveJson(system, user, llmOptions);
     const resolved = LLM.resolveModelMove(req.board, req.side, legal, raw);
     const move = resolved?.move ?? null;
 

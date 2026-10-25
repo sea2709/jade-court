@@ -1,12 +1,12 @@
 /**
- * Anthropic provider — JSON via system prompt + Messages API (parse fallback in engine).
+ * Anthropic provider — JSON via Messages API; streaming for coach SSE.
  */
 import Anthropic from '@anthropic-ai/sdk';
-import { apiKeyForProvider, llmModel } from '../config.js';
-import { assertLlmConfigured, streamTextNotImplemented } from '../errors.js';
+import { apiKeyForProvider } from '../config.js';
+import { assertLlmConfigured } from '../errors.js';
 import { logLlmTokenUsage } from '../logUsage.js';
 import { llmAbortSignal } from '../timeout.js';
-import type { GenerateJsonParams, LlmProvider } from '../types.js';
+import type { GenerateJsonParams, LlmProvider, StreamTextParams } from '../types.js';
 
 let client: Anthropic | null = null;
 
@@ -24,8 +24,7 @@ function extractText(content: Anthropic.Messages.Message['content']): string {
     .join('');
 }
 
-export function createAnthropicProvider(): LlmProvider {
-  const model = llmModel('anthropic');
+export function createAnthropicProvider(model: string): LlmProvider {
   return {
     id: 'anthropic',
     model,
@@ -46,13 +45,48 @@ export function createAnthropicProvider(): LlmProvider {
         },
         { signal },
       );
-      logLlmTokenUsage('anthropic', {
-        promptTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-        totalTokens: response.usage.input_tokens + response.usage.output_tokens,
-      });
+      logLlmTokenUsage(
+        'anthropic',
+        {
+          promptTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+          totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+        },
+        { model, logContext: params.logContext },
+      );
       return extractText(response.content);
     },
-    streamText: streamTextNotImplemented,
+    async *streamText(params: StreamTextParams) {
+      const anthropic = getClient();
+      const signal = llmAbortSignal(params.signal);
+      const stream = anthropic.messages.stream(
+        {
+          model,
+          max_tokens: 1024,
+          system: params.system,
+          messages: [{ role: 'user', content: params.user }],
+        },
+        { signal },
+      );
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta' &&
+          event.delta.text
+        ) {
+          yield event.delta.text;
+        }
+      }
+      const final = await stream.finalMessage();
+      logLlmTokenUsage(
+        'anthropic',
+        {
+          promptTokens: final.usage.input_tokens,
+          outputTokens: final.usage.output_tokens,
+          totalTokens: final.usage.input_tokens + final.usage.output_tokens,
+        },
+        { model, logContext: params.logContext },
+      );
+    },
   };
 }

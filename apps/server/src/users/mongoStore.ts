@@ -171,4 +171,17 @@ export class MongoUserStore implements UserStore {
     );
     return result ? fromMongo(result) : null;
   }
+
+  async setPreferredModelId(userId: string, preferredModelId: string): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const result = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $set: { preferredModelId } },
+      { returnDocument: 'after' },
+    );
+    return result ? fromMongo(result) : null;
+  }
 }

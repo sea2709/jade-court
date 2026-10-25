@@ -46,6 +46,29 @@ function historyPayload(history: { side: Side; from: [number, number]; to: [numb
   return history.length ? history : undefined;
 }
 
+/** When SSE emits `error`, retry batch coach with the same preset before engine template. */
+async function coachStreamErrorFallback(
+  modelId: string | undefined,
+  batch: () => Promise<void>,
+  applyTemplate: () => void,
+  handleCoachGated: (err: unknown) => boolean,
+  route: string,
+): Promise<void> {
+  if (!modelId) {
+    applyTemplate();
+    return;
+  }
+  try {
+    await batch();
+  } catch (batchErr) {
+    if (handleCoachGated(batchErr)) return;
+    if (!isLlmUnconfigured(batchErr)) {
+      console.warn(`[coach] ${route} batch failed after stream error:`, batchErr);
+    }
+    applyTemplate();
+  }
+}
+
 export interface PlayAiGameProps {
   accessUntil: string | null;
   preferredModelId: string | null;
@@ -158,7 +181,26 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
               });
             },
             onToken: (text) => chat.appendToMessage(pendingId, text),
-            onError: () => applyTemplate(),
+            onError: () => {
+              void coachStreamErrorFallback(
+                modelId,
+                async () => {
+                  const fb = await fetchCoachFeedback({
+                    boardBefore,
+                    move,
+                    side: 'r',
+                    depth: 2,
+                    difficulty,
+                    history,
+                    modelId,
+                  });
+                  chat.replaceMessage(pendingId, feedbackToPatch(fb));
+                },
+                applyTemplate,
+                handleCoachGated,
+                'feedback',
+              );
+            },
           },
           signal,
         );
@@ -262,7 +304,25 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
             chat.replaceMessage(pendingId, { text: '', tone: 'info' });
           },
           onToken: (text) => chat.appendToMessage(pendingId, text),
-          onError: () => applyTemplate(),
+          onError: () => {
+            void coachStreamErrorFallback(
+              modelId,
+              async () => {
+                const h = await fetchCoachHint({
+                  board: game.board,
+                  side: game.turn,
+                  depth: 2,
+                  difficulty,
+                  modelId,
+                });
+                game.revealHint(h.move);
+                chat.replaceMessage(pendingId, { text: h.text, tone: 'info', sub: h.tip });
+              },
+              applyTemplate,
+              handleCoachGated,
+              'hint',
+            );
+          },
         },
         signal,
       );
@@ -315,7 +375,25 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
           },
           {
             onToken: (text) => chat.appendToMessage(pendingId, text),
-            onError: () => applyTemplate(),
+            onError: () => {
+              void coachStreamErrorFallback(
+                modelId,
+                async () => {
+                  const res = await fetchCoachAsk({
+                    board: game.board,
+                    side: game.turn,
+                    question,
+                    difficulty,
+                    history: gameHistory(),
+                    modelId,
+                  });
+                  chat.replaceMessage(pendingId, { text: res.text, tone: 'info' });
+                },
+                applyTemplate,
+                handleCoachGated,
+                'ask',
+              );
+            },
           },
           signal,
         );
@@ -417,7 +495,7 @@ export function PlayAiGame({ accessUntil, preferredModelId }: PlayAiGameProps) {
           ) : null}
         </div>
         <p className="mt-3 mb-0 text-[13px] font-bold text-muted">
-          Master Lin, AI player · running {aiModels.modelLabel}
+          Master Lin, AI player · running {aiModels.modelRunningCaption}
         </p>
         <p className="mt-1 mb-0 text-[12px] font-semibold text-muted">
           Master Lin is an AI. Its moves and advice can be wrong.

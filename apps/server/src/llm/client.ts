@@ -2,6 +2,8 @@
  * LLM façade — routes call these helpers, not provider modules directly.
  */
 import { llmModel, llmProviderId } from './config.js';
+import type { LlmSelection } from './modelSelection.js';
+import { isSelectionConfigured } from './modelSelection.js';
 import { createProvider } from './providers/index.js';
 import {
   COACH_ASK_SCHEMA,
@@ -10,56 +12,128 @@ import {
   COACH_OPENING_SCHEMA,
   MOVE_SCHEMA,
 } from './schemas.js';
-import type { LlmProvider, LlmProviderId } from './types.js';
+import type { LlmLogContext, LlmProvider, LlmProviderId } from './types.js';
 
-let cachedProvider: LlmProvider | null = null;
-let cachedProviderId: LlmProviderId | null = null;
-let cachedModel: string | null = null;
+const providerCache = new Map<string, LlmProvider>();
 
-export function getLlmProvider(): LlmProvider {
-  const id = llmProviderId();
-  const model = llmModel(id);
-  if (!cachedProvider || cachedProviderId !== id || cachedModel !== model) {
-    cachedProvider = createProvider(id);
-    cachedProviderId = id;
-    cachedModel = model;
-  }
-  return cachedProvider;
+function cacheKey(provider: LlmProviderId, model: string): string {
+  return `${provider}:${model}`;
 }
 
-/** Clear cached provider — for tests when env changes between cases. */
+export function getLlmProviderFor(selection?: LlmSelection): LlmProvider {
+  const provider = selection?.provider ?? llmProviderId();
+  const model = selection?.model ?? llmModel(provider);
+  const key = cacheKey(provider, model);
+  const cached = providerCache.get(key);
+  if (cached) return cached;
+  const instance = createProvider(provider, model);
+  providerCache.set(key, instance);
+  return instance;
+}
+
+/** Env-default provider (unchanged behavior for opponent LLM without modelId). */
+export function getLlmProvider(): LlmProvider {
+  return getLlmProviderFor();
+}
+
+/** Clear cached providers — for tests when env or presets change. */
 export function resetLlmProviderCache(): void {
-  cachedProvider = null;
-  cachedProviderId = null;
-  cachedModel = null;
+  providerCache.clear();
+}
+
+export function isLlmConfiguredForSelection(selection: LlmSelection): boolean {
+  return isSelectionConfigured(selection);
 }
 
 export { isLlmConfigured, llmHistoryLimit } from './config.js';
 
-export function llmGenerateMoveJson(system: string, user: string): Promise<string> {
-  return getLlmProvider().generateJson({ system, user, schema: MOVE_SCHEMA });
+export interface LlmCallOptions {
+  selection?: LlmSelection;
+  logContext?: LlmLogContext;
 }
 
-export function llmGenerateCoachFeedbackJson(system: string, user: string): Promise<string> {
-  return getLlmProvider().generateJson({ system, user, schema: COACH_FEEDBACK_SCHEMA });
+function callOpts(options?: LlmCallOptions) {
+  return {
+    selection: options?.selection,
+    logContext: options?.logContext,
+  };
 }
 
-export function llmGenerateCoachHintJson(system: string, user: string): Promise<string> {
-  return getLlmProvider().generateJson({ system, user, schema: COACH_HINT_SCHEMA });
+export function llmGenerateMoveJson(
+  system: string,
+  user: string,
+  options?: LlmCallOptions,
+): Promise<string> {
+  const { selection, logContext } = callOpts(options);
+  return getLlmProviderFor(selection).generateJson({
+    system,
+    user,
+    schema: MOVE_SCHEMA,
+    logContext,
+  });
 }
 
-export function llmGenerateCoachOpeningJson(system: string, user: string): Promise<string> {
-  return getLlmProvider().generateJson({ system, user, schema: COACH_OPENING_SCHEMA });
+export function llmGenerateCoachFeedbackJson(
+  system: string,
+  user: string,
+  options?: LlmCallOptions,
+): Promise<string> {
+  const { selection, logContext } = callOpts(options);
+  return getLlmProviderFor(selection).generateJson({
+    system,
+    user,
+    schema: COACH_FEEDBACK_SCHEMA,
+    logContext,
+  });
 }
 
-export function llmGenerateCoachAskJson(system: string, user: string): Promise<string> {
-  return getLlmProvider().generateJson({ system, user, schema: COACH_ASK_SCHEMA });
+export function llmGenerateCoachHintJson(
+  system: string,
+  user: string,
+  options?: LlmCallOptions,
+): Promise<string> {
+  const { selection, logContext } = callOpts(options);
+  return getLlmProviderFor(selection).generateJson({
+    system,
+    user,
+    schema: COACH_HINT_SCHEMA,
+    logContext,
+  });
+}
+
+export function llmGenerateCoachOpeningJson(
+  system: string,
+  user: string,
+  options?: LlmCallOptions,
+): Promise<string> {
+  const { selection, logContext } = callOpts(options);
+  return getLlmProviderFor(selection).generateJson({
+    system,
+    user,
+    schema: COACH_OPENING_SCHEMA,
+    logContext,
+  });
+}
+
+export function llmGenerateCoachAskJson(
+  system: string,
+  user: string,
+  options?: LlmCallOptions,
+): Promise<string> {
+  const { selection, logContext } = callOpts(options);
+  return getLlmProviderFor(selection).generateJson({
+    system,
+    user,
+    schema: COACH_ASK_SCHEMA,
+    logContext,
+  });
 }
 
 export async function* llmStreamCoachText(
   system: string,
   user: string,
-  signal?: AbortSignal,
+  options?: LlmCallOptions & { signal?: AbortSignal },
 ): AsyncGenerator<string> {
-  yield* getLlmProvider().streamText({ system, user, signal });
+  const { selection, logContext, signal } = options ?? {};
+  yield* getLlmProviderFor(selection).streamText({ system, user, signal, logContext });
 }

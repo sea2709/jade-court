@@ -7,17 +7,25 @@ export type LlmProviderId = 'gemini' | 'openai' | 'anthropic';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type JsonSchema = Record<string, any>;
 
+export interface LlmLogContext {
+  actorId: string;
+  actorKind: 'user' | 'guest';
+  presetId?: string;
+}
+
 export interface GenerateJsonParams {
   system: string;
   user: string;
   schema: JsonSchema;
   signal?: AbortSignal;
+  logContext?: LlmLogContext;
 }
 
 export interface StreamTextParams {
   system: string;
   user: string;
   signal?: AbortSignal;
+  logContext?: LlmLogContext;
 }
 
 export interface LlmUsage {

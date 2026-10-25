@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -85,9 +85,9 @@ describe('RoomChatPanel', () => {
     const onSend = vi.fn();
     await renderOpen({ onSend });
     const input = screen.getByTestId('room-chat-input');
-    await userEvent.type(input, 'x'.repeat(401));
+    fireEvent.change(input, { target: { value: 'x'.repeat(401) } });
     expect(screen.getByTestId('room-chat-counter')).toBeVisible();
-    await userEvent.type(input, 'x'.repeat(100));
+    fireEvent.change(input, { target: { value: 'x'.repeat(501) } });
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
     expect(input).toHaveClass('room-chat-input-over');
   });

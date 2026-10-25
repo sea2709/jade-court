@@ -23,22 +23,31 @@ describe('logLlmTokenUsage', () => {
   it('no-ops when logging is disabled', () => {
     process.env.LLM_LOG_TOKENS = '0';
     process.env.NODE_ENV = 'test';
-    logLlmTokenUsage('gemini', { promptTokens: 1, outputTokens: 2 });
+    logLlmTokenUsage('gemini', { promptTokens: 1, outputTokens: 2 }, { model: 'gemini-test' });
     expect(console.log).not.toHaveBeenCalled();
   });
 
   it('warns when usage is missing', () => {
     process.env.LLM_LOG_TOKENS = '1';
-    logLlmTokenUsage('openai', undefined);
+    logLlmTokenUsage('openai', undefined, { model: 'gpt-4o-mini' });
     expect(console.warn).toHaveBeenCalledWith('[llm] tokens: usage missing from API response');
   });
 
   it('logs normalized counts when enabled', () => {
     process.env.LLM_LOG_TOKENS = '1';
     process.env.LLM_PROVIDER = 'anthropic';
-    logLlmTokenUsage('anthropic', { promptTokens: 10, outputTokens: 5, totalTokens: 15 });
+    logLlmTokenUsage(
+      'anthropic',
+      { promptTokens: 10, outputTokens: 5, totalTokens: 15 },
+      {
+        model: 'claude-sonnet-4-20250514',
+        logContext: { actorId: 'user-1', actorKind: 'user', presetId: 'claude-sonnet' },
+      },
+    );
     expect(console.log).toHaveBeenCalledWith(
-      expect.stringMatching(/prompt=10 output=5 total=15 provider=anthropic/),
+      expect.stringMatching(
+        /prompt=10 output=5 total=15 provider=anthropic model=claude-sonnet-4-20250514 user=user-1 preset=claude-sonnet/,
+      ),
     );
   });
 });

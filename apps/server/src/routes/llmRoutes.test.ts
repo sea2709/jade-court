@@ -3,19 +3,29 @@ import { Coach, X } from '@jade-court/xiangqi-engine';
 import { createApp } from '../app.js';
 import { SESSION_COOKIE_NAME } from '../auth/config.js';
 import type * as LlmClient from '../llm/client.js';
+import type { LlmCallOptions } from '../llm/client.js';
 import { resetRateLimitsForTests } from '../llm/rateLimit.js';
 import { MemorySessionStore } from '../users/memorySessionStore.js';
 import { MemoryUserStore } from '../users/memoryStore.js';
 import { hashPassword } from '../users/password.js';
 
+type LlmFn = (system: string, user: string, options?: LlmCallOptions) => Promise<string>;
+
 const llm = vi.hoisted(() => ({
   configured: true,
-  move: vi.fn<(system: string, user: string) => Promise<string>>(),
-  feedback: vi.fn<(system: string, user: string) => Promise<string>>(),
-  hint: vi.fn<(system: string, user: string) => Promise<string>>(),
-  opening: vi.fn<(system: string, user: string) => Promise<string>>(),
-  ask: vi.fn<(system: string, user: string) => Promise<string>>(),
-  stream: vi.fn<(system: string, user: string) => AsyncGenerator<string>>(),
+  move: vi.fn<LlmFn>(),
+  feedback: vi.fn<LlmFn>(),
+  hint: vi.fn<LlmFn>(),
+  opening: vi.fn<LlmFn>(),
+  ask: vi.fn<LlmFn>(),
+  stream:
+    vi.fn<
+      (
+        system: string,
+        user: string,
+        options?: LlmCallOptions & { signal?: AbortSignal },
+      ) => AsyncGenerator<string>
+    >(),
 }));
 
 vi.mock('../llm/client.js', async (importOriginal) => {
@@ -285,5 +295,111 @@ describe('LLM routes with a mocked model', () => {
     const data = await (await post('/api/ai/move', moveBody)).json();
     expect(data.source).toBe('negamax');
     expect(X.legalMoves(board, 'b')).toContainEqual(data.move);
+  });
+});
+
+describe('AI model presets', () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = 'gemini-key';
+    process.env.OPENAI_API_KEY = 'openai-key';
+    process.env.ANTHROPIC_API_KEY = 'anthropic-key';
+    process.env.LLM_PROVIDER = 'gemini';
+    delete process.env.LLM_MODEL;
+  });
+
+  it('GET /api/ai/models is readable without play access', async () => {
+    const res = await app.request('/api/ai/models', { headers: { 'x-guest-id': 'paywall-guest' } });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.defaultId).toBeTypeOf('string');
+    expect(data.models.length).toBeGreaterThan(0);
+    expect(data.models[0]).toMatchObject({ id: expect.any(String), label: expect.any(String) });
+    expect(data.models[0]).not.toHaveProperty('provider');
+  });
+
+  it('returns invalid_model for unknown modelId', async () => {
+    const res = await post('/api/coach/opening', { modelId: 'not-a-real-preset' });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_model' });
+  });
+
+  it('returns invalid_model for non-string modelId', async () => {
+    const res = await post('/api/coach/opening', { modelId: 123 });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_model' });
+  });
+
+  it('GET /api/ai/models returns null defaultId when no presets are available', async () => {
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    const res = await app.request('/api/ai/models', { headers: { 'x-guest-id': 'empty-models' } });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.models).toEqual([]);
+    expect(data.defaultId).toBeNull();
+  });
+
+  it('ai/move honors cross-provider preset when env default provider has no key', async () => {
+    delete process.env.GEMINI_API_KEY;
+    process.env.OPENAI_API_KEY = 'openai-key';
+    process.env.LLM_PROVIDER = 'gemini';
+    llm.configured = false;
+    llm.move.mockResolvedValue(JSON.stringify({ moveIndex: 1, comment: 'OpenAI move.' }));
+    const res = await post('/api/ai/move', { ...moveBody, modelId: 'gpt-4o-mini' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ source: 'llm', comment: 'OpenAI move.' });
+    expect(llm.move).toHaveBeenCalled();
+  });
+
+  it('forwards modelId to batch coach and move handlers', async () => {
+    llm.opening.mockResolvedValue(JSON.stringify({ text: 'Welcome' }));
+    llm.move.mockResolvedValue(JSON.stringify({ moveIndex: 1 }));
+    await post('/api/coach/opening', { modelId: 'gpt-4o-mini' });
+    expect(llm.opening).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        selection: { provider: 'openai', model: 'gpt-4o-mini', presetId: 'gpt-4o-mini' },
+      }),
+    );
+
+    await post('/api/ai/move', { ...moveBody, modelId: 'gemini-flash' });
+    expect(llm.move).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        selection: {
+          provider: 'gemini',
+          model: 'gemini-2.0-flash',
+          presetId: 'gemini-flash',
+        },
+      }),
+    );
+  });
+
+  it('forwards modelId to stream coach handlers', async () => {
+    llm.stream.mockImplementation(async function* () {
+      yield 'streamed';
+    });
+    await post('/api/coach/ask/stream', { ...askBody, modelId: 'claude-haiku' });
+    expect(llm.stream).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        selection: {
+          provider: 'anthropic',
+          model: 'claude-3-5-haiku-20241022',
+          presetId: 'claude-haiku',
+        },
+      }),
+    );
+  });
+
+  it('persists preferredModelId for signed-in players', async () => {
+    llm.opening.mockResolvedValue(JSON.stringify({ text: 'Hi' }));
+    await post('/api/coach/opening', { modelId: 'gemini-flash' });
+    const saved = userStore.all().find((u) => u.preferredModelId === 'gemini-flash');
+    expect(saved).toBeDefined();
   });
 });
