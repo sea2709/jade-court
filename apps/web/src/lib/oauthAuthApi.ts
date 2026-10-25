@@ -86,9 +86,24 @@ export function googleSignInProviderId(configured: string[]): string | null {
   return null;
 }
 
+/**
+ * Provider id for “Continue with Facebook”.
+ * Production uses `facebook`; E2E/test uses `fake` when Facebook is not configured.
+ */
+export function facebookSignInProviderId(configured: string[]): string | null {
+  if (configured.includes('facebook')) return 'facebook';
+  if (configured.includes('fake')) return 'fake';
+  return null;
+}
+
 /** Account settings OAuth provider (Google in prod, fake in test). */
 export function googleAccountProviderId(configured: string[]): string | null {
   return googleSignInProviderId(configured);
+}
+
+/** Account settings Facebook OAuth provider. */
+export function facebookAccountProviderId(configured: string[]): string | null {
+  return facebookSignInProviderId(configured);
 }
 
 /** Start account link flow (redirects to IdP). */
@@ -138,14 +153,16 @@ export function oauthErrorMessage(code: string | null): string | null {
       return 'Sign-in was interrupted. Try again.';
     case 'missing_code':
     case 'exchange_failed':
-      return 'Could not finish sign-in with Google. Try again.';
+      return 'Could not finish sign-in. Try again.';
+    case 'email_exists_use_link':
+      return 'An account with this email exists — sign in with your original method, then link Facebook from your account page.';
     case 'identity_taken':
-      return 'That Google account is already linked to another user.';
+      return 'That social account is already linked to another user.';
     case 'email_taken':
       return 'That email is already registered with a different sign-in method.';
     case 'link_failed':
-      return 'Could not link Google to your account. Try again.';
+      return 'Could not link that account. Try again.';
     default:
-      return 'Something went wrong with Google sign-in. Try again.';
+      return 'Something went wrong with sign-in. Try again.';
   }
 }

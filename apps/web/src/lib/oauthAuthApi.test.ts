@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  facebookSignInProviderId,
   fetchAuthIdentities,
   fetchAuthProviders,
   googleSignInProviderId,
+  oauthErrorMessage,
   oauthSignInStartUrl,
   unlinkOAuthProvider,
 } from './oauthAuthApi';
@@ -46,6 +48,24 @@ describe('googleSignInProviderId', () => {
 
   it('uses fake when google is not configured', () => {
     expect(googleSignInProviderId(['fake'])).toBe('fake');
+  });
+});
+
+describe('facebookSignInProviderId', () => {
+  it('prefers facebook over fake', () => {
+    expect(facebookSignInProviderId(['fake', 'facebook'])).toBe('facebook');
+  });
+
+  it('uses fake when facebook is not configured', () => {
+    expect(facebookSignInProviderId(['fake'])).toBe('fake');
+  });
+});
+
+describe('oauthErrorMessage', () => {
+  it('maps email_exists_use_link to issue copy', () => {
+    expect(oauthErrorMessage('email_exists_use_link')).toMatch(
+      /sign in with your original method/i,
+    );
   });
 });
 

@@ -25,6 +25,11 @@ import type { AppVariables } from '../types/hono.js';
 import type { SessionStore } from '../users/sessionStore.js';
 import type { UserStore } from '../users/store.js';
 import { appBaseUrl } from '../auth/oauth/config.js';
+import { handleFacebookDataDeletion } from '../auth/oauth/facebookDataDeletion.js';
+import type { DataDeletionStore } from '../auth/oauth/dataDeletionStore.js';
+import type { EmailTokenStore } from '../emailTokens/store.js';
+
+const DATA_DELETION_CODE_RE = /^[a-f0-9]{32}$/i;
 
 function noStore(c: { header: (name: string, value: string) => void }) {
   c.header('Cache-Control', 'no-store');
@@ -45,13 +50,58 @@ function redirectWithOAuthError(returnTo: string, code: string): Response {
 export type OAuthRouteDeps = {
   userStore: UserStore;
   sessionStore: SessionStore;
+  dataDeletionStore: DataDeletionStore;
+  emailTokenStore?: EmailTokenStore;
   registry?: OAuthRegistryDeps;
 };
 
 /** Routes mounted under `/api/auth` (register static paths before `/:provider/*`). */
 export function createOAuthRoutes(deps: OAuthRouteDeps) {
-  const { userStore, sessionStore, registry } = deps;
+  const { userStore, sessionStore, dataDeletionStore, emailTokenStore, registry } = deps;
   const routes = new Hono<{ Variables: AppVariables }>();
+
+  routes.get('/data-deletion-status', async (c) => {
+    noStore(c);
+    const raw = c.req.query('code')?.trim() ?? '';
+    if (!DATA_DELETION_CODE_RE.test(raw)) {
+      return c.json({ error: 'invalid_code' }, 400);
+    }
+    const record = await dataDeletionStore.findByConfirmationCode(raw);
+    if (!record) {
+      return c.json({ error: 'not_found' }, 404);
+    }
+    return c.json({
+      status: 'completed' as const,
+      deletedAt: record.deletedAt.toISOString(),
+    });
+  });
+
+  routes.post('/facebook/data-deletion', async (c) => {
+    noStore(c);
+    let signedRequest: string | undefined;
+    const contentType = c.req.header('content-type') ?? '';
+    if (contentType.includes('application/json')) {
+      const body = (await c.req.json().catch(() => null)) as { signed_request?: string } | null;
+      signedRequest = body?.signed_request;
+    } else {
+      const body = await c.req.parseBody();
+      const raw = body['signed_request'];
+      signedRequest = typeof raw === 'string' ? raw : undefined;
+    }
+    const result = await handleFacebookDataDeletion(signedRequest, {
+      userStore,
+      sessionStore,
+      dataDeletionStore,
+      emailTokenStore,
+    });
+    if (!result.ok) {
+      if (result.error === 'not_configured') {
+        return c.json({ error: 'facebook_not_configured' }, 503);
+      }
+      return c.json({ error: result.error }, 400);
+    }
+    return c.json({ url: result.url, confirmation_code: result.confirmation_code });
+  });
 
   routes.get('/providers', (c) => {
     noStore(c);
@@ -230,9 +280,11 @@ export function createOAuthRoutes(deps: OAuthRouteDeps) {
         const err =
           result.error === 'identity_taken'
             ? 'identity_taken'
-            : result.error === 'email_taken'
-              ? 'email_taken'
-              : 'link_failed';
+            : result.error === 'email_exists_use_link'
+              ? 'email_exists_use_link'
+              : result.error === 'email_taken'
+                ? 'email_taken'
+                : 'link_failed';
         return redirectWithOAuthError(returnTo, err);
       }
       userId = result.user.id;

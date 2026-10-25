@@ -1,5 +1,5 @@
 /**
- * OAuth environment (Google, app base URL, test fake provider).
+ * OAuth environment (Google, Facebook, app base URL, test fake provider).
  */
 import { isTestEnv } from '../../email/config.js';
 
@@ -22,6 +22,18 @@ export function googleClientSecret(): string {
 
 export function isGoogleOAuthConfigured(): boolean {
   return googleClientId().length > 0 && googleClientSecret().length > 0;
+}
+
+export function facebookAppId(): string {
+  return process.env.FACEBOOK_APP_ID?.trim() ?? '';
+}
+
+export function facebookAppSecret(): string {
+  return process.env.FACEBOOK_APP_SECRET?.trim() ?? '';
+}
+
+export function isFacebookOAuthConfigured(): boolean {
+  return facebookAppId().length > 0 && facebookAppSecret().length > 0;
 }
 
 function isFakeOAuthFlagSet(): boolean {

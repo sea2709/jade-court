@@ -86,6 +86,24 @@ describe('playerRegister', () => {
     );
   });
 
+  it('playerAddAccountEmail posts email and returns user', async () => {
+    const { playerAddAccountEmail } = await import('./playerAuthApi');
+    fetchMock.mockResolvedValue(
+      json({
+        user: { ...sampleUser, email: 'added@example.com', emailVerified: false },
+      }),
+    );
+    const user = await playerAddAccountEmail('added@example.com');
+    expect(user.email).toBe('added@example.com');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/add-email',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'added@example.com' }),
+      }),
+    );
+  });
+
   it('maps email_taken to error code', async () => {
     fetchMock.mockResolvedValue(json({ error: 'email_taken' }, 409));
     await expect(playerRegister('a@example.com', 'password1', 'Alice')).rejects.toBeInstanceOf(

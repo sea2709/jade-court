@@ -12,4 +12,5 @@ export const BREADCRUMB_NAV = [
   ['/forgot-password', 'Forgot password'],
   ['/reset-password', 'Reset password'],
   ['/account', 'Account'],
+  ['/account/data-deletion', 'Data deletion'],
 ] as const;

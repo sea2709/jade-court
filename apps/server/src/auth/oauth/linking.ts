@@ -7,7 +7,10 @@ import type { OAuthProfile } from './types.js';
 
 export type OAuthLinkResult =
   | { ok: true; user: UserRecord; created: boolean; linked: boolean }
-  | { ok: false; error: 'identity_taken' | 'email_taken' | 'link_user_missing' };
+  | {
+      ok: false;
+      error: 'identity_taken' | 'email_taken' | 'email_exists_use_link' | 'link_user_missing';
+    };
 
 function identityKey(provider: string, sub: string): UserIdentity {
   return { provider, sub };
@@ -38,6 +41,14 @@ export async function resolveOAuthUser(
     return { ok: true, user: byIdentity, created: false, linked: false };
   }
 
+  // Facebook does not prove email ownership — never auto-link or create a duplicate by email.
+  if (provider === 'facebook' && profile.email) {
+    const byEmail = await userStore.findByEmail(profile.email);
+    if (byEmail) {
+      return { ok: false, error: 'email_exists_use_link' };
+    }
+  }
+
   if (profile.email && profile.emailVerified) {
     const byEmail = await userStore.findByEmail(profile.email);
     if (byEmail) {
@@ -58,9 +69,12 @@ export async function resolveOAuthUser(
   }
 
   try {
+    // Facebook Graph email is not verified — never persist it on sign-up (use add-email + verify).
+    const persistEmail = provider === 'facebook' ? undefined : profile.email;
+    const emailVerified = provider === 'facebook' ? false : profile.emailVerified;
     const user = await userStore.createOAuthUser({
-      email: profile.email,
-      emailVerified: profile.emailVerified,
+      email: persistEmail,
+      emailVerified,
       displayName: profile.name,
       identity,
     });

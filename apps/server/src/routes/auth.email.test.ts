@@ -212,6 +212,79 @@ describe('auth email routes', () => {
     await waitForOutbox();
   });
 
+  it('POST /add-email rate limits repeated attempts for the same target email', async () => {
+    const { app, userStore, sessionStore } = makeApp();
+    const victim = 'victim-rate@example.com';
+
+    async function mintSessionForSub(sub: string): Promise<string> {
+      const oauthUser = await userStore.createOAuthUser({
+        emailVerified: false,
+        identity: { provider: 'fake', sub },
+      });
+      const { generateSessionToken, hashSessionToken } = await import('../auth/sessionToken.js');
+      const { newSessionExpiresAt } = await import('../auth/cookies.js');
+      const raw = generateSessionToken();
+      await sessionStore.create({
+        tokenHash: hashSessionToken(raw),
+        userId: oauthUser.id,
+        expiresAt: newSessionExpiresAt(),
+      });
+      return raw;
+    }
+
+    const first = await app.request('/api/auth/add-email', {
+      method: 'POST',
+      headers: sessionCookieHeader(await mintSessionForSub('sub-rate-0')),
+      body: JSON.stringify({ email: victim }),
+    });
+    expect(first.status).toBe(200);
+
+    for (let i = 1; i < 3; i++) {
+      const res = await app.request('/api/auth/add-email', {
+        method: 'POST',
+        headers: sessionCookieHeader(await mintSessionForSub(`sub-rate-${i}`)),
+        body: JSON.stringify({ email: victim }),
+      });
+      expect(res.status).toBe(409);
+    }
+
+    const limited = await app.request('/api/auth/add-email', {
+      method: 'POST',
+      headers: sessionCookieHeader(await mintSessionForSub('sub-rate-blocked')),
+      body: JSON.stringify({ email: victim }),
+    });
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({ error: 'rate_limited' });
+  });
+
+  it('POST /add-email attaches email and sends verification for OAuth user without email', async () => {
+    const { app, userStore, sessionStore } = makeApp();
+    const oauthUser = await userStore.createOAuthUser({
+      emailVerified: false,
+      displayName: 'No Email',
+      identity: { provider: 'fake', sub: 'sub-no-email' },
+    });
+    const { generateSessionToken, hashSessionToken } = await import('../auth/sessionToken.js');
+    const { newSessionExpiresAt } = await import('../auth/cookies.js');
+    const raw = generateSessionToken();
+    await sessionStore.create({
+      tokenHash: hashSessionToken(raw),
+      userId: oauthUser.id,
+      expiresAt: newSessionExpiresAt(),
+    });
+
+    const res = await app.request('/api/auth/add-email', {
+      method: 'POST',
+      headers: sessionCookieHeader(raw),
+      body: JSON.stringify({ email: 'attach@example.com' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { user: { email: string; emailVerified: boolean } };
+    expect(body.user.email).toBe('attach@example.com');
+    expect(body.user.emailVerified).toBe(false);
+    await waitForOutbox();
+  });
+
   it('POST /resend-verification is no-op when already verified', async () => {
     const { app, userStore } = makeApp();
     const reg = await register(app, 'done@example.com', 'password123');

@@ -43,6 +43,20 @@ afterEach(() => {
 });
 
 describe('LoginScreen', () => {
+  it('shows Continue with Facebook when fake provider stands in for Facebook', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/me')) return Promise.resolve(guestMe);
+      if (url.includes('/api/auth/providers')) {
+        return Promise.resolve(json({ providers: ['fake'] }));
+      }
+      return Promise.resolve(json({ error: 'unexpected' }, 500));
+    });
+    renderLogin();
+    const link = await screen.findByRole('link', { name: 'Continue with Facebook' });
+    expect(link).toHaveAttribute('href', '/api/auth/fake/start?returnTo=%2Fplay');
+  });
+
   it('shows Continue with Google when google provider is configured', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
