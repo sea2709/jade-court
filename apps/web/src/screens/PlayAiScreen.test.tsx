@@ -62,6 +62,9 @@ beforeEach(() => {
     if (url.includes('/api/coach/opening')) {
       return Promise.resolve(json({ text: 'Hello', source: 'llm' }));
     }
+    if (url.includes('/api/games/active/ai')) {
+      return Promise.resolve(json({ error: 'not_found' }, 404));
+    }
     return Promise.resolve(json({}));
   });
 });

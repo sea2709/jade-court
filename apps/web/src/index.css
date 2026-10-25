@@ -151,6 +151,9 @@
 }
 
 @layer components {
+  .saved-mini-board [data-testid='board'] {
+    pointer-events: none;
+  }
   .app-shell {
     @apply min-h-screen flex flex-col;
   }

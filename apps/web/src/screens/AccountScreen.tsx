@@ -5,9 +5,16 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { SIGN_OUT_FAILED_MESSAGE, SIGN_OUT_NOTICE } from '../components/AccountAvatarMenu';
 import { AccountDayPassCard } from '../components/account/AccountDayPassCard';
+import { UnfinishedGamesSection } from '../components/account/UnfinishedGamesSection';
 import { PaymentHistoryTable } from '../components/account/PaymentHistoryTable';
 import { useAuth } from '../context/useAuth';
 import { fetchBillingPayments, type PublicPayment } from '../lib/billingApi';
+import {
+  deleteActiveGame,
+  fetchActiveGames,
+  type ActiveGameSummary,
+  type SavedGameMode,
+} from '../lib/gamesApi';
 import { ResendVerificationButton } from '../components/ResendVerificationButton';
 import { playerLogout } from '../lib/playerAuthApi';
 
@@ -18,6 +25,8 @@ export function AccountScreen() {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [payments, setPayments] = useState<PublicPayment[]>([]);
+  const [unfinishedGames, setUnfinishedGames] = useState<ActiveGameSummary[]>([]);
+  const [abandonBusyMode, setAbandonBusyMode] = useState<SavedGameMode | null>(null);
 
   useEffect(() => {
     document.title = 'Account · Jade Court';
@@ -38,6 +47,32 @@ export function AccountScreen() {
       cancelled = true;
     };
   }, [status, user]);
+
+  useEffect(() => {
+    if (status !== 'ready' || !user) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { games } = await fetchActiveGames();
+        if (!cancelled) setUnfinishedGames(games);
+      } catch {
+        if (!cancelled) setUnfinishedGames([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, user]);
+
+  const onAbandonGame = async (mode: SavedGameMode) => {
+    setAbandonBusyMode(mode);
+    try {
+      await deleteActiveGame(mode);
+      setUnfinishedGames((rows) => rows.filter((g) => g.mode !== mode));
+    } finally {
+      setAbandonBusyMode(null);
+    }
+  };
 
   if (status === 'loading') {
     return (
@@ -74,7 +109,7 @@ export function AccountScreen() {
       <div className="rise section-header mb-8">
         <span className="pill pill-jade mb-3.5">Account · 帳</span>
         <h1 className="section-title">Your account</h1>
-        <p className="section-subtitle">Profile and session. Saved games will appear here later.</p>
+        <p className="section-subtitle">Profile, billing, and any games you have in progress.</p>
       </div>
       <div className="news-panel border border-line-soft p-8 shadow-md max-w-lg">
         {!user.emailVerified ? (
@@ -124,6 +159,11 @@ export function AccountScreen() {
           </Link>
         </div>
       </div>
+      <UnfinishedGamesSection
+        games={unfinishedGames}
+        onAbandon={(mode) => void onAbandonGame(mode)}
+        abandonBusyMode={abandonBusyMode}
+      />
       <AccountDayPassCard
         accessUntil={accessUntil}
         emailVerified={user.emailVerified}
