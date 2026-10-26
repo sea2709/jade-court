@@ -12,6 +12,7 @@ import { NewsScreen } from './screens/NewsScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { RegisterScreen } from './screens/RegisterScreen';
 import { AccountScreen } from './screens/AccountScreen';
+import { DataDeletionStatusScreen } from './screens/DataDeletionStatusScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
 import { RegisterSentScreen } from './screens/RegisterSentScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
@@ -53,6 +54,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="forgot-password" element={<ForgotPasswordScreen />} />
             <Route path="reset-password" element={<ResetPasswordScreen />} />
             <Route path="account" element={<AccountScreen />} />
+            <Route path="account/data-deletion" element={<DataDeletionStatusScreen />} />
           </Route>
         </Routes>
       </AuthProvider>

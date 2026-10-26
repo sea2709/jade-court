@@ -3,10 +3,14 @@
  */
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
+import { OAuthSignInButtons } from '../components/auth/OAuthSignInButtons';
 import { useAuthProviders } from '../hooks/useAuthProviders';
 import { useAuth } from '../context/useAuth';
-import { googleSignInProviderId, oauthErrorMessage } from '../lib/oauthAuthApi';
+import {
+  facebookSignInProviderId,
+  googleSignInProviderId,
+  oauthErrorMessage,
+} from '../lib/oauthAuthApi';
 import { PlayerAuthApiError, playerLogin } from '../lib/playerAuthApi';
 import { safeLoginNextPath } from '../lib/safeReturnTo';
 
@@ -33,6 +37,7 @@ export function LoginScreen() {
   const { status, user, setSignedIn, refresh } = useAuth();
   const { providers, loading: providersLoading } = useAuthProviders();
   const googleProvider = googleSignInProviderId(providers);
+  const facebookProvider = facebookSignInProviderId(providers);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -87,13 +92,13 @@ export function LoginScreen() {
             {oauthErrorMessage(oauthError)}
           </p>
         ) : null}
-        {!providersLoading && googleProvider ? (
-          <div className="mb-4 flex flex-col gap-4">
-            <GoogleSignInButton provider={googleProvider} returnTo={nextPath} />
-            <p className="m-0 text-center text-xs font-bold uppercase tracking-wide text-muted">
-              or sign in with email
-            </p>
-          </div>
+        {!providersLoading && (googleProvider || facebookProvider) ? (
+          <OAuthSignInButtons
+            googleProvider={googleProvider}
+            facebookProvider={facebookProvider}
+            returnTo={nextPath}
+            dividerLabel="or sign in with email"
+          />
         ) : null}
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
           <label

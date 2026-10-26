@@ -174,6 +174,22 @@ export class MemoryUserStore implements UserStore {
     return { ...user };
   }
 
+  async setEmail(userId: string, email: string): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    const normalized = normalizeEmail(email);
+    if (user.email?.trim()) {
+      throw new Error('already_has_email');
+    }
+    if (this.byEmail.has(normalized)) {
+      throw new EmailTakenError();
+    }
+    const updated: UserRecord = { ...user, email: normalized, emailVerified: false };
+    this.byId.set(userId, updated);
+    this.byEmail.set(normalized, userId);
+    return { ...updated };
+  }
+
   async updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null> {
     const user = this.byId.get(userId);
     if (!user) return null;
@@ -187,6 +203,25 @@ export class MemoryUserStore implements UserStore {
     const updated: UserRecord = { ...user, preferredModelId };
     this.byId.set(userId, updated);
     return { ...updated };
+  }
+
+  async anonymizeUser(userId: string): Promise<boolean> {
+    const user = this.byId.get(userId);
+    if (!user) return false;
+    if (user.email) {
+      this.byEmail.delete(user.email);
+    }
+    for (const identity of user.identities) {
+      this.byIdentity.delete(identityIndexKey(identity.provider, identity.sub));
+    }
+    const anonymized: UserRecord = {
+      id: user.id,
+      emailVerified: false,
+      identities: [],
+      createdAt: user.createdAt,
+    };
+    this.byId.set(userId, anonymized);
+    return true;
   }
 
   async searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult> {

@@ -5,7 +5,9 @@ import { appBaseUrl, isFakeOAuthEnabled } from './config.js';
 import type { OAuthProfile, OAuthProvider } from './types.js';
 
 export const FAKE_OAUTH_CODE = 'fake-oauth-code';
+export const FAKE_OAUTH_CODE_NO_EMAIL = 'fake-oauth-code-no-email';
 export const FAKE_OAUTH_SUB = 'fake-user-sub';
+export const FAKE_OAUTH_SUB_NO_EMAIL = 'fake-user-sub-no-email';
 export const FAKE_OAUTH_EMAIL = 'fake-oauth@example.com';
 
 export function createFakeOAuthProvider(): OAuthProvider {
@@ -23,6 +25,13 @@ export function createFakeOAuthProvider(): OAuthProvider {
       return `${redirectUri}?${params.toString()}`;
     },
     async exchange(code: string, _codeVerifier: string): Promise<OAuthProfile> {
+      if (code === FAKE_OAUTH_CODE_NO_EMAIL) {
+        return {
+          sub: FAKE_OAUTH_SUB_NO_EMAIL,
+          emailVerified: false,
+          name: 'Fake OAuth User (no email)',
+        };
+      }
       if (code !== FAKE_OAUTH_CODE) {
         throw new Error('invalid_code');
       }

@@ -2,7 +2,10 @@
  * Day-pass paywall when signed in without active access.
  */
 import { useEffect, useState } from 'react';
+import { AddAccountEmailPanel } from '../account/AddAccountEmailPanel';
+import { ResendVerificationButton } from '../ResendVerificationButton';
 import { CoachAvatar } from '../CoachAvatar';
+import { useAuth } from '../../context/useAuth';
 import { fetchAiModels, type AiModelOption } from '../../lib/aiModelsApi';
 import { assignCheckoutUrl, BillingApiError, postBillingCheckout } from '../../lib/billingApi';
 
@@ -13,6 +16,7 @@ interface PlayAiPaywallProps {
 }
 
 export function PlayAiPaywall({ emailVerified, hasEmail, onCheckoutStart }: PlayAiPaywallProps) {
+  const { refresh } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [models, setModels] = useState<AiModelOption[]>([]);
@@ -94,7 +98,20 @@ export function PlayAiPaywall({ emailVerified, hasEmail, onCheckoutStart }: Play
       >
         {busy ? 'Opening checkout…' : 'Buy day pass · $1'}
       </button>
-      {billingBlocked ? (
+      {!hasEmail ? (
+        <AddAccountEmailPanel compact onSaved={() => void refresh()} />
+      ) : !emailVerified ? (
+        <div
+          className="mt-4 rounded-[var(--r-md)] border border-line-soft bg-cream/80 p-4"
+          role="region"
+          aria-label="Email verification"
+        >
+          <p className="m-0 mb-3 text-sm font-semibold text-ink-soft" role="status">
+            {billingBlocked}
+          </p>
+          <ResendVerificationButton />
+        </div>
+      ) : billingBlocked ? (
         <p className="mt-4 text-sm font-semibold text-ink-soft" role="status">
           {billingBlocked}
         </p>

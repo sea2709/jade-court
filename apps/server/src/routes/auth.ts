@@ -14,6 +14,7 @@ import {
   recordFailedLoginAtVolumeCap,
   reserveForgotPasswordAttempt,
   reserveLoginFailureAttempts,
+  reserveAddEmailAttempt,
   reserveRegisterAttempt,
   reserveResendVerificationAttempt,
   reserveResetPasswordAttempt,
@@ -303,6 +304,76 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
     return c.json({ user: toPublicUser(updated) }, 200);
   });
 
+  routes.post('/add-email', requireUser, async (c) => {
+    noStore(c);
+
+    if (!isPlayerAuthEnabled()) {
+      return authDisabled(c);
+    }
+
+    if (!isJsonContentType(c)) {
+      return invalidRequest(c);
+    }
+
+    const authUser = c.get('user');
+    if (!authUser) {
+      return unauthorized(c);
+    }
+
+    const parsed = await parseAuthJsonBody(c);
+    if (!parsed.ok) {
+      return c.json({ error: parsed.error }, parsed.status);
+    }
+    const body = parsed.body;
+    if (typeof body !== 'object' || body === null) {
+      return invalidRequest(c);
+    }
+
+    const emailRaw = (body as { email?: unknown }).email;
+    if (typeof emailRaw !== 'string') {
+      return invalidRequest(c);
+    }
+
+    const email = emailRaw.trim().toLowerCase();
+    if (email.length === 0 || email.length > MAX_EMAIL_LEN || !EMAIL_RE.test(email)) {
+      return invalidRequest(c);
+    }
+
+    const user = await userStore.findById(authUser.id);
+    if (!user) {
+      return unauthorized(c);
+    }
+    if (user.email?.trim()) {
+      return c.json({ error: 'already_has_email' }, 400);
+    }
+
+    if (reserveAddEmailAttempt(authUser.id, email) === 'limited') {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
+
+    let updated;
+    try {
+      updated = await userStore.setEmail(user.id, email);
+    } catch (err) {
+      if (err instanceof EmailTakenError) {
+        return c.json({ error: 'email_taken' }, 409);
+      }
+      if (err instanceof Error && err.message === 'already_has_email') {
+        return c.json({ error: 'already_has_email' }, 400);
+      }
+      throw err;
+    }
+    if (!updated) {
+      return invalidRequest(c);
+    }
+
+    void sendVerificationEmail(emailDeps, updated).catch((err) => {
+      console.warn('Failed to send verification email:', err);
+    });
+
+    return c.json({ user: toPublicUser(updated) }, 200);
+  });
+
   routes.post('/resend-verification', requireUser, async (c) => {
     noStore(c);
 
@@ -324,7 +395,7 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
     }
 
     const user = await userStore.findById(authUser.id);
-    if (!user?.passwordHash) {
+    if (!user?.email?.trim()) {
       return c.json({ ok: true }, 200);
     }
 

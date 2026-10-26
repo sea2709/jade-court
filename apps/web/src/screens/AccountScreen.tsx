@@ -16,12 +16,13 @@ import {
   type ActiveGameSummary,
   type SavedGameMode,
 } from '../lib/gamesApi';
+import { AddAccountEmailPanel } from '../components/account/AddAccountEmailPanel';
 import { ResendVerificationButton } from '../components/ResendVerificationButton';
 import { playerLogout } from '../lib/playerAuthApi';
 
 /** Signed-in profile and sign out. */
 export function AccountScreen() {
-  const { status, user, access, clearAuth } = useAuth();
+  const { status, user, access, clearAuth, refresh } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const oauthError = searchParams.get('oauth_error');
@@ -115,7 +116,11 @@ export function AccountScreen() {
         <p className="section-subtitle">Profile, billing, and any games you have in progress.</p>
       </div>
       <div className="news-panel border border-line-soft p-8 shadow-md max-w-lg">
-        {!user.emailVerified ? (
+        {!user.email?.trim() ? (
+          <div className="mb-6">
+            <AddAccountEmailPanel onSaved={() => void refresh()} />
+          </div>
+        ) : !user.emailVerified ? (
           <div
             className="mb-6 rounded-[var(--r-md)] border border-line-soft bg-[#FBEAC4] p-4"
             role="region"

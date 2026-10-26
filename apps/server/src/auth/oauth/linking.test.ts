@@ -62,6 +62,59 @@ describe('oauth account linking', () => {
     expect(squatter?.identities).toEqual([]);
   });
 
+  it('facebook does not auto-link when email matches an existing user', async () => {
+    const store = new MemoryUserStore();
+    const passwordUser = await store.create({
+      email: 'existing@example.com',
+      passwordHash: await hashPassword('password123'),
+      displayName: 'Existing',
+    });
+    await store.setEmailVerified(passwordUser.id, true);
+    const result = await resolveOAuthUser(store, 'facebook', {
+      sub: 'fb-sub-new',
+      email: 'existing@example.com',
+      emailVerified: false,
+    });
+    expect(result).toEqual({ ok: false, error: 'email_exists_use_link' });
+    const unchanged = await store.findById(passwordUser.id);
+    expect(unchanged?.identities).toEqual([]);
+  });
+
+  it('facebook does not persist Graph email on new sign-up (no squatting)', async () => {
+    const store = new MemoryUserStore();
+    const result = await resolveOAuthUser(store, 'facebook', {
+      sub: 'fb-squatter',
+      email: 'victim@example.com',
+      emailVerified: false,
+      name: 'Attacker',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.user.email).toBeUndefined();
+    }
+    expect(await store.findByEmail('victim@example.com')).toBeNull();
+    const victim = await store.create({
+      email: 'victim@example.com',
+      passwordHash: await hashPassword('password123'),
+    });
+    expect(victim.email).toBe('victim@example.com');
+  });
+
+  it('facebook creates user without email', async () => {
+    const store = new MemoryUserStore();
+    const result = await resolveOAuthUser(store, 'facebook', {
+      sub: 'fb-only-id',
+      emailVerified: false,
+      name: 'FB Only',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.created).toBe(true);
+      expect(result.user.email).toBeUndefined();
+      expect(result.user.identities).toEqual([{ provider: 'facebook', sub: 'fb-only-id' }]);
+    }
+  });
+
   it('creates a new user when no match', async () => {
     const store = new MemoryUserStore();
     const result = await resolveOAuthUser(store, 'google', {

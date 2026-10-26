@@ -277,6 +277,36 @@ export class MongoUserStore implements UserStore {
     return result ? fromMongo(result) : null;
   }
 
+  async setEmail(userId: string, email: string): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const normalized = normalizeEmail(email);
+    const owner = await col.findOne({ _id: new ObjectId(userId) });
+    if (!owner) return null;
+    if (owner.email?.trim()) {
+      throw new Error('already_has_email');
+    }
+    const taken = await col.findOne({ email: normalized });
+    if (taken) {
+      throw new EmailTakenError();
+    }
+    try {
+      const result = await col.findOneAndUpdate(
+        { _id: new ObjectId(userId), $or: [{ email: { $exists: false } }, { email: '' }] },
+        { $set: { email: normalized, emailVerified: false } },
+        { returnDocument: 'after' },
+      );
+      return result ? fromMongo(result) : null;
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) {
+        throw new EmailTakenError();
+      }
+      throw err;
+    }
+  }
+
   async updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null> {
     await ensureIndexes();
     const db = await getDb();
@@ -301,6 +331,28 @@ export class MongoUserStore implements UserStore {
       { returnDocument: 'after' },
     );
     return result ? fromMongo(result) : null;
+  }
+
+  async anonymizeUser(userId: string): Promise<boolean> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return false;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const result = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      {
+        $set: { emailVerified: false, identities: [] },
+        $unset: {
+          email: '',
+          passwordHash: '',
+          displayName: '',
+          preferredModelId: '',
+          accessUntil: '',
+        },
+      },
+      { returnDocument: 'after' },
+    );
+    return Boolean(result);
   }
 
   async searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult> {

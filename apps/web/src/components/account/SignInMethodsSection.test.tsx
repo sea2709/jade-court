@@ -59,6 +59,26 @@ describe('SignInMethodsSection', () => {
     expect(screen.getByRole('button', { name: 'Unlink' })).toBeInTheDocument();
   });
 
+  it('shows Facebook row when facebook provider is configured', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/me')) {
+        return Promise.resolve(
+          json({ user: signedInUser, access: { active: false, accessUntil: null } }),
+        );
+      }
+      if (url.includes('/api/auth/providers')) {
+        return Promise.resolve(json({ providers: ['google', 'facebook'] }));
+      }
+      if (url.includes('/api/auth/identities')) {
+        return Promise.resolve(json({ hasPassword: true, providers: [] }));
+      }
+      return Promise.resolve(json({ error: 'unexpected' }, 500));
+    });
+    renderSection();
+    expect(await screen.findByRole('button', { name: 'Link Facebook' })).toBeInTheDocument();
+  });
+
   it('shows link button when Google is not linked', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();

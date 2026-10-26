@@ -17,6 +17,9 @@ import { MemoryEmailTokenStore } from './emailTokens/memoryStore.js';
 import { MongoEmailTokenStore } from './emailTokens/mongoStore.js';
 import type { EmailTokenStore } from './emailTokens/store.js';
 import { createMeRoute, createPlayerAuthRoutes } from './routes/auth.js';
+import { MemoryDataDeletionStore } from './auth/oauth/memoryDataDeletionStore.js';
+import { MongoDataDeletionStore } from './auth/oauth/mongoDataDeletionStore.js';
+import type { DataDeletionStore } from './auth/oauth/dataDeletionStore.js';
 import { createOAuthRoutes } from './routes/oauth.js';
 import { MemorySessionStore } from './users/memorySessionStore.js';
 import { MemoryUserStore } from './users/memoryStore.js';
@@ -125,6 +128,7 @@ export interface CreateAppDeps {
   userStore?: UserStore;
   sessionStore?: SessionStore;
   emailTokenStore?: EmailTokenStore;
+  dataDeletionStore?: DataDeletionStore;
   emailSender?: EmailSender;
   paymentStore?: PaymentStore;
   savedGameStore?: SavedGameStore;
@@ -179,6 +183,15 @@ export function createApp(deps?: CreateAppDeps) {
   }
 
   const emailSender = deps?.emailSender ?? createEmailSender();
+
+  let dataDeletionStore: DataDeletionStore;
+  if (deps?.dataDeletionStore) {
+    dataDeletionStore = deps.dataDeletionStore;
+  } else if (process.env.MONGODB_URI) {
+    dataDeletionStore = new MongoDataDeletionStore();
+  } else {
+    dataDeletionStore = new MemoryDataDeletionStore();
+  }
 
   let paymentStore: PaymentStore;
   if (deps?.paymentStore) {
@@ -250,7 +263,10 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));
   const playerAuthDeps = { userStore, sessionStore, emailTokenStore, emailSender };
   const authRoutes = new Hono();
-  authRoutes.route('/', createOAuthRoutes({ userStore, sessionStore }));
+  authRoutes.route(
+    '/',
+    createOAuthRoutes({ userStore, sessionStore, dataDeletionStore, emailTokenStore }),
+  );
   authRoutes.route('/', createPlayerAuthRoutes(playerAuthDeps));
   app.route('/api/auth', authRoutes);
   app.route('/api', createMeRoute());

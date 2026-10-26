@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthProvider } from '../../context/AuthProvider';
 import { PlayAiPaywall } from './PlayAiPaywall';
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -7,10 +8,21 @@ const fetchMock = vi.fn<typeof fetch>();
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+const guestMe = json({ user: null, access: { active: false, accessUntil: null } });
+
+function renderPaywall(props: { emailVerified: boolean; hasEmail: boolean }) {
+  return render(
+    <AuthProvider>
+      <PlayAiPaywall {...props} />
+    </AuthProvider>,
+  );
+}
+
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockImplementation((input) => {
     const url = String(input);
+    if (url.includes('/api/me')) return Promise.resolve(guestMe);
     if (url.includes('/api/ai/models')) {
       return Promise.resolve(
         json({ models: [{ id: 'm1', label: 'Gemini Flash' }], defaultId: 'm1' }),
@@ -27,7 +39,7 @@ afterEach(() => {
 
 describe('PlayAiPaywall', () => {
   it('shows model chips and Buy day pass CTA', async () => {
-    render(<PlayAiPaywall emailVerified hasEmail />);
+    renderPaywall({ emailVerified: true, hasEmail: true });
     await waitFor(() => {
       expect(screen.getByText('Gemini Flash')).toBeInTheDocument();
     });
@@ -36,14 +48,14 @@ describe('PlayAiPaywall', () => {
   });
 
   it('disables buy when email is not verified', () => {
-    render(<PlayAiPaywall emailVerified={false} hasEmail />);
+    renderPaywall({ emailVerified: false, hasEmail: true });
     expect(screen.getByRole('button', { name: /Buy day pass/i })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent(/Verify your email/i);
   });
 
   it('disables buy when account has no email', () => {
-    render(<PlayAiPaywall emailVerified hasEmail={false} />);
+    renderPaywall({ emailVerified: true, hasEmail: false });
     expect(screen.getByRole('button', { name: /Buy day pass/i })).toBeDisabled();
-    expect(screen.getByRole('status')).toHaveTextContent(/Add an email/i);
+    expect(screen.getByRole('heading', { name: 'Add your email' })).toBeInTheDocument();
   });
 });
