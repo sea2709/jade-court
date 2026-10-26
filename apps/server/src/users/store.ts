@@ -1,7 +1,7 @@
 /**
  * User persistence abstraction (Mongo + in-memory for tests).
  */
-import type { UserRecord } from './types.js';
+import type { UserIdentity, UserRecord } from './types.js';
 
 export type CreateUserInput = {
   email: string;
@@ -9,10 +9,31 @@ export type CreateUserInput = {
   displayName?: string;
 };
 
+export type CreateOAuthUserInput = {
+  email?: string;
+  emailVerified: boolean;
+  displayName?: string;
+  identity: UserIdentity;
+};
+
 export class EmailTakenError extends Error {
   readonly code = 'email_taken' as const;
   constructor() {
     super('email_taken');
+  }
+}
+
+export class IdentityTakenError extends Error {
+  readonly code = 'identity_taken' as const;
+  constructor() {
+    super('identity_taken');
+  }
+}
+
+export class LastSignInMethodError extends Error {
+  readonly code = 'last_sign_in_method' as const;
+  constructor() {
+    super('last_sign_in_method');
   }
 }
 
@@ -29,8 +50,12 @@ export type UserEmailSearchResult = {
 
 export interface UserStore {
   create(input: CreateUserInput): Promise<UserRecord>;
+  createOAuthUser(input: CreateOAuthUserInput): Promise<UserRecord>;
   findByEmail(email: string): Promise<UserRecord | null>;
   findById(id: string): Promise<UserRecord | null>;
+  findByIdentity(provider: string, sub: string): Promise<UserRecord | null>;
+  addIdentity(userId: string, identity: UserIdentity): Promise<UserRecord | null>;
+  removeIdentity(userId: string, provider: string): Promise<UserRecord | null>;
   /** Atomically extend `accessUntil` by `ms` from max(now, current access). */
   extendAccess(userId: string, ms: number, now: Date): Promise<UserRecord | null>;
   /** Raise `accessUntil` to at least `until` without shortening existing access. */

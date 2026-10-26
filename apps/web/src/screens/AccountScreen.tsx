@@ -2,7 +2,8 @@
  * Player account profile at `/account`.
  */
 import { useEffect, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { SignInMethodsSection } from '../components/account/SignInMethodsSection';
 import { SIGN_OUT_FAILED_MESSAGE, SIGN_OUT_NOTICE } from '../components/AccountAvatarMenu';
 import { AccountDayPassCard } from '../components/account/AccountDayPassCard';
 import { UnfinishedGamesSection } from '../components/account/UnfinishedGamesSection';
@@ -22,6 +23,8 @@ import { playerLogout } from '../lib/playerAuthApi';
 export function AccountScreen() {
   const { status, user, access, clearAuth } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const oauthError = searchParams.get('oauth_error');
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [payments, setPayments] = useState<PublicPayment[]>([]);
@@ -140,6 +143,7 @@ export function AccountScreen() {
             </dd>
           </div>
         </dl>
+        <SignInMethodsSection oauthErrorCode={oauthError} />
         {signOutError ? (
           <p className="mt-6 text-sm font-bold text-red-deep" role="alert">
             {signOutError}

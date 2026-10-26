@@ -7,6 +7,9 @@ import { InvalidCursorError } from '../news/memoryStore.js';
 import { getDb } from '../db.js';
 import {
   EmailTakenError,
+  IdentityTakenError,
+  LastSignInMethodError,
+  type CreateOAuthUserInput,
   type CreateUserInput,
   type UserEmailSearchOptions,
   type UserEmailSearchResult,
@@ -41,6 +44,10 @@ async function ensureIndexes(): Promise<void> {
   if (!db) return;
   const col = db.collection<MongoUserDoc>(COLLECTION);
   await col.createIndex({ email: 1 }, { unique: true, sparse: true });
+  await col.createIndex(
+    { 'identities.provider': 1, 'identities.sub': 1 },
+    { unique: true, sparse: true },
+  );
   indexesEnsured = true;
 }
 
@@ -94,6 +101,105 @@ export class MongoUserStore implements UserStore {
       throw err;
     }
     return fromMongo(doc);
+  }
+
+  async createOAuthUser(input: CreateOAuthUserInput): Promise<UserRecord> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) {
+      throw new Error('MongoDB not configured');
+    }
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const email = input.email ? normalizeEmail(input.email) : undefined;
+    const now = new Date();
+    const doc: MongoUserDoc = {
+      _id: new ObjectId(),
+      emailVerified: input.emailVerified,
+      ...(email ? { email } : {}),
+      ...(input.displayName ? { displayName: input.displayName.trim() } : {}),
+      identities: [{ ...input.identity }],
+      createdAt: now,
+    };
+    try {
+      await col.insertOne(doc);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) {
+        const keyPattern = (err as { keyPattern?: Record<string, unknown> }).keyPattern;
+        if (keyPattern && 'identities.provider' in keyPattern) {
+          throw new IdentityTakenError();
+        }
+        throw new EmailTakenError();
+      }
+      throw err;
+    }
+    return fromMongo(doc);
+  }
+
+  async findByIdentity(provider: string, sub: string): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) return null;
+    const doc = await db.collection<MongoUserDoc>(COLLECTION).findOne({
+      identities: { $elemMatch: { provider, sub } },
+    });
+    return doc ? fromMongo(doc) : null;
+  }
+
+  async addIdentity(userId: string, identity: UserIdentity): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const existing = await col.findOne({
+      identities: { $elemMatch: { provider: identity.provider, sub: identity.sub } },
+    });
+    if (existing && existing._id.toHexString() !== userId) {
+      throw new IdentityTakenError();
+    }
+    const owner = await col.findOne({ _id: new ObjectId(userId) });
+    if (!owner) return null;
+    if (owner.identities?.some((i) => i.provider === identity.provider)) {
+      if (
+        owner.identities.some((i) => i.provider === identity.provider && i.sub === identity.sub)
+      ) {
+        return fromMongo(owner);
+      }
+      throw new IdentityTakenError();
+    }
+    try {
+      const result = await col.findOneAndUpdate(
+        { _id: new ObjectId(userId) },
+        { $push: { identities: { ...identity } } },
+        { returnDocument: 'after' },
+      );
+      return result ? fromMongo(result) : null;
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) {
+        throw new IdentityTakenError();
+      }
+      throw err;
+    }
+  }
+
+  async removeIdentity(userId: string, provider: string): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const owner = await col.findOne({ _id: new ObjectId(userId) });
+    if (!owner) return null;
+    const hasIdentity = owner.identities?.some((i) => i.provider === provider);
+    if (!hasIdentity) return null;
+    const methods = (owner.passwordHash ? 1 : 0) + (owner.identities?.length ?? 0);
+    if (methods <= 1) {
+      throw new LastSignInMethodError();
+    }
+    const result = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $pull: { identities: { provider } } },
+      { returnDocument: 'after' },
+    );
+    return result ? fromMongo(result) : null;
   }
 
   async findByEmail(email: string): Promise<UserRecord | null> {

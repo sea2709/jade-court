@@ -17,6 +17,7 @@ import { MemoryEmailTokenStore } from './emailTokens/memoryStore.js';
 import { MongoEmailTokenStore } from './emailTokens/mongoStore.js';
 import type { EmailTokenStore } from './emailTokens/store.js';
 import { createMeRoute, createPlayerAuthRoutes } from './routes/auth.js';
+import { createOAuthRoutes } from './routes/oauth.js';
 import { MemorySessionStore } from './users/memorySessionStore.js';
 import { MemoryUserStore } from './users/memoryStore.js';
 import { MongoSessionStore } from './users/mongoSessionStore.js';
@@ -247,10 +248,11 @@ export function createApp(deps?: CreateAppDeps) {
   app.route('/api/engine', engineRoutes);
   app.route('/api/opponent', opponentRoutes);
   app.route('/api/news', createNewsRoutes(newsStore, newsImageStorage));
-  app.route(
-    '/api/auth',
-    createPlayerAuthRoutes({ userStore, sessionStore, emailTokenStore, emailSender }),
-  );
+  const playerAuthDeps = { userStore, sessionStore, emailTokenStore, emailSender };
+  const authRoutes = new Hono();
+  authRoutes.route('/', createOAuthRoutes({ userStore, sessionStore }));
+  authRoutes.route('/', createPlayerAuthRoutes(playerAuthDeps));
+  app.route('/api/auth', authRoutes);
   app.route('/api', createMeRoute());
   app.route('/api/admin', createAdminRoutes({ userStore, paymentStore }));
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));

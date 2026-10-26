@@ -6,12 +6,15 @@ import { decodeNewsCursor, encodeNewsCursor, isBeforeCursor } from '../news/curs
 import { InvalidCursorError } from '../news/memoryStore.js';
 import {
   EmailTakenError,
+  IdentityTakenError,
+  LastSignInMethodError,
+  type CreateOAuthUserInput,
   type CreateUserInput,
   type UserEmailSearchOptions,
   type UserEmailSearchResult,
   type UserStore,
 } from './store.js';
-import type { UserRecord } from './types.js';
+import type { UserIdentity, UserRecord } from './types.js';
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -21,9 +24,14 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function identityIndexKey(provider: string, sub: string): string {
+  return `${provider}\0${sub}`;
+}
+
 export class MemoryUserStore implements UserStore {
   private byId = new Map<string, UserRecord>();
   private byEmail = new Map<string, string>();
+  private byIdentity = new Map<string, string>();
 
   /** Snapshot for tests. */
   all(): UserRecord[] {
@@ -48,6 +56,81 @@ export class MemoryUserStore implements UserStore {
     this.byId.set(id, record);
     this.byEmail.set(email, id);
     return { ...record };
+  }
+
+  async createOAuthUser(input: CreateOAuthUserInput): Promise<UserRecord> {
+    const identityKey = identityIndexKey(input.identity.provider, input.identity.sub);
+    if (this.byIdentity.has(identityKey)) {
+      throw new IdentityTakenError();
+    }
+    let email: string | undefined;
+    if (input.email) {
+      email = normalizeEmail(input.email);
+      if (this.byEmail.has(email)) {
+        throw new EmailTakenError();
+      }
+    }
+    const id = randomUUID();
+    const record: UserRecord = {
+      id,
+      ...(email ? { email } : {}),
+      emailVerified: input.emailVerified,
+      ...(input.displayName ? { displayName: input.displayName.trim() } : {}),
+      identities: [{ ...input.identity }],
+      createdAt: new Date(),
+    };
+    this.byId.set(id, record);
+    if (email) this.byEmail.set(email, id);
+    this.byIdentity.set(identityKey, id);
+    return { ...record };
+  }
+
+  async findByIdentity(provider: string, sub: string): Promise<UserRecord | null> {
+    const id = this.byIdentity.get(identityIndexKey(provider, sub));
+    if (!id) return null;
+    const user = this.byId.get(id);
+    return user ? { ...user } : null;
+  }
+
+  async addIdentity(userId: string, identity: UserIdentity): Promise<UserRecord | null> {
+    const key = identityIndexKey(identity.provider, identity.sub);
+    const existingOwner = this.byIdentity.get(key);
+    if (existingOwner && existingOwner !== userId) {
+      throw new IdentityTakenError();
+    }
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    if (user.identities.some((i) => i.provider === identity.provider && i.sub === identity.sub)) {
+      return { ...user };
+    }
+    if (user.identities.some((i) => i.provider === identity.provider)) {
+      throw new IdentityTakenError();
+    }
+    const updated: UserRecord = {
+      ...user,
+      identities: [...user.identities, { ...identity }],
+    };
+    this.byId.set(userId, updated);
+    this.byIdentity.set(key, userId);
+    return { ...updated };
+  }
+
+  async removeIdentity(userId: string, provider: string): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    const target = user.identities.find((i) => i.provider === provider);
+    if (!target) return null;
+    const methods = (user.passwordHash ? 1 : 0) + user.identities.length;
+    if (methods <= 1) {
+      throw new LastSignInMethodError();
+    }
+    const updated: UserRecord = {
+      ...user,
+      identities: user.identities.filter((i) => i.provider !== provider),
+    };
+    this.byId.set(userId, updated);
+    this.byIdentity.delete(identityIndexKey(target.provider, target.sub));
+    return { ...updated };
   }
 
   async findByEmail(email: string): Promise<UserRecord | null> {
