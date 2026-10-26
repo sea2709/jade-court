@@ -3,13 +3,16 @@ import { createApp } from '../app.js';
 import { SESSION_COOKIE_NAME } from '../auth/config.js';
 import { getConsoleEmailOutbox, resetConsoleEmailOutboxForTests } from '../email/consoleSender.js';
 import { resetPlayerAuthRateLimitsForTests } from '../auth/rateLimit.js';
+import { resetE2eTestSecretForTests } from '../e2e/testSecret.js';
 import { hashSessionToken } from '../auth/sessionToken.js';
 import { MemoryEmailTokenStore } from '../emailTokens/memoryStore.js';
 import { MemorySessionStore } from '../users/memorySessionStore.js';
 import { MemoryUserStore } from '../users/memoryStore.js';
 import * as passwordModule from '../users/password.js';
+import { E2E_TEST_SECRET_HEADER } from '../e2e/testSecret.js';
 
 const SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
+const E2E_SECRET = 'unit-test-e2e-secret-value';
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 function setupAuthEnv() {
@@ -17,6 +20,7 @@ function setupAuthEnv() {
   process.env.NODE_ENV = 'test';
   process.env.PUBLIC_APP_URL = 'http://localhost:5199';
   process.env.EMAIL_PROVIDER = 'console';
+  process.env.E2E_TEST_SECRET = E2E_SECRET;
 }
 
 function makeApp() {
@@ -92,6 +96,7 @@ describe('auth email routes', () => {
     delete process.env.NODE_ENV;
     delete process.env.PUBLIC_APP_URL;
     delete process.env.EMAIL_PROVIDER;
+    resetE2eTestSecretForTests();
     resetPlayerAuthRateLimitsForTests();
     resetConsoleEmailOutboxForTests();
     passwordModule.resetDummyPasswordHashForTests();
@@ -376,12 +381,21 @@ describe('auth email routes', () => {
     expect(loginNew.status).toBe(200);
   });
 
+  it('GET /api/auth/test-email-outbox returns 403 without x-e2e-test-secret', async () => {
+    const { app } = makeApp();
+    const res = await app.request('/api/auth/test-email-outbox');
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'forbidden' });
+  });
+
   it('GET /api/auth/test-email-outbox returns captured messages in test env', async () => {
     const { app } = makeApp();
     await register(app, 'outbox@example.com', 'password123');
     await waitForOutbox();
 
-    const res = await app.request('/api/auth/test-email-outbox');
+    const res = await app.request('/api/auth/test-email-outbox', {
+      headers: { [E2E_TEST_SECRET_HEADER]: E2E_SECRET },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { messages: unknown[] };
     expect(body.messages.length).toBeGreaterThan(0);

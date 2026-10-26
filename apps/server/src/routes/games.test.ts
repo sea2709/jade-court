@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { SESSION_COOKIE_NAME } from '../auth/config.js';
 import { hashSessionToken } from '../auth/sessionToken.js';
-import { resetPlayerAuthRateLimitsForTests } from '../auth/rateLimit.js';
+import {
+  resetPlayerAuthRateLimitsForTests,
+  setSavedGameAutosaveMaxPerUserForTests,
+} from '../auth/rateLimit.js';
 import * as dbModule from '../db.js';
 import {
   MAX_CHAT_MESSAGES,
@@ -394,5 +397,26 @@ describe('active games API', () => {
 
     const get = await app.request('/api/games/active/pvc', { headers: sessionHeaders(token) });
     expect(get.status).toBe(404);
+  });
+
+  it('returns 429 when autosave rate limit is exceeded', async () => {
+    setSavedGameAutosaveMaxPerUserForTests(1);
+    const body = JSON.stringify({
+      config: { level: 'beginner', side: 'r' },
+      moves: [{ from: [7, 1], to: [7, 4] }],
+    });
+    const first = await app.request('/api/games/active/pvc', {
+      method: 'PUT',
+      headers: sessionHeaders(token),
+      body,
+    });
+    expect(first.status).toBe(200);
+    const second = await app.request('/api/games/active/pvc', {
+      method: 'PUT',
+      headers: sessionHeaders(token),
+      body,
+    });
+    expect(second.status).toBe(429);
+    expect(await second.json()).toEqual({ error: 'rate_limited' });
   });
 });

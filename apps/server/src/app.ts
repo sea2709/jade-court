@@ -211,6 +211,7 @@ export function createApp(deps?: CreateAppDeps) {
     savedGameStore = new MemorySavedGameStore();
   }
 
+  // `credentials: true` so browsers send the httpOnly player session cookie on /api/* fetches.
   app.use(
     '*',
     cors({

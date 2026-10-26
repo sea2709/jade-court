@@ -52,6 +52,11 @@ describe('health and CORS', () => {
     const res = await app.request('/health', { headers: { Origin: 'http://localhost:5173' } });
     expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
   });
+
+  it('allows credentialed fetches for the player session cookie', async () => {
+    const res = await app.request('/health', { headers: { Origin: 'http://localhost:5173' } });
+    expect(res.headers.get('access-control-allow-credentials')).toBe('true');
+  });
 });
 
 describe('room REST endpoints', () => {

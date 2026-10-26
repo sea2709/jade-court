@@ -2,7 +2,8 @@
  * Lazy Stripe SDK client for Checkout and webhooks.
  */
 import Stripe from 'stripe';
-import { isStripeConfigured, stripeSecretKey } from './config.js';
+import { createFakeStripeClient } from './fakeStripe.js';
+import { isStripeConfigured, shouldUseFakeStripe, stripeSecretKey } from './config.js';
 
 let client: Stripe | null = null;
 
@@ -10,7 +11,7 @@ let client: Stripe | null = null;
 export function getStripe(): Stripe | null {
   if (!isStripeConfigured()) return null;
   if (!client) {
-    client = new Stripe(stripeSecretKey());
+    client = shouldUseFakeStripe() ? createFakeStripeClient() : new Stripe(stripeSecretKey());
   }
   return client;
 }

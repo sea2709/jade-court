@@ -77,6 +77,19 @@ services:
       PORT: '3001'
       MONGODB_URI: mongodb://mongo:27017
       PIKAFISH_PATH: /opt/pikafish/${PIKAFISH_BIN:-pikafish}
+      # Pass through from repo-root `.env` (see `.env.example`); unset vars are ignored by the server.
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:5173}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_E2E_FAKE: ${STRIPE_E2E_FAKE:-}
+      OAUTH_FAKE_ENABLED: ${OAUTH_FAKE_ENABLED:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
     # The engine's tsc --watch runs here too, so engine edits rebuild dist/ for server and web.
     command:
       - pnpm

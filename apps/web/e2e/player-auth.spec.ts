@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { e2eTestHeaders } from './e2eEnv';
 
 const uniqueEmail = () => `e2e-player-${Date.now()}@jade-court.test`;
 const SERVER_PORT = Number(process.env.E2E_SERVER_PORT ?? 3101);
@@ -52,7 +53,9 @@ test.describe('player auth', () => {
 
     let verifyLink: string | undefined;
     await expect(async () => {
-      const outbox = await request.get(`${serverUrl}/api/auth/test-email-outbox`);
+      const outbox = await request.get(`${serverUrl}/api/auth/test-email-outbox`, {
+        headers: e2eTestHeaders(),
+      });
       expect(outbox.ok()).toBeTruthy();
       const body = (await outbox.json()) as {
         messages: { to: string; links: string[] }[];

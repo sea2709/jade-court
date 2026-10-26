@@ -8,9 +8,11 @@ import { isLlmConfigured, llmModel, llmProviderId, shouldLogLlmTokenUsage } from
 import { warnAdminConfigAtStartup } from './admin/startupWarnings.js';
 import { warnPlayerAuthConfigAtStartup } from './auth/startupWarnings.js';
 import { isStripeConfigured } from './billing/config.js';
+import { warnIntegrationsConfigAtStartup } from './integrations/startupWarnings.js';
 
 warnAdminConfigAtStartup();
 warnPlayerAuthConfigAtStartup();
+warnIntegrationsConfigAtStartup();
 
 const app = createApp();
 
