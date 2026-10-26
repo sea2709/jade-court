@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prototype · Combined Sign in / Create account (layout C) · Jade Court</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Noto+Serif+SC:wght@700;900&family=Nunito:wght@600;700;800&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  :root {
+    --cream: #fbf3e1; --cream-2: #f4e8ce; --paper: #fffdf6; --ink: #2b2622; --ink-soft: #5c5347;
+    --muted: #94886f; --line: #e7dabc; --red: #d5452c; --red-deep: #ae3119; --red-soft: #f6d7cc;
+    --jade: #1f9e81; --jade-deep: #157a63; --jade-soft: #d6efe7; --gold-soft: #fbeac4; --gold-deep: #a8740f;
+    --display: 'Baloo 2', 'Nunito', system-ui, sans-serif; --body: 'Nunito', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ece8df; font-family: var(--body); color: var(--ink); }
+  .controls { max-width: 1040px; margin: 0 auto; padding: 18px 20px 6px; font-size: 13px; color: #5d584f; }
+  .controls h1 { font-size: 18px; margin: 0 0 4px; color: #2b2622; }
+  .controls p { margin: 0 0 10px; }
+  .controls .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .chip { border: 1px solid #cfc8b8; background: #fff; border-radius: 999px; padding: 5px 12px; font: 700 12.5px var(--body); cursor: pointer; color: #3b372f; }
+  .chip.on { background: #2b2622; color: #fff; border-color: #2b2622; }
+  .shot .controls { display: none; }
+  .frame-wrap { max-width: 1040px; margin: 0 auto; padding: 10px 20px 30px; }
+  .shot .frame-wrap { padding: 0; max-width: none; }
+  .frame { border: 1px solid #cfc8b8; border-radius: 10px; overflow: hidden; background: var(--cream); }
+  .shot .frame { border-radius: 0; border: 0; }
+  .urlbar { padding: 7px 14px; background: #f5f3ee; border-bottom: 1px solid #ddd6c6; font: 12px ui-monospace, monospace; color: #7a7466; }
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 12px 22px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 36px; height: 36px; border-radius: 11px; background: var(--red); color: #fff; display: grid; place-items: center; font: 900 20px 'Noto Serif SC', serif; }
+  .logo-name { font: 800 17px/1 var(--display); }
+  .logo-sub { font-size: 10px; color: var(--muted); font-weight: 800; letter-spacing: .14em; }
+  .nav { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .nav span { font-weight: 700; font-size: 13.5px; padding: 7px 12px; color: var(--ink-soft); }
+  .crumb { padding: 6px 22px; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  .crumb b { color: var(--ink-soft); font-weight: 700; }
+  .page { padding: 22px 20px 44px; display: flex; justify-content: center; }
+  .card { width: 100%; max-width: 420px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 26px -8px rgba(80,55,20,.3); }
+  .card h2 { margin: 0; text-align: center; font: 800 24px/1.15 var(--display); }
+  .sub { margin: -6px 0 0; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  .btn { font: 800 15px var(--body); border-radius: 999px; padding: 11px 22px; cursor: pointer; border: 1px solid transparent; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+  .btn-primary { background: var(--jade); color: #fff; }
+  .btn-ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+  .btn-dark { background: var(--ink); color: var(--cream); width: auto; padding: 7px 14px; font-size: 13px; }
+  .link { background: none; border: 0; padding: 2px 4px; font: 800 13.5px var(--body); color: var(--jade-deep); cursor: pointer; }
+  .link:hover { text-decoration: underline; }
+  .divider { display: flex; align-items: center; gap: 10px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .divider span { font-size: 11.5px; font-weight: 800; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+  form { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 800; color: var(--ink-soft); }
+  .req { color: var(--red-deep); }
+  input { width: 100%; font: 600 14px var(--body); padding: 11px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--cream); color: var(--ink); }
+  input:focus { outline: none; border-color: var(--jade); }
+  .hint { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .forgot { text-align: right; margin-top: -4px; }
+  .alert { padding: 10px 12px; border-radius: 12px; background: var(--red-soft); color: var(--red-deep); font-weight: 800; font-size: 13.5px; line-height: 1.45; }
+  .alert.info { background: var(--jade-soft); color: var(--jade-deep); }
+  .alert .inline { text-decoration: underline; cursor: pointer; }
+  .switch { text-align: center; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  .note { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .pill { display: inline-flex; width: fit-content; font-weight: 800; font-size: 12.5px; padding: 5px 12px; border-radius: 999px; background: var(--jade-soft); color: var(--jade-deep); }
+  .pill.gold { background: var(--gold-soft); color: var(--gold-deep); }
+  .result h3 { margin: 0; font: 800 22px var(--display); }
+  .result p { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.5; }
+  @media (max-width: 640px) {
+    .nav span { display: none; }
+    .card { padding: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="controls">
+  <h1>Combined Sign in / Create account — layout C prototype</h1>
+  <p>Click around inside the mock. Demo data: <b>dang@example.com</b> is an existing account (any password signs in); any other email is new.</p>
+  <div class="row">
+    <span>Google / Facebook returns:</span>
+    <button class="chip" data-outcome="new">New to Jade Court</button>
+    <button class="chip" data-outcome="returning">Returning player</button>
+    <button class="chip" data-outcome="conflict">Email already registered</button>
+  </div>
+  <div class="row">
+    <span>Jump to state:</span>
+    <button class="chip" data-jump="signin">Sign in</button>
+    <button class="chip" data-jump="register">Create account</button>
+    <button class="chip" data-jump="email-taken">Email already registered</button>
+    <button class="chip" data-jump="oauth-error">Facebook email conflict</button>
+    <button class="chip" data-jump="facebook-new">New Facebook account</button>
+    <button class="chip" data-jump="verify-sent">Check your email</button>
+  </div>
+</div>
+
+<div class="frame-wrap">
+  <div class="frame" id="frame">
+    <div class="urlbar" id="url"></div>
+    <div class="topbar">
+      <div class="logo">
+        <div class="logo-mark">象</div>
+        <div><div class="logo-name">Jade Court</div><div class="logo-sub">XIANGQI</div></div>
+      </div>
+      <div class="nav">
+        <span>Home</span><span>Play with AI</span><span>Play vs Computer</span><span>Play with Friends</span><span>News</span>
+        <button class="btn btn-dark" id="topbar-auth">Sign in</button>
+      </div>
+    </div>
+    <div class="crumb">Home / <b id="crumb"></b></div>
+    <div class="page"><div class="card" id="card"></div></div>
+  </div>
+</div>
+
+<script>
+  const PASSWORD_ACCOUNT = 'dang@example.com';
+  const GOOGLE_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>';
+  const FACEBOOK_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+  const OAUTH_ERRORS = {
+    email_exists_use_link: 'An account with this email exists — sign in with your original method, then link Facebook from your account page.',
+    email_taken: 'That email is already registered with a different sign-in method.',
+  };
+
+  const s = { mode: 'signin', email: '', password: '', name: '', error: null, oauthError: null, result: null, outcome: 'new' };
+
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  function path() {
+    if (s.result) return s.result.kind === 'verify' ? '/register/sent' : '/play';
+    if (s.oauthError) return '/login?oauth_error=' + s.oauthError;
+    return s.mode === 'register' ? '/login?mode=register' : '/login';
+  }
+
+  function render() {
+    document.getElementById('url').textContent = 'jadecourt.app' + path();
+    document.getElementById('crumb').textContent = s.result
+      ? (s.result.kind === 'verify' ? 'Check your inbox' : 'Play vs Computer')
+      : s.mode === 'signin' ? 'Sign in' : 'Create account';
+    document.getElementById('topbar-auth').textContent = s.result ? 'Dang' : 'Sign in';
+    document.querySelectorAll('[data-outcome]').forEach((b) => b.classList.toggle('on', b.dataset.outcome === s.outcome));
+    const card = document.getElementById('card');
+    card.classList.toggle('result', !!s.result);
+    card.innerHTML = s.result ? resultHtml() : formHtml();
+    document.title = (s.mode === 'signin' ? 'Sign in' : 'Create account') + ' · Jade Court (prototype)';
+  }
+
+  function formHtml() {
+    const reg = s.mode === 'register';
+    const req = reg ? ' <span class="req">*</span>' : '';
+    return `
+      <h2>${reg ? 'Create account' : 'Sign in'}</h2>
+      <p class="sub">${reg ? 'Free to join — your games sync when you sign in.' : 'Save progress and pick up your games on any device.'}</p>
+      ${s.oauthError ? `<div class="alert" role="alert">${OAUTH_ERRORS[s.oauthError]}</div>` : ''}
+      <button class="btn btn-ghost" data-social="google">${GOOGLE_SVG} Continue with Google</button>
+      <button class="btn btn-ghost" data-social="facebook">${FACEBOOK_SVG} Continue with Facebook</button>
+      <div class="divider"><span>or with email</span></div>
+      <form id="form" novalidate>
+        ${reg ? `<label>
+          <span>Display name${req}</span><input name="name" autocomplete="nickname" value="${esc(s.name)}" /></label>` : ''}
+        <label><span>Email${req}</span><input name="email" type="email" autocomplete="email" value="${esc(s.email)}" /></label>
+        <label><span>Password${req}</span>
+          <input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" value="${esc(s.password)}" />
+          ${reg ? '<span class="hint">At least 8 characters</span>' : ''}
+        </label>
+        ${reg ? '' : '<div class="forgot"><button type="button" class="link">Forgot password?</button></div>'}
+        ${s.error ? `<div class="alert" role="alert">${s.error.text}${s.error.signInInstead ? ' <span class="inline" data-action="sign-in-instead">Sign in instead</span>' : ''}</div>` : ''}
+        <button class="btn btn-primary" type="submit">${reg ? 'Create account' : 'Sign in'}</button>
+        ${reg ? '<div class="note">We\'ll email you a link to verify your address.</div>' : ''}
+      </form>
+      <div class="switch">${reg ? 'Already have an account?' : 'No account yet?'}
+        <button class="link" data-action="toggle">${reg ? 'Sign in' : 'Create one'}</button>
+      </div>`;
+  }
+
+  function resultHtml() {
+    const r = s.result;
+    if (r.kind === 'verify') {
+      return `<span class="pill">Account created</span><h3>Check your email</h3>
+        <p>We sent a verification link to <b>${esc(r.email)}</b>. You're signed in already. Verify to unlock purchases and password reset.</p>
+        <button class="btn btn-ghost" data-action="reset">Back to the sign-in page</button>`;
+    }
+    const via = { email: 'email', google: 'Google', facebook: 'Facebook' }[r.via];
+    return `<span class="pill ${r.created ? 'gold' : ''}">${r.created ? 'New account · ' + via : 'Signed in · ' + via}</span>
+      <h3>${r.created ? 'Welcome to Jade Court, Dang' : 'Welcome back, Dang'}</h3>
+      <p>${r.created ? `Your account was created from your ${via} profile. No separate sign-up step.` : 'Taking you back to where you were (the ?next= page, or Play).'}</p>
+      ${r.noEmail ? '<div class="alert info">Facebook didn\'t share a verified email. Add one from your account page to get receipts and reset your password.</div>' : ''}
+      <button class="btn btn-ghost" data-action="reset">Back to the sign-in page</button>`;
+  }
+
+  function submit() {
+    const e = s.email.trim().toLowerCase();
+    if (s.mode === 'signin') {
+      if (!e || !s.password) return fail('Enter your email and password.');
+      if (e !== PASSWORD_ACCOUNT) return fail('Invalid email or password.');
+      s.result = { kind: 'signedIn', via: 'email', created: false };
+    } else {
+      if (!s.name.trim() || !e || !s.password) return fail('Enter your display name, email, and password.');
+      if (s.password.length < 8) return fail('Use a password of at least 8 characters.');
+      if (e === PASSWORD_ACCOUNT) return fail('That email is already registered.', true);
+      s.result = { kind: 'verify', email: e };
+    }
+    s.error = null;
+    render();
+  }
+
+  function fail(text, signInInstead) {
+    s.error = { text, signInInstead };
+    render();
+  }
+
+  function social(provider) {
+    s.error = null;
+    if (s.outcome === 'conflict') {
+      s.oauthError = provider === 'facebook' ? 'email_exists_use_link' : 'email_taken';
+      s.mode = 'signin';
+    } else {
+      s.oauthError = null;
+      s.result = { kind: 'signedIn', via: provider, created: s.outcome === 'new', noEmail: provider === 'facebook' && s.outcome === 'new' };
+    }
+    render();
+  }
+
+  function reset() {
+    Object.assign(s, { result: null, error: null, oauthError: null, password: '' });
+    render();
+  }
+
+  /** Named states, reachable from the URL hash (e.g. #register) for screenshots and links. */
+  function jump(name) {
+    Object.assign(s, { mode: 'signin', email: '', password: '', name: '', error: null, oauthError: null, result: null });
+    if (name === 'register') s.mode = 'register';
+    if (name === 'email-taken') Object.assign(s, { mode: 'register', name: 'Dang', email: PASSWORD_ACCOUNT, password: 'xiangqi-2026', error: { text: 'That email is already registered.', signInInstead: true } });
+    if (name === 'oauth-error') s.oauthError = 'email_exists_use_link';
+    if (name === 'facebook-new') s.result = { kind: 'signedIn', via: 'facebook', created: true, noEmail: true };
+    if (name === 'verify-sent') s.result = { kind: 'verify', email: 'lan@example.com' };
+    render();
+  }
+
+  document.addEventListener('input', (e) => {
+    if (e.target.name in s) s[e.target.name] = e.target.value;
+  });
+  document.addEventListener('submit', (e) => { e.preventDefault(); submit(); });
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-social],[data-action],[data-outcome],[data-jump]');
+    if (!t) return;
+    if (t.dataset.social) social(t.dataset.social);
+    if (t.dataset.outcome) { s.outcome = t.dataset.outcome; render(); }
+    if (t.dataset.jump) { history.replaceState(null, '', '#' + t.dataset.jump); jump(t.dataset.jump); }
+    const a = t.dataset.action;
+    if (a === 'toggle') { s.error = null; s.oauthError = null; s.mode = s.mode === 'signin' ? 'register' : 'signin'; render(); }
+    if (a === 'sign-in-instead') { s.error = null; s.password = ''; s.mode = 'signin'; render(); }
+    if (a === 'reset') reset();
+  });
+
+  const params = new URLSearchParams(location.search);
+  if (params.has('shot')) document.body.classList.add('shot');
+  window.addEventListener('hashchange', () => jump(location.hash.slice(1) || 'signin'));
+  jump(location.hash.slice(1) || 'signin');
+</script>
+</body>
+</html>
