@@ -43,6 +43,23 @@ export type PublicPayment = {
   receiptUrl?: string;
 };
 
+/** Admin payment list row (`GET /api/admin/payments`). */
+export type AdminPaymentRow = PublicPayment & {
+  userId: string;
+  userEmail?: string;
+};
+
+export function toAdminPaymentRow(
+  record: PaymentRecord,
+  userEmail?: string | null,
+): AdminPaymentRow {
+  return {
+    ...toPublicPayment(record),
+    userId: record.userId,
+    ...(userEmail ? { userEmail } : {}),
+  };
+}
+
 export function toPublicPayment(record: PaymentRecord): PublicPayment {
   return {
     id: record.id,

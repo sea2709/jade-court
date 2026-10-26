@@ -63,9 +63,12 @@ export async function handleCheckoutSessionCompleted(
     createdAt: deps.now,
   });
 
-  if (insertResult.inserted) {
-    await extendAccess(deps.userStore, userId, hours, deps.now);
+  if (!insertResult.inserted) {
+    return;
   }
 
-  await ensureAccessUntilAtLeast(deps.userStore, userId, insertResult.payment.grantedUntil);
+  const extended = await extendAccess(deps.userStore, userId, hours, deps.now);
+  if (!extended) {
+    await ensureAccessUntilAtLeast(deps.userStore, userId, insertResult.payment.grantedUntil);
+  }
 }

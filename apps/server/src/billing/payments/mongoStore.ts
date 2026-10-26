@@ -2,9 +2,17 @@
  * MongoDB-backed PaymentStore — unique index on `stripeSessionId` for idempotent webhooks.
  */
 import { ObjectId } from 'mongodb';
+import { decodeNewsCursor, encodeNewsCursor } from '../../news/cursor.js';
+import { InvalidCursorError } from '../../news/memoryStore.js';
 import { getDb } from '../../db.js';
 import type { InsertPaymentInput, PaymentRecord } from './types.js';
-import type { InsertPaymentResult, PaymentStore } from './store.js';
+import type {
+  InsertPaymentResult,
+  ListPaymentsByUserOptions,
+  PaymentListOptions,
+  PaymentListResult,
+  PaymentStore,
+} from './store.js';
 
 const COLLECTION = 'payments';
 
@@ -44,6 +52,7 @@ async function ensureIndexes() {
   const col = db.collection<MongoPaymentDoc>(COLLECTION);
   await col.createIndex({ stripeSessionId: 1 }, { unique: true });
   await col.createIndex({ userId: 1, createdAt: -1 });
+  await col.createIndex({ createdAt: -1, _id: -1 });
   indexesEnsured = true;
 }
 
@@ -94,13 +103,58 @@ export class MongoPaymentStore implements PaymentStore {
     }
   }
 
-  async listByUserId(userId: string): Promise<PaymentRecord[]> {
+  async listByUserId(
+    userId: string,
+    options?: ListPaymentsByUserOptions,
+  ): Promise<PaymentRecord[]> {
     await ensureIndexes();
     const db = await getDb();
     if (!db) return [];
     const col = db.collection<MongoPaymentDoc>(COLLECTION);
-    const cursor = col.find({ userId }).sort({ createdAt: -1 });
+    let cursor = col.find({ userId }).sort({ createdAt: -1 });
+    if (options?.limit !== undefined) {
+      cursor = cursor.limit(options.limit);
+    }
     const docs = await cursor.toArray();
     return docs.map(fromMongo);
+  }
+
+  async listRecent(options: PaymentListOptions): Promise<PaymentListResult> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) {
+      return { payments: [], nextCursor: null };
+    }
+    const clauses: Record<string, unknown>[] = [];
+    if (options.cursor) {
+      const decoded = decodeNewsCursor(options.cursor);
+      if (!decoded) throw new InvalidCursorError();
+      let cursorId: ObjectId;
+      try {
+        cursorId = new ObjectId(decoded.id);
+      } catch {
+        throw new InvalidCursorError();
+      }
+      clauses.push({
+        $or: [
+          { createdAt: { $lt: decoded.sortAt } },
+          { createdAt: decoded.sortAt, _id: { $lt: cursorId } },
+        ],
+      });
+    }
+    const mongoFilter = clauses.length === 0 ? {} : clauses[0]!;
+    const limit = options.limit;
+    const col = db.collection<MongoPaymentDoc>(COLLECTION);
+    const docs = await col
+      .find(mongoFilter)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .toArray();
+    const hasMore = docs.length > limit;
+    const page = hasMore ? docs.slice(0, limit) : docs;
+    const last = page[page.length - 1];
+    const nextCursor =
+      hasMore && last ? encodeNewsCursor(last.createdAt, last._id.toHexString()) : null;
+    return { payments: page.map(fromMongo), nextCursor };
   }
 }

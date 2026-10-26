@@ -37,6 +37,17 @@ export class LastSignInMethodError extends Error {
   }
 }
 
+export type UserEmailSearchOptions = {
+  q: string;
+  limit: number;
+  cursor?: string;
+};
+
+export type UserEmailSearchResult = {
+  users: UserRecord[];
+  nextCursor: string | null;
+};
+
 export interface UserStore {
   create(input: CreateUserInput): Promise<UserRecord>;
   createOAuthUser(input: CreateOAuthUserInput): Promise<UserRecord>;
@@ -52,4 +63,8 @@ export interface UserStore {
   setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null>;
   updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null>;
   setPreferredModelId(userId: string, preferredModelId: string): Promise<UserRecord | null>;
+  /** Case-insensitive email substring search, newest `createdAt` first. */
+  searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult>;
+  /** Clears play access (`accessUntil` removed). */
+  revokeAccess(userId: string): Promise<UserRecord | null>;
 }

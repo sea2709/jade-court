@@ -52,3 +52,8 @@ export async function ensureAccessUntilAtLeast(
 ): Promise<UserRecord | null> {
   return store.ensureAccessUntilAtLeast(userId, until);
 }
+
+/** Removes play access for the user, or `null` when the id is unknown. */
+export async function revokeAccess(store: UserStore, userId: string): Promise<UserRecord | null> {
+  return store.revokeAccess(userId);
+}

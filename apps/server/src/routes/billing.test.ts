@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { createApp } from '../app.js';
 import { SESSION_COOKIE_NAME } from '../auth/config.js';
 import * as billingAccess from '../billing/access.js';
+import { revokeAccess } from '../billing/access.js';
 import { resetBillingConfigForTests } from '../billing/config.js';
 import { MemoryPaymentStore } from '../billing/payments/memoryStore.js';
 import { resetStripeClientForTests } from '../billing/stripeClient.js';
@@ -319,6 +320,29 @@ describe('billing routes', () => {
       const userAfterSecond = await userStore.findById(userId);
       expect(userAfterSecond?.accessUntil?.getTime()).toBe(untilFirst);
       expect(await paymentStore.listByUserId(userId)).toHaveLength(1);
+    });
+
+    it('does not restore access on webhook replay after admin revoke', async () => {
+      const sessionId = 'cs_revoked_replay';
+      const event = paidCheckoutSessionEvent(sessionId, userId);
+      const first = signedWebhookPayload(mockStripe, event);
+      await app.request('/api/billing/webhook', {
+        method: 'POST',
+        headers: first.headers,
+        body: first.body,
+      });
+      expect((await userStore.findById(userId))?.accessUntil).toBeTruthy();
+
+      await revokeAccess(userStore, userId);
+      expect((await userStore.findById(userId))?.accessUntil).toBeUndefined();
+
+      const second = signedWebhookPayload(mockStripe, event);
+      await app.request('/api/billing/webhook', {
+        method: 'POST',
+        headers: second.headers,
+        body: second.body,
+      });
+      expect((await userStore.findById(userId))?.accessUntil).toBeUndefined();
     });
 
     it('stacks access on a second purchase', async () => {

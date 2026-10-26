@@ -2,6 +2,8 @@
  * MongoDB-backed UserStore — unique sparse index on email.
  */
 import { ObjectId } from 'mongodb';
+import { decodeNewsCursor, encodeNewsCursor } from '../news/cursor.js';
+import { InvalidCursorError } from '../news/memoryStore.js';
 import { getDb } from '../db.js';
 import {
   EmailTakenError,
@@ -9,6 +11,8 @@ import {
   LastSignInMethodError,
   type CreateOAuthUserInput,
   type CreateUserInput,
+  type UserEmailSearchOptions,
+  type UserEmailSearchResult,
   type UserStore,
 } from './store.js';
 import type { UserIdentity, UserRecord } from './types.js';
@@ -49,6 +53,10 @@ async function ensureIndexes(): Promise<void> {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function fromMongo(doc: MongoUserDoc): UserRecord {
@@ -290,6 +298,60 @@ export class MongoUserStore implements UserStore {
     const result = await col.findOneAndUpdate(
       { _id: new ObjectId(userId) },
       { $set: { preferredModelId } },
+      { returnDocument: 'after' },
+    );
+    return result ? fromMongo(result) : null;
+  }
+
+  async searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db) {
+      return { users: [], nextCursor: null };
+    }
+    const q = options.q.trim();
+    const re = new RegExp(escapeRegex(q), 'i');
+    const clauses: Record<string, unknown>[] = [{ email: re }];
+    if (options.cursor) {
+      const decoded = decodeNewsCursor(options.cursor);
+      if (!decoded) throw new InvalidCursorError();
+      let cursorId: ObjectId;
+      try {
+        cursorId = new ObjectId(decoded.id);
+      } catch {
+        throw new InvalidCursorError();
+      }
+      clauses.push({
+        $or: [
+          { createdAt: { $lt: decoded.sortAt } },
+          { createdAt: decoded.sortAt, _id: { $lt: cursorId } },
+        ],
+      });
+    }
+    const mongoFilter = clauses.length === 1 ? clauses[0]! : { $and: clauses };
+    const limit = options.limit;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const docs = await col
+      .find(mongoFilter)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .toArray();
+    const hasMore = docs.length > limit;
+    const page = hasMore ? docs.slice(0, limit) : docs;
+    const last = page[page.length - 1];
+    const nextCursor =
+      hasMore && last ? encodeNewsCursor(last.createdAt, last._id.toHexString()) : null;
+    return { users: page.map(fromMongo), nextCursor };
+  }
+
+  async revokeAccess(userId: string): Promise<UserRecord | null> {
+    await ensureIndexes();
+    const db = await getDb();
+    if (!db || !ObjectId.isValid(userId)) return null;
+    const col = db.collection<MongoUserDoc>(COLLECTION);
+    const result = await col.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $unset: { accessUntil: '' } },
       { returnDocument: 'after' },
     );
     return result ? fromMongo(result) : null;

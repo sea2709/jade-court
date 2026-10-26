@@ -2,18 +2,26 @@
  * In-memory UserStore for tests and when MongoDB is not configured.
  */
 import { randomUUID } from 'node:crypto';
+import { decodeNewsCursor, encodeNewsCursor, isBeforeCursor } from '../news/cursor.js';
+import { InvalidCursorError } from '../news/memoryStore.js';
 import {
   EmailTakenError,
   IdentityTakenError,
   LastSignInMethodError,
   type CreateOAuthUserInput,
   type CreateUserInput,
+  type UserEmailSearchOptions,
+  type UserEmailSearchResult,
   type UserStore,
 } from './store.js';
 import type { UserIdentity, UserRecord } from './types.js';
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function identityIndexKey(provider: string, sub: string): string {
@@ -177,6 +185,41 @@ export class MemoryUserStore implements UserStore {
     const user = this.byId.get(userId);
     if (!user) return null;
     const updated: UserRecord = { ...user, preferredModelId };
+    this.byId.set(userId, updated);
+    return { ...updated };
+  }
+
+  async searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult> {
+    const q = options.q.trim();
+    const re = new RegExp(escapeRegex(q), 'i');
+    let rows = [...this.byId.values()].filter((u) => u.email && re.test(u.email));
+
+    rows.sort((a, b) => {
+      const t = b.createdAt.getTime() - a.createdAt.getTime();
+      if (t !== 0) return t;
+      return b.id.localeCompare(a.id);
+    });
+
+    if (options.cursor) {
+      const decoded = decodeNewsCursor(options.cursor);
+      if (!decoded) throw new InvalidCursorError();
+      rows = rows.filter((u) => isBeforeCursor({ sortAt: u.createdAt, id: u.id }, decoded));
+    }
+
+    const limit = options.limit;
+    const page = rows.slice(0, limit);
+    const hasMore = rows.length > limit;
+    const last = page[page.length - 1];
+    const nextCursor = hasMore && last ? encodeNewsCursor(last.createdAt, last.id) : null;
+
+    return { users: page.map((u) => ({ ...u })), nextCursor };
+  }
+
+  async revokeAccess(userId: string): Promise<UserRecord | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    const updated: UserRecord = { ...user };
+    delete updated.accessUntil;
     this.byId.set(userId, updated);
     return { ...updated };
   }
