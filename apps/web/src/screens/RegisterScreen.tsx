@@ -3,10 +3,14 @@
  */
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
+import { OAuthSignInButtons } from '../components/auth/OAuthSignInButtons';
 import { useAuthProviders } from '../hooks/useAuthProviders';
 import { useAuth } from '../context/useAuth';
-import { googleSignInProviderId, oauthErrorMessage } from '../lib/oauthAuthApi';
+import {
+  facebookSignInProviderId,
+  googleSignInProviderId,
+  oauthErrorMessage,
+} from '../lib/oauthAuthApi';
 import { PlayerAuthApiError, playerRegister } from '../lib/playerAuthApi';
 
 function registerErrorMessage(err: unknown): string {
@@ -42,6 +46,7 @@ export function RegisterScreen() {
   const { status, user, setSignedIn, refresh } = useAuth();
   const { providers, loading: providersLoading } = useAuthProviders();
   const googleProvider = googleSignInProviderId(providers);
+  const facebookProvider = facebookSignInProviderId(providers);
   const oauthReturnTo = '/play';
 
   const [email, setEmail] = useState('');
@@ -108,13 +113,13 @@ export function RegisterScreen() {
         <p className="mb-4 text-xs font-semibold text-muted">
           <RequiredMark /> Required field
         </p>
-        {!providersLoading && googleProvider ? (
-          <div className="mb-4 flex flex-col gap-4">
-            <GoogleSignInButton provider={googleProvider} returnTo={oauthReturnTo} />
-            <p className="m-0 text-center text-xs font-bold uppercase tracking-wide text-muted">
-              or create account with email
-            </p>
-          </div>
+        {!providersLoading && (googleProvider || facebookProvider) ? (
+          <OAuthSignInButtons
+            googleProvider={googleProvider}
+            facebookProvider={facebookProvider}
+            returnTo={oauthReturnTo}
+            dividerLabel="or create account with email"
+          />
         ) : null}
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
           <label

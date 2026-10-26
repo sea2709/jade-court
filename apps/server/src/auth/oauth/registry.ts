@@ -1,12 +1,13 @@
 /**
- * OAuth provider registry (Google + optional test fake).
+ * OAuth provider registry (Google, Facebook, optional test fake).
  */
 import { createFakeOAuthProvider } from './fake.js';
+import { createFacebookOAuthProvider, type FacebookOAuthDeps } from './facebook.js';
 import { createGoogleOAuthProvider, type GoogleOAuthDeps } from './google.js';
 import type { OAuthProvider } from './types.js';
 import { isFakeOAuthEnabled } from './config.js';
 
-export type OAuthRegistryDeps = GoogleOAuthDeps;
+export type OAuthRegistryDeps = GoogleOAuthDeps & FacebookOAuthDeps;
 
 let registryOverride: Map<string, OAuthProvider> | null = null;
 
@@ -18,6 +19,7 @@ export function setOAuthProvidersForTests(providers: Map<string, OAuthProvider> 
 function buildDefaultRegistry(deps: OAuthRegistryDeps = {}): Map<string, OAuthProvider> {
   const map = new Map<string, OAuthProvider>();
   map.set('google', createGoogleOAuthProvider(deps));
+  map.set('facebook', createFacebookOAuthProvider(deps));
   if (isFakeOAuthEnabled()) {
     map.set('fake', createFakeOAuthProvider());
   }

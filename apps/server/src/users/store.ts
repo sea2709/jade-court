@@ -50,6 +50,10 @@ export interface UserStore {
   /** Raise `accessUntil` to at least `until` without shortening existing access. */
   ensureAccessUntilAtLeast(userId: string, until: Date): Promise<UserRecord | null>;
   setEmailVerified(userId: string, emailVerified: boolean): Promise<UserRecord | null>;
+  /** Set email on an account that has none yet (OAuth without email). */
+  setEmail(userId: string, email: string): Promise<UserRecord | null>;
   updatePasswordHash(userId: string, passwordHash: string): Promise<UserRecord | null>;
   setPreferredModelId(userId: string, preferredModelId: string): Promise<UserRecord | null>;
+  /** Remove PII and OAuth identities (e.g. Meta data-deletion). Returns false if user missing. */
+  anonymizeUser(userId: string): Promise<boolean>;
 }

@@ -20,7 +20,7 @@ function userEmail(user: UserRecord): string | null {
 /** Mint a verify token, persist hash, and send email. */
 export async function sendVerificationEmail(deps: AuthEmailDeps, user: UserRecord): Promise<void> {
   const email = userEmail(user);
-  if (!email || !user.passwordHash) return;
+  if (!email) return;
 
   await deps.emailTokenStore.deleteByUserIdAndKind(user.id, 'verify');
 

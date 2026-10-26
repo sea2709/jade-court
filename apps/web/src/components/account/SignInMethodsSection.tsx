@@ -1,8 +1,9 @@
 /**
- * Account settings: password + Google link state and actions.
+ * Account settings: password + Google/Facebook link state and actions.
  */
 import { useEffect, useState } from 'react';
 import {
+  facebookAccountProviderId,
   fetchAuthIdentities,
   fetchAuthProviders,
   googleAccountProviderId,
@@ -13,21 +14,90 @@ import {
 import { PlayerAuthApiError } from '../../lib/playerAuthApi';
 import { useAuth } from '../../context/useAuth';
 
-function unlinkErrorMessage(err: unknown): string {
+const PROVIDER_LABELS: Record<string, string> = {
+  google: 'Google',
+  facebook: 'Facebook',
+  fake: 'Test sign-in',
+};
+
+function providerLabel(providerId: string): string {
+  return PROVIDER_LABELS[providerId] ?? providerId;
+}
+
+function unlinkErrorMessage(err: unknown, providerId: string): string {
+  const label = providerLabel(providerId);
   if (err instanceof PlayerAuthApiError && err.code === 'last_sign_in_method') {
-    return 'Add a password or another sign-in method before unlinking Google.';
+    return `Add a password or another sign-in method before unlinking ${label}.`;
   }
   if (err instanceof PlayerAuthApiError && err.code === 'not_linked') {
-    return 'Google is not linked to this account.';
+    return `${label} is not linked to this account.`;
   }
-  return 'Could not update Google link. Try again.';
+  return `Could not update ${label} link. Try again.`;
 }
 
 export type SignInMethodsSectionProps = {
   oauthErrorCode?: string | null;
 };
 
-/** Lists sign-in methods and supports Google link / unlink. */
+type OAuthProviderRowProps = {
+  providerId: string;
+  linked: boolean;
+  linking: boolean;
+  unlinking: boolean;
+  onLink: () => void;
+  onUnlink: () => void;
+};
+
+function OAuthProviderRow({
+  providerId,
+  linked,
+  linking,
+  unlinking,
+  onLink,
+  onUnlink,
+}: OAuthProviderRowProps) {
+  const label = providerLabel(providerId);
+  const linkLabel = providerId === 'google' ? 'Link Google' : `Link ${label}`;
+  const confirmMessage =
+    providerId === 'google'
+      ? 'Unlink Google from this account? You can link it again later.'
+      : `Unlink ${label} from this account? You can link it again later.`;
+
+  const onUnlinkClick = () => {
+    const ok = window.confirm(confirmMessage);
+    if (ok) onUnlink();
+  };
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-md)] border border-line-soft bg-cream/50 px-4 py-3">
+      <span className="text-sm font-bold text-ink">{label}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-muted">{linked ? 'Linked' : 'Not linked'}</span>
+        {linked ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm border border-line-soft"
+            disabled={unlinking}
+            onClick={onUnlinkClick}
+          >
+            {unlinking ? 'Unlinking…' : 'Unlink'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm border border-line-soft"
+            disabled={linking}
+            onClick={onLink}
+          >
+            {linking ? 'Linking…' : linkLabel}
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** Lists sign-in methods and supports OAuth link / unlink. */
 export function SignInMethodsSection({ oauthErrorCode }: SignInMethodsSectionProps) {
   const { refresh } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -35,11 +105,14 @@ export function SignInMethodsSection({ oauthErrorCode }: SignInMethodsSectionPro
   const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [linking, setLinking] = useState(false);
-  const [unlinking, setUnlinking] = useState(false);
+  const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
+  const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
 
   const googleProvider = googleAccountProviderId(configuredProviders);
-  const googleLinked = googleProvider ? linkedProviders.includes(googleProvider) : false;
+  const facebookProvider = facebookAccountProviderId(configuredProviders);
+  const oauthRows = [
+    ...new Set([googleProvider, facebookProvider].filter((p): p is string => p != null)),
+  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -68,38 +141,40 @@ export function SignInMethodsSection({ oauthErrorCode }: SignInMethodsSectionPro
     };
   }, []);
 
-  const onLink = async () => {
-    if (!googleProvider || linking) return;
-    setLinking(true);
+  const reloadIdentities = async () => {
+    const [configured, identities] = await Promise.all([
+      fetchAuthProviders(),
+      fetchAuthIdentities(),
+    ]);
+    setConfiguredProviders(configured);
+    setHasPassword(identities.hasPassword);
+    setLinkedProviders(identities.providers);
+    await refresh();
+  };
+
+  const onLink = async (providerId: string) => {
+    if (linkingProvider) return;
+    setLinkingProvider(providerId);
     setActionError(null);
     try {
-      await linkOAuthProvider(googleProvider, '/account');
+      await linkOAuthProvider(providerId, '/account');
     } catch (err) {
-      setActionError(unlinkErrorMessage(err));
-      setLinking(false);
+      setActionError(unlinkErrorMessage(err, providerId));
+      setLinkingProvider(null);
     }
   };
 
-  const onUnlink = async () => {
-    if (!googleProvider || unlinking) return;
-    const ok = window.confirm('Unlink Google from this account? You can link it again later.');
-    if (!ok) return;
-    setUnlinking(true);
+  const onUnlink = async (providerId: string) => {
+    if (unlinkingProvider) return;
+    setUnlinkingProvider(providerId);
     setActionError(null);
     try {
-      await unlinkOAuthProvider(googleProvider);
-      const [configured, identities] = await Promise.all([
-        fetchAuthProviders(),
-        fetchAuthIdentities(),
-      ]);
-      setConfiguredProviders(configured);
-      setHasPassword(identities.hasPassword);
-      setLinkedProviders(identities.providers);
-      await refresh();
+      await unlinkOAuthProvider(providerId);
+      await reloadIdentities();
     } catch (err) {
-      setActionError(unlinkErrorMessage(err));
+      setActionError(unlinkErrorMessage(err, providerId));
     } finally {
-      setUnlinking(false);
+      setUnlinkingProvider(null);
     }
   };
 
@@ -126,35 +201,17 @@ export function SignInMethodsSection({ oauthErrorCode }: SignInMethodsSectionPro
               {hasPassword ? 'Enabled' : 'Not set'}
             </span>
           </li>
-          {googleProvider ? (
-            <li className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-md)] border border-line-soft bg-cream/50 px-4 py-3">
-              <span className="text-sm font-bold text-ink">Google</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-muted">
-                  {googleLinked ? 'Linked' : 'Not linked'}
-                </span>
-                {googleLinked ? (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm border border-line-soft"
-                    disabled={unlinking}
-                    onClick={() => void onUnlink()}
-                  >
-                    {unlinking ? 'Unlinking…' : 'Unlink'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm border border-line-soft"
-                    disabled={linking}
-                    onClick={() => void onLink()}
-                  >
-                    {linking ? 'Linking…' : 'Link Google'}
-                  </button>
-                )}
-              </div>
-            </li>
-          ) : null}
+          {oauthRows.map((providerId) => (
+            <OAuthProviderRow
+              key={providerId}
+              providerId={providerId}
+              linked={linkedProviders.includes(providerId)}
+              linking={linkingProvider === providerId}
+              unlinking={unlinkingProvider === providerId}
+              onLink={() => void onLink(providerId)}
+              onUnlink={() => void onUnlink(providerId)}
+            />
+          ))}
         </ul>
       )}
       {bannerError ? (

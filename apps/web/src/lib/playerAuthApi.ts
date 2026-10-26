@@ -154,6 +154,25 @@ export async function playerVerifyEmail(token: string): Promise<PublicUser> {
   return user;
 }
 
+/** Attach an email to the signed-in account (OAuth users without email). Sends verification. */
+export async function playerAddAccountEmail(email: string): Promise<PublicUser> {
+  const res = await fetch(`${API_BASE}/api/auth/add-email`, {
+    method: 'POST',
+    credentials: jsonCredentials,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ email: email.trim() }),
+  });
+  const data = await parseJsonBody(res);
+  if (!res.ok) {
+    throwPlayerError(res.status, data);
+  }
+  const user = data.user;
+  if (!isPublicUser(user)) {
+    throw new PlayerAuthApiError(500, 'request_failed', 'Invalid add-email response.');
+  }
+  return user;
+}
+
 /** Resend verification email for the signed-in user. */
 export async function playerResendVerification(): Promise<{ ok: true }> {
   const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {

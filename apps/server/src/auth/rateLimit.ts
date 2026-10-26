@@ -11,6 +11,8 @@ const REGISTER_MAX_GLOBAL = 60;
 /** Process-wide cap on failed login verifications (scrypt) per window. */
 const LOGIN_FAILED_VOLUME_MAX_GLOBAL = 300;
 const RESEND_VERIFY_MAX_PER_USER = 5;
+const ADD_EMAIL_MAX_PER_USER = 5;
+const ADD_EMAIL_MAX_PER_TARGET_EMAIL = 3;
 const FORGOT_PASSWORD_MAX_PER_IP = 20;
 const FORGOT_PASSWORD_MAX_PER_EMAIL = 5;
 const RESET_PASSWORD_MAX_PER_IP = 30;
@@ -241,6 +243,36 @@ export function reserveResendVerificationAttempt(userId: string, now = Date.now(
     RESEND_VERIFY_MAX_PER_USER,
     now,
   );
+}
+
+function addEmailTargetKey(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  const emailHash = createHash('sha256').update(normalized, 'utf8').digest('hex');
+  return `player:add-email:email:${emailHash}`;
+}
+
+/** Per-user and per-target-email caps before sending verification for `POST /add-email`. */
+export function reserveAddEmailAttempt(
+  userId: string,
+  email: string,
+  now = Date.now(),
+): ReserveResult {
+  const keys = [
+    { key: `player:add-email:user:${userId}`, max: ADD_EMAIL_MAX_PER_USER },
+    { key: addEmailTargetKey(email), max: ADD_EMAIL_MAX_PER_TARGET_EMAIL },
+  ];
+  const reserved: { map: Map<string, Bucket>; key: string }[] = [];
+  for (const { key, max } of keys) {
+    const result = reserveInMap(loginFailureBuckets, key, max, now);
+    if (result === 'limited') {
+      for (const r of reserved) {
+        rollbackInMap(r.map, r.key);
+      }
+      return 'limited';
+    }
+    reserved.push({ map: loginFailureBuckets, key });
+  }
+  return 'ok';
 }
 
 function forgotPasswordEmailKey(email: string): string {
