@@ -105,8 +105,37 @@ pnpm build          # engine + web + server
 ```
 
 E2E needs a built engine (`pnpm build`) and a one-time browser install:
-`pnpm --filter @jade-court/web exec playwright install chromium`. The E2E server runs with
-`PLAY_OPPONENT_PROVIDER=local` and no LLM keys or MongoDB; Learn specs stub LLM routes in the browser.
+`pnpm --filter @jade-court/web exec playwright install chromium`. Playwright starts its own Hono
+server on `:3101` and Vite on `:5199` (see `apps/web/playwright.config.ts`):
+
+- `PLAY_OPPONENT_PROVIDER=local`, no MongoDB (`MONGODB_URI` unset — in-memory stores).
+- Player auth: `SESSION_SECRET`, `EMAIL_PROVIDER=console`, and `GET /api/auth/test-email-outbox` in test.
+- Billing: fake Stripe (`STRIPE_E2E_FAKE=1` + placeholder `STRIPE_*` keys); E2E completes checkout via
+  `POST /api/billing/test/complete-checkout` (see `apps/web/e2e/play-ai-journey.spec.ts`).
+- Most Play with AI specs stub coach/LLM routes in the browser; the **journey** spec exercises real
+  register → verify → day pass → saved game APIs end to end.
+
+### Play with AI journey (E2E)
+
+`apps/web/e2e/play-ai-journey.spec.ts` is the regression net for the full product path: create an
+account, verify email from the test outbox, purchase a day pass (fake Stripe), play one coached move,
+ask Master Lin (stubbed LLM routes), reload and resume the autosaved game, then sign out from the
+avatar menu.
+
+### Player accounts, Stripe test mode, and OAuth
+
+Copy [`.env.example`](.env.example) and set at minimum:
+
+| Concern                               | Variables                                                                                                                                                                                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sessions                              | `SESSION_SECRET` (32+ random chars)                                                                                                                                                                                      |
+| Email                                 | `EMAIL_PROVIDER` (`console` for local dev; `resend` or `smtp` in production), `PUBLIC_APP_URL`, `EMAIL_FROM`                                                                                                             |
+| Day pass                              | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` — use [Stripe test mode](https://stripe.com/docs/testing) keys locally; run `stripe listen --forward-to localhost:3001/api/billing/webhook` for webhooks |
+| Fake Stripe (E2E / local without API) | Set all three `STRIPE_*` vars plus `STRIPE_E2E_FAKE=1` (or rely on `NODE_ENV=test` in Playwright)                                                                                                                        |
+| Google / Facebook sign-in             | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, or `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET`; redirect URI `{PUBLIC_APP_URL}/api/auth/oauth/{google\|facebook}/callback`                                                    |
+| Dev-only fake OAuth                   | `OAUTH_FAKE_ENABLED=1` with `NODE_ENV=development` — instant test users without real OAuth (never enable in production)                                                                                                  |
+
+**Meta (Facebook) app review:** use a public `PUBLIC_APP_URL` (staging), add the OAuth redirect URL in the Meta developer console, request `email` (and any login permissions you use), and submit screen recordings of sign-in plus the Play with AI flow. Jade Court does not embed the Facebook SDK in the web app; login is server-side OAuth only.
 
 ## Project structure
 
@@ -131,20 +160,27 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 
 **Server** (no `VITE_` prefix — never exposed to the client)
 
-| Variable                                                  | Default              | Description                                                                                            |
-| --------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------ |
-| `PORT`                                                    | `3001`               | Hono server port                                                                                       |
-| `LLM_PROVIDER`                                            | `gemini`             | LLM backend: `gemini`, `openai`, or `anthropic`                                                        |
-| `LLM_MODEL`                                               | _(provider default)_ | Model id for the active provider                                                                       |
-| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | _(unset)_            | API key for the active `LLM_PROVIDER`. Without it, coach uses templates and LLM opponent returns `503` |
-| `PLAY_OPPONENT_PROVIDER`                                  | `engine`             | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax)  |
-| `PIKAFISH_PATH`                                           | _(unset)_            | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing                       |
-| `ENGINE_MOVE_TIMEOUT_MS`                                  | `30000`              | Max wait for a Pikafish move                                                                           |
-| `LLM_TIMEOUT_MS`                                          | `25000`              | Max wait for an LLM response                                                                           |
-| `LLM_HISTORY_LIMIT`                                       | `150`                | Max plies in opponent “Recent history” prompt                                                          |
-| `LLM_LOG_TOKENS`                                          | _(dev default)_      | `1` = log token usage; `0` = suppress                                                                  |
-| `MONGODB_URI`                                             | _(unset)_            | Optional MongoDB URI for finished-game persistence; `pnpm dev:docker` sets it to its own container     |
-| `MONGODB_DB`                                              | `jade_court`         | Database name when Mongo is enabled                                                                    |
+| Variable                                                          | Default              | Description                                                                                            |
+| ----------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `PORT`                                                            | `3001`               | Hono server port                                                                                       |
+| `LLM_PROVIDER`                                                    | `gemini`             | LLM backend: `gemini`, `openai`, or `anthropic`                                                        |
+| `LLM_MODEL`                                                       | _(provider default)_ | Model id for the active provider                                                                       |
+| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`         | _(unset)_            | API key for the active `LLM_PROVIDER`. Without it, coach uses templates and LLM opponent returns `503` |
+| `PLAY_OPPONENT_PROVIDER`                                          | `engine`             | Play vs Computer (`POST /api/opponent/move`): `engine` (Pikafish), `llm`, or `local` (server negamax)  |
+| `PIKAFISH_PATH`                                                   | _(unset)_            | Path to Pikafish binary for `POST /api/engine/move`; negamax fallback if missing                       |
+| `ENGINE_MOVE_TIMEOUT_MS`                                          | `30000`              | Max wait for a Pikafish move                                                                           |
+| `LLM_TIMEOUT_MS`                                                  | `25000`              | Max wait for an LLM response                                                                           |
+| `LLM_HISTORY_LIMIT`                                               | `150`                | Max plies in opponent “Recent history” prompt                                                          |
+| `LLM_LOG_TOKENS`                                                  | _(dev default)_      | `1` = log token usage; `0` = suppress                                                                  |
+| `MONGODB_URI`                                                     | _(unset)_            | Optional MongoDB URI for finished-game persistence; `pnpm dev:docker` sets it to its own container     |
+| `MONGODB_DB`                                                      | `jade_court`         | Database name when Mongo is enabled                                                                    |
+| `SESSION_SECRET`                                                  | _(unset)_            | Player session HMAC secret (required for register/login in production)                                 |
+| `EMAIL_PROVIDER` / `PUBLIC_APP_URL`                               | `console` / dev URL  | Verification and reset links; OAuth redirect base                                                      |
+| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | _(unset)_            | Day-pass Checkout + webhook; all three required to enable billing                                      |
+| `STRIPE_E2E_FAKE`                                                 | _(unset)_            | `1` = in-process fake Stripe (no HTTP); auto in `NODE_ENV=test` when Stripe env is set                 |
+| `OAUTH_FAKE_ENABLED`                                              | `0`                  | `1` in development only — fake Google/Facebook OAuth without real app credentials                      |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                       | _(unset)_            | Google OAuth (optional)                                                                                |
+| `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET`                         | _(unset)_            | Facebook Login OAuth (optional)                                                                        |
 
 **Web** (`VITE_*` only)
 
@@ -157,12 +193,10 @@ One gitignored **`.env`** at the repo root (copy from [`.env.example`](.env.exam
 
 Core work from [.cursor/plans/jade-court-implementation.md](.cursor/plans/jade-court-implementation.md) is in place: monorepo scaffold, ported engine with tests, full web UI (all five routes), and real-time rooms with server-side move validation.
 
-**Not included yet:** Playwright end-to-end tests and a production deploy pipeline (hosting, Redis for durable rooms, Clerk auth, etc. remain future items).
+**Not included yet:** Production deploy pipeline (hosting, Redis for durable rooms, etc.). Playwright E2E covers core flows including the Play with AI journey (`play-ai-journey.spec.ts`).
 
 ## Known limitations
 
 - Rooms are **in-memory** — lost on server restart; no Redis yet.
-- **Guest sessions only** — Clerk auth is stubbed for later.
-- **No Playwright e2e** in this release.
-- **Play vs Computer** defaults to Pikafish when `PIKAFISH_PATH` is set; falls back to built-in negamax. **Learn** uses the LLM coach when the active provider’s API key is set (`LLM_PROVIDER`).
+- **Play vs Computer** defaults to Pikafish when `PIKAFISH_PATH` is set; falls back to built-in negamax. **Play with AI** uses the LLM opponent and coach when the active provider’s API key is set (`LLM_PROVIDER`); otherwise templates and local negamax fallback apply.
 - MongoDB only persists **finished** online games when `MONGODB_URI` is set.

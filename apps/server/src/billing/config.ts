@@ -58,6 +58,28 @@ export function isStripeConfigured(): boolean {
   );
 }
 
+function stripeEnvPartsSet(): number {
+  return [stripeSecretKey(), stripePriceId(), stripeWebhookSecret()].filter((v) => v.length > 0)
+    .length;
+}
+
+/** True when some but not all Stripe billing env vars are set. */
+export function isStripePartiallyConfigured(): boolean {
+  const n = stripeEnvPartsSet();
+  return n > 0 && n < 3;
+}
+
+/**
+ * Use local fake Stripe (no API calls) when `STRIPE_E2E_FAKE=1` or in `NODE_ENV=test`
+ * with full Stripe env configured.
+ */
+export function shouldUseFakeStripe(): boolean {
+  if (!isStripeConfigured()) return false;
+  const flag = trimEnv('STRIPE_E2E_FAKE').toLowerCase();
+  if (flag === '1' || flag === 'true' || flag === 'yes') return true;
+  return process.env.NODE_ENV === 'test';
+}
+
 /**
  * When true, checkout requires `emailVerified` on the session user.
  * Set `BILLING_REQUIRE_VERIFIED_EMAIL=false` in dev to test checkout without verifying.
@@ -77,4 +99,5 @@ export function resetBillingConfigForTests(): void {
   delete process.env.STRIPE_WEBHOOK_SECRET;
   delete process.env.PUBLIC_APP_URL;
   delete process.env.BILLING_REQUIRE_VERIFIED_EMAIL;
+  delete process.env.STRIPE_E2E_FAKE;
 }

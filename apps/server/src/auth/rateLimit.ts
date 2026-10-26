@@ -17,6 +17,9 @@ const FORGOT_PASSWORD_MAX_PER_IP = 20;
 const FORGOT_PASSWORD_MAX_PER_EMAIL = 5;
 const RESET_PASSWORD_MAX_PER_IP = 30;
 const VERIFY_EMAIL_MAX_PER_IP = 30;
+const BILLING_CHECKOUT_MAX_PER_USER = 10;
+const BILLING_TEST_COMPLETE_CHECKOUT_MAX_PER_USER = 10;
+const SAVED_GAME_AUTOSAVE_MAX_PER_USER = 120;
 const MAX_BUCKETS = 10_000;
 
 type Bucket = { attempts: number; resetAt: number };
@@ -28,6 +31,9 @@ let registerGlobalBucket: Bucket | null = null;
 let maxBucketsOverride: number | null = null;
 let registerMaxGlobalOverride: number | null = null;
 let loginFailedVolumeMaxGlobalOverride: number | null = null;
+let billingCheckoutMaxPerUserOverride: number | null = null;
+let billingTestCompleteCheckoutMaxPerUserOverride: number | null = null;
+let savedGameAutosaveMaxPerUserOverride: number | null = null;
 
 function effectiveMaxBuckets(): number {
   return maxBucketsOverride ?? MAX_BUCKETS;
@@ -319,6 +325,68 @@ export function reserveVerifyEmailAttempt(ip: string, now = Date.now()): Reserve
   return reserveInMap(loginFailureBuckets, `player:verify:ip:${ip}`, VERIFY_EMAIL_MAX_PER_IP, now);
 }
 
+function effectiveBillingCheckoutMaxPerUser(): number {
+  return billingCheckoutMaxPerUserOverride ?? BILLING_CHECKOUT_MAX_PER_USER;
+}
+
+function effectiveSavedGameAutosaveMaxPerUser(): number {
+  return savedGameAutosaveMaxPerUserOverride ?? SAVED_GAME_AUTOSAVE_MAX_PER_USER;
+}
+
+/** Per-user Stripe checkout session starts (`POST /api/billing/checkout`). */
+export function reserveBillingCheckoutAttempt(userId: string, now = Date.now()): ReserveResult {
+  return reserveInMap(
+    loginFailureBuckets,
+    `player:billing-checkout:${userId}`,
+    effectiveBillingCheckoutMaxPerUser(),
+    now,
+  );
+}
+
+function effectiveBillingTestCompleteCheckoutMaxPerUser(): number {
+  return (
+    billingTestCompleteCheckoutMaxPerUserOverride ?? BILLING_TEST_COMPLETE_CHECKOUT_MAX_PER_USER
+  );
+}
+
+/** Per-user test checkout completion (`POST /api/billing/test/complete-checkout`). */
+export function reserveBillingTestCompleteCheckoutAttempt(
+  userId: string,
+  now = Date.now(),
+): ReserveResult {
+  return reserveInMap(
+    loginFailureBuckets,
+    `player:billing-test-complete:${userId}`,
+    effectiveBillingTestCompleteCheckoutMaxPerUser(),
+    now,
+  );
+}
+
+/** Set test complete-checkout cap for Vitest only (`null` restores default). */
+export function setBillingTestCompleteCheckoutMaxPerUserForTests(max: number | null): void {
+  billingTestCompleteCheckoutMaxPerUserOverride = max;
+}
+
+/** Per-user saved-game autosave (`PUT /api/games/active/:mode`). */
+export function reserveSavedGameAutosaveAttempt(userId: string, now = Date.now()): ReserveResult {
+  return reserveInMap(
+    loginFailureBuckets,
+    `player:saved-game:${userId}`,
+    effectiveSavedGameAutosaveMaxPerUser(),
+    now,
+  );
+}
+
+/** Set billing checkout cap for Vitest only (`null` restores default). */
+export function setBillingCheckoutMaxPerUserForTests(max: number | null): void {
+  billingCheckoutMaxPerUserOverride = max;
+}
+
+/** Set saved-game autosave cap for Vitest only (`null` restores default). */
+export function setSavedGameAutosaveMaxPerUserForTests(max: number | null): void {
+  savedGameAutosaveMaxPerUserOverride = max;
+}
+
 /** Reset buckets (Vitest only). */
 export function resetPlayerAuthRateLimitsForTests(): void {
   loginFailureBuckets.clear();
@@ -327,4 +395,7 @@ export function resetPlayerAuthRateLimitsForTests(): void {
   maxBucketsOverride = null;
   registerMaxGlobalOverride = null;
   loginFailedVolumeMaxGlobalOverride = null;
+  billingCheckoutMaxPerUserOverride = null;
+  billingTestCompleteCheckoutMaxPerUserOverride = null;
+  savedGameAutosaveMaxPerUserOverride = null;
 }

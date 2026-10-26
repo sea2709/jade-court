@@ -14,6 +14,7 @@ import {
 import { parseMovesArray, replaySavedMoves } from '../games/replay.js';
 import { toActiveGameResponse } from '../games/serialize.js';
 import type { SavedGameStore } from '../games/store.js';
+import { reserveSavedGameAutosaveAttempt } from '../auth/rateLimit.js';
 import { requireUser } from '../middleware/auth.js';
 import type { AppVariables } from '../types/hono.js';
 
@@ -50,6 +51,11 @@ export function createGamesRoutes(deps: GamesRouteDeps) {
     c.header('Cache-Control', 'no-store');
     const mode = parseGameMode(c.req.param('mode'));
     if (!mode) return invalidMode(c);
+
+    const userId = c.get('user')!.id;
+    if (reserveSavedGameAutosaveAttempt(userId) === 'limited') {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
 
     let body: unknown;
     try {
@@ -90,8 +96,6 @@ export function createGamesRoutes(deps: GamesRouteDeps) {
     if (!replay.ok) {
       return c.json({ error: 'invalid_moves' }, 400);
     }
-
-    const userId = c.get('user')!.id;
 
     if (replay.status === 'checkmate' || replay.status === 'stalemate') {
       await saveUserFinishedGame({

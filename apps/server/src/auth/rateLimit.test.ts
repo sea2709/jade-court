@@ -3,9 +3,15 @@ import {
   beginLoginPasswordCheck,
   playerLoginEmailKey,
   playerLoginPeerEmailKey,
+  reserveBillingCheckoutAttempt,
+  reserveBillingTestCompleteCheckoutAttempt,
   reserveLoginFailureAttempts,
+  reserveSavedGameAutosaveAttempt,
   resetPlayerAuthRateLimitsForTests,
+  setBillingCheckoutMaxPerUserForTests,
+  setBillingTestCompleteCheckoutMaxPerUserForTests,
   setLoginFailedVolumeMaxForTests,
+  setSavedGameAutosaveMaxPerUserForTests,
 } from './rateLimit.js';
 
 describe('reserveLoginFailureAttempts', () => {
@@ -36,6 +42,49 @@ describe('reserveLoginFailureAttempts', () => {
     }
     expect(reserveLoginFailureAttempts([victimKey])).toBe('limited');
     expect(reserveLoginFailureAttempts([otherKey])).toBe('ok');
+  });
+});
+
+describe('reserveBillingCheckoutAttempt', () => {
+  afterEach(() => {
+    resetPlayerAuthRateLimitsForTests();
+  });
+
+  it('allows at most 10 checkout attempts per user per window', () => {
+    setBillingCheckoutMaxPerUserForTests(3);
+    const userId = 'user-checkout';
+    expect(reserveBillingCheckoutAttempt(userId)).toBe('ok');
+    expect(reserveBillingCheckoutAttempt(userId)).toBe('ok');
+    expect(reserveBillingCheckoutAttempt(userId)).toBe('ok');
+    expect(reserveBillingCheckoutAttempt(userId)).toBe('limited');
+  });
+});
+
+describe('reserveBillingTestCompleteCheckoutAttempt', () => {
+  afterEach(() => {
+    resetPlayerAuthRateLimitsForTests();
+  });
+
+  it('limits test complete-checkout per user', () => {
+    setBillingTestCompleteCheckoutMaxPerUserForTests(2);
+    const userId = 'user-complete';
+    expect(reserveBillingTestCompleteCheckoutAttempt(userId)).toBe('ok');
+    expect(reserveBillingTestCompleteCheckoutAttempt(userId)).toBe('ok');
+    expect(reserveBillingTestCompleteCheckoutAttempt(userId)).toBe('limited');
+  });
+});
+
+describe('reserveSavedGameAutosaveAttempt', () => {
+  afterEach(() => {
+    resetPlayerAuthRateLimitsForTests();
+  });
+
+  it('allows autosaves up to the per-user cap', () => {
+    setSavedGameAutosaveMaxPerUserForTests(2);
+    const userId = 'user-save';
+    expect(reserveSavedGameAutosaveAttempt(userId)).toBe('ok');
+    expect(reserveSavedGameAutosaveAttempt(userId)).toBe('ok');
+    expect(reserveSavedGameAutosaveAttempt(userId)).toBe('limited');
   });
 });
 

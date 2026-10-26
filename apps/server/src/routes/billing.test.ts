@@ -8,7 +8,13 @@ import { resetBillingConfigForTests } from '../billing/config.js';
 import { MemoryPaymentStore } from '../billing/payments/memoryStore.js';
 import { resetStripeClientForTests } from '../billing/stripeClient.js';
 import { hashSessionToken } from '../auth/sessionToken.js';
-import { resetPlayerAuthRateLimitsForTests } from '../auth/rateLimit.js';
+import {
+  resetPlayerAuthRateLimitsForTests,
+  setBillingCheckoutMaxPerUserForTests,
+  setBillingTestCompleteCheckoutMaxPerUserForTests,
+} from '../auth/rateLimit.js';
+import { resetPendingTestCheckoutForTests } from '../billing/pendingTestCheckout.js';
+import { e2eTestSecretHeaders, resetE2eTestSecretForTests } from '../e2e/testSecret.js';
 import { MemorySessionStore } from '../users/memorySessionStore.js';
 import { MemoryUserStore } from '../users/memoryStore.js';
 import { hashPassword } from '../users/password.js';
@@ -17,6 +23,7 @@ const SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
 const STRIPE_SECRET = 'sk_test_billing_unit_tests';
 const WEBHOOK_SECRET = 'whsec_test_billing_webhook_secret';
 const PRICE_ID = 'price_test_day_pass';
+const E2E_SECRET = 'unit-test-e2e-secret-billing';
 
 function setupStripeEnv() {
   process.env.STRIPE_SECRET_KEY = STRIPE_SECRET;
@@ -29,6 +36,15 @@ function setupStripeEnv() {
 function setupAuthEnv() {
   process.env.SESSION_SECRET = SECRET;
   process.env.NODE_ENV = 'test';
+  process.env.E2E_TEST_SECRET = E2E_SECRET;
+}
+
+function testCompleteCheckoutHeaders(sessionToken: string): Record<string, string> {
+  return {
+    ...sessionHeaders(sessionToken),
+    'Content-Type': 'application/json',
+    ...e2eTestSecretHeaders(),
+  };
 }
 
 type MockStripe = {
@@ -135,6 +151,7 @@ describe('billing routes', () => {
 
   beforeEach(async () => {
     resetPlayerAuthRateLimitsForTests();
+    resetPendingTestCheckoutForTests();
     resetBillingConfigForTests();
     resetStripeClientForTests();
     setupAuthEnv();
@@ -165,6 +182,7 @@ describe('billing routes', () => {
   afterEach(() => {
     delete process.env.SESSION_SECRET;
     delete process.env.NODE_ENV;
+    resetE2eTestSecretForTests();
     resetBillingConfigForTests();
     resetStripeClientForTests();
     resetPlayerAuthRateLimitsForTests();
@@ -213,14 +231,30 @@ describe('billing routes', () => {
       expect(await res.json()).toEqual({ error: 'email_not_verified' });
     });
 
+    it('returns 429 when checkout rate limit is exceeded', async () => {
+      setBillingCheckoutMaxPerUserForTests(1);
+      const first = await app.request('/api/billing/checkout', {
+        method: 'POST',
+        headers: sessionHeaders(sessionToken),
+      });
+      expect(first.status).toBe(200);
+      const second = await app.request('/api/billing/checkout', {
+        method: 'POST',
+        headers: sessionHeaders(sessionToken),
+      });
+      expect(second.status).toBe(429);
+      expect(await second.json()).toEqual({ error: 'rate_limited' });
+    });
+
     it('creates a Checkout session for a verified user', async () => {
       const res = await app.request('/api/billing/checkout', {
         method: 'POST',
         headers: sessionHeaders(sessionToken),
       });
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { url: string };
+      const body = (await res.json()) as { url: string; sessionId: string };
       expect(body.url).toBe('https://checkout.stripe.com/c/pay/cs_test_123');
+      expect(body.sessionId).toBe('cs_test_123');
       expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith({
         mode: 'payment',
         line_items: [{ price: PRICE_ID, quantity: 1 }],
@@ -228,6 +262,119 @@ describe('billing routes', () => {
         success_url: 'http://localhost:5173/play-ai?checkout=success',
         cancel_url: 'http://localhost:5173/play-ai',
       });
+    });
+  });
+
+  describe('fake Stripe (no injected client)', () => {
+    it('creates a local checkout session when NODE_ENV=test', async () => {
+      const localApp = createApp({
+        newsStore: null,
+        userStore,
+        sessionStore,
+        paymentStore,
+      });
+      const res = await localApp.request('/api/billing/checkout', {
+        method: 'POST',
+        headers: sessionHeaders(sessionToken),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { url: string; sessionId: string };
+      expect(body.sessionId).toMatch(/^cs_test_/);
+      expect(body.url).toContain(body.sessionId);
+      expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /api/billing/test/complete-checkout', () => {
+    it('returns 403 without x-e2e-test-secret', async () => {
+      const res = await app.request('/api/billing/test/complete-checkout', {
+        method: 'POST',
+        headers: { ...sessionHeaders(sessionToken), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: 'cs_not_registered' }),
+      });
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: 'forbidden' });
+    });
+
+    it('grants access for a checkout session id issued via POST /checkout', async () => {
+      const checkout = await app.request('/api/billing/checkout', {
+        method: 'POST',
+        headers: sessionHeaders(sessionToken),
+      });
+      expect(checkout.status).toBe(200);
+      const { sessionId } = (await checkout.json()) as { sessionId: string };
+
+      const res = await app.request('/api/billing/test/complete-checkout', {
+        method: 'POST',
+        headers: testCompleteCheckoutHeaders(sessionToken),
+        body: JSON.stringify({ sessionId }),
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      const user = await userStore.findById(userId);
+      expect(user?.accessUntil).toBeTruthy();
+      const payments = await paymentStore.listByUserId(userId);
+      expect(payments.some((p) => p.stripeSessionId === sessionId)).toBe(true);
+    });
+
+    it('rejects unknown or stale session ids', async () => {
+      const res = await app.request('/api/billing/test/complete-checkout', {
+        method: 'POST',
+        headers: testCompleteCheckoutHeaders(sessionToken),
+        body: JSON.stringify({ sessionId: 'cs_not_registered' }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: 'unknown_checkout_session' });
+    });
+
+    it('returns 429 when complete-checkout rate limit is exceeded', async () => {
+      setBillingTestCompleteCheckoutMaxPerUserForTests(1);
+      const checkout = await app.request('/api/billing/checkout', {
+        method: 'POST',
+        headers: sessionHeaders(sessionToken),
+      });
+      const { sessionId: firstId } = (await checkout.json()) as { sessionId: string };
+      const first = await app.request('/api/billing/test/complete-checkout', {
+        method: 'POST',
+        headers: testCompleteCheckoutHeaders(sessionToken),
+        body: JSON.stringify({ sessionId: firstId }),
+      });
+      expect(first.status).toBe(200);
+
+      mockStripe.checkout.sessions.create.mockResolvedValueOnce({
+        id: 'cs_test_second',
+        url: 'https://checkout.stripe.com/c/pay/cs_test_second',
+      });
+      const checkout2 = await app.request('/api/billing/checkout', {
+        method: 'POST',
+        headers: sessionHeaders(sessionToken),
+      });
+      const { sessionId: secondId } = (await checkout2.json()) as { sessionId: string };
+      const second = await app.request('/api/billing/test/complete-checkout', {
+        method: 'POST',
+        headers: testCompleteCheckoutHeaders(sessionToken),
+        body: JSON.stringify({ sessionId: secondId }),
+      });
+      expect(second.status).toBe(429);
+      expect(await second.json()).toEqual({ error: 'rate_limited' });
+    });
+
+    it('is not mounted outside NODE_ENV=test', async () => {
+      process.env.NODE_ENV = 'development';
+      const devApp = createApp({
+        newsStore: null,
+        userStore,
+        sessionStore,
+        paymentStore,
+        stripe: mockStripe,
+      });
+      const res = await devApp.request('/api/billing/test/complete-checkout', {
+        method: 'POST',
+        headers: { ...sessionHeaders(sessionToken), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: 'cs_missing' }),
+      });
+      expect(res.status).toBe(404);
+      process.env.NODE_ENV = 'test';
     });
   });
 

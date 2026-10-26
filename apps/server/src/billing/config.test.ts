@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   billingPublicAppUrl,
   billingRequiresVerifiedEmail,
+  isStripePartiallyConfigured,
+  shouldUseFakeStripe,
   isStripeConfigured,
   MAX_PLAY_AI_ACCESS_HOURS,
   playAiAccessHours,
@@ -43,6 +45,7 @@ describe('playAiAccessHours', () => {
 describe('Stripe billing config', () => {
   afterEach(() => {
     resetBillingConfigForTests();
+    delete process.env.NODE_ENV;
   });
 
   it('isStripeConfigured requires all three secrets', () => {
@@ -64,5 +67,27 @@ describe('Stripe billing config', () => {
     expect(billingRequiresVerifiedEmail()).toBe(true);
     process.env.BILLING_REQUIRE_VERIFIED_EMAIL = 'false';
     expect(billingRequiresVerifiedEmail()).toBe(false);
+  });
+
+  it('isStripePartiallyConfigured when only some vars are set', () => {
+    expect(isStripePartiallyConfigured()).toBe(false);
+    process.env.STRIPE_SECRET_KEY = 'sk_test';
+    expect(isStripePartiallyConfigured()).toBe(true);
+    process.env.STRIPE_PRICE_ID = 'price_1';
+    expect(isStripePartiallyConfigured()).toBe(true);
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_1';
+    expect(isStripePartiallyConfigured()).toBe(false);
+  });
+
+  it('shouldUseFakeStripe in test env or STRIPE_E2E_FAKE', () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test';
+    process.env.STRIPE_PRICE_ID = 'price_1';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_1';
+    process.env.NODE_ENV = 'test';
+    expect(shouldUseFakeStripe()).toBe(true);
+    process.env.NODE_ENV = 'development';
+    expect(shouldUseFakeStripe()).toBe(false);
+    process.env.STRIPE_E2E_FAKE = '1';
+    expect(shouldUseFakeStripe()).toBe(true);
   });
 });

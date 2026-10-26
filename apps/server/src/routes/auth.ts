@@ -23,6 +23,7 @@ import {
 import { sendPasswordResetEmail, sendVerificationEmail } from '../auth/sendAuthEmails.js';
 import { createSessionForUser } from '../auth/playerSession.js';
 import { hashSessionToken } from '../auth/sessionToken.js';
+import { requireE2eTestSecret } from '../e2e/testSecret.js';
 import { isTestEnv } from '../email/config.js';
 import { getConsoleEmailOutbox } from '../email/consoleSender.js';
 import type { EmailSender } from '../email/types.js';
@@ -507,6 +508,8 @@ export function createPlayerAuthRoutes(deps: PlayerAuthDeps) {
   if (isTestEnv()) {
     routes.get('/test-email-outbox', (c) => {
       noStore(c);
+      const denied = requireE2eTestSecret(c);
+      if (denied) return denied;
       return c.json({ messages: getConsoleEmailOutbox() }, 200);
     });
   }
