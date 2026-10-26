@@ -19,6 +19,7 @@
     "@jade-court/xiangqi-engine": "workspace:*",
     "dotenv": "^17.4.2",
     "hono": "^4.6.16",
+    "jose": "^6.2.13",
     "mongodb": "^6.12.0",
     "node-html-parser": "^9.0.4",
     "nodemailer": "^10.2.0",

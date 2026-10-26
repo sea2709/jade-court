@@ -30,6 +30,9 @@ beforeEach(() => {
   fetchMock.mockImplementation((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
     if (url.includes('/api/me')) return Promise.resolve(guestMe);
+    if (url.includes('/api/auth/providers')) {
+      return Promise.resolve(json({ providers: [] }));
+    }
     return Promise.resolve(json({ error: 'unexpected' }, 500));
   });
 });
@@ -40,12 +43,35 @@ afterEach(() => {
 });
 
 describe('LoginScreen', () => {
+  it('shows Continue with Google when google provider is configured', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/me')) return Promise.resolve(guestMe);
+      if (url.includes('/api/auth/providers')) {
+        return Promise.resolve(json({ providers: ['google'] }));
+      }
+      return Promise.resolve(json({ error: 'unexpected' }, 500));
+    });
+    renderLogin();
+    const link = await screen.findByRole('link', { name: 'Continue with Google' });
+    expect(link).toHaveAttribute('href', '/api/auth/google/start?returnTo=%2Fplay');
+  });
+
+  it('hides Google button when google is not listed', async () => {
+    renderLogin();
+    await screen.findByRole('heading', { name: 'Sign in' });
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument();
+  });
+
   it('shows error on invalid credentials', async () => {
     renderLogin();
     await screen.findByRole('heading', { name: 'Sign in' });
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.includes('/api/me')) return Promise.resolve(guestMe);
+      if (url.includes('/api/auth/providers')) {
+        return Promise.resolve(json({ providers: [] }));
+      }
       if (url.includes('/api/auth/login')) {
         return Promise.resolve(json({ error: 'invalid_credentials' }, 401));
       }
@@ -63,6 +89,9 @@ describe('LoginScreen', () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.includes('/api/me')) return Promise.resolve(guestMe);
+      if (url.includes('/api/auth/providers')) {
+        return Promise.resolve(json({ providers: [] }));
+      }
       if (url.includes('/api/auth/login')) {
         return Promise.resolve(
           json({

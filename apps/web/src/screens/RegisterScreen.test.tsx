@@ -31,6 +31,9 @@ beforeEach(() => {
   fetchMock.mockImplementation((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
     if (url.includes('/api/me')) return Promise.resolve(guestMe);
+    if (url.includes('/api/auth/providers')) {
+      return Promise.resolve(json({ providers: [] }));
+    }
     return Promise.resolve(json({ error: 'unexpected' }, 500));
   });
 });

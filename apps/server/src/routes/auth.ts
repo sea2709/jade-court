@@ -2,12 +2,7 @@
  * Player account API: register, login, logout, and `/api/me`.
  */
 import { Hono } from 'hono';
-import {
-  readSessionCookie,
-  clearSessionCookie,
-  newSessionExpiresAt,
-  setSessionCookie,
-} from '../auth/cookies.js';
+import { readSessionCookie, clearSessionCookie } from '../auth/cookies.js';
 import { isPlayerAuthEnabled } from '../auth/config.js';
 import { isJsonContentType, parseAuthJsonBody } from '../auth/jsonBody.js';
 import { hashEmailToken } from '../auth/emailToken.js';
@@ -25,7 +20,8 @@ import {
   reserveVerifyEmailAttempt,
 } from '../auth/rateLimit.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../auth/sendAuthEmails.js';
-import { generateSessionToken, hashSessionToken } from '../auth/sessionToken.js';
+import { createSessionForUser } from '../auth/playerSession.js';
+import { hashSessionToken } from '../auth/sessionToken.js';
 import { isTestEnv } from '../email/config.js';
 import { getConsoleEmailOutbox } from '../email/consoleSender.js';
 import type { EmailSender } from '../email/types.js';
@@ -77,18 +73,6 @@ function wrongAccount(c: { json: (body: unknown, status: number) => Response }) 
 
 function unauthorized(c: { json: (body: unknown, status: number) => Response }) {
   return c.json({ error: 'unauthorized' }, 401);
-}
-
-async function createSessionForUser(
-  c: { header: (name: string, value: string) => void },
-  userId: string,
-  sessionStore: SessionStore,
-): Promise<void> {
-  const token = generateSessionToken();
-  const tokenHash = hashSessionToken(token);
-  const expiresAt = newSessionExpiresAt();
-  await sessionStore.create({ tokenHash, userId, expiresAt });
-  setSessionCookie(c as Parameters<typeof setSessionCookie>[0], token, expiresAt);
 }
 
 export type PlayerAuthDeps = {

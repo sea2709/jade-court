@@ -41,6 +41,15 @@ beforeEach(() => {
     if (url.includes('/api/billing/payments')) {
       return Promise.resolve(json({ payments: [] }));
     }
+    if (url.includes('/api/games/active')) {
+      return Promise.resolve(json({ games: [] }));
+    }
+    if (url.includes('/api/auth/providers')) {
+      return Promise.resolve(json({ providers: [] }));
+    }
+    if (url.includes('/api/auth/identities')) {
+      return Promise.resolve(json({ hasPassword: true, providers: [] }));
+    }
     return Promise.resolve(json({ error: 'unexpected' }, 500));
   });
 });
