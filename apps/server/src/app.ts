@@ -270,7 +270,7 @@ export function createApp(deps?: CreateAppDeps) {
   authRoutes.route('/', createPlayerAuthRoutes(playerAuthDeps));
   app.route('/api/auth', authRoutes);
   app.route('/api', createMeRoute());
-  app.route('/api/admin', createAdminRoutes({ userStore }));
+  app.route('/api/admin', createAdminRoutes({ userStore, paymentStore }));
   app.route('/api/admin/news', createAdminNewsRoutes(newsStore, newsImageStorage));
   app.route(
     '/api/billing',

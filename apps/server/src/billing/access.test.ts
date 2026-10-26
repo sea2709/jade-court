@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ensureAccessUntilAtLeast, extendAccess, grantHoursToMs, hasPlayAccess } from './access.js';
+import {
+  ensureAccessUntilAtLeast,
+  extendAccess,
+  grantHoursToMs,
+  hasPlayAccess,
+  revokeAccess,
+} from './access.js';
 import { MAX_PLAY_AI_ACCESS_HOURS } from './config.js';
 import { MemoryUserStore } from '../users/memoryStore.js';
 
@@ -76,6 +82,27 @@ describe('extendAccess', () => {
     const second = await extendAccess(store, user.id, 24, mid);
     expect(first?.accessUntil?.getTime()).toBe(now.getTime() + 24 * hourMs);
     expect(second?.accessUntil?.getTime()).toBe(now.getTime() + 48 * hourMs);
+  });
+});
+
+describe('revokeAccess', () => {
+  it('clears accessUntil for an existing user', async () => {
+    const store = new MemoryUserStore();
+    const now = new Date('2026-06-01T00:00:00.000Z');
+    const user = await store.create({
+      email: 'revoke@example.com',
+      passwordHash: 'hash',
+    });
+    await extendAccess(store, user.id, 24, now);
+    const updated = await revokeAccess(store, user.id);
+    expect(updated?.accessUntil).toBeUndefined();
+    const loaded = await store.findById(user.id);
+    expect(loaded?.accessUntil).toBeUndefined();
+  });
+
+  it('returns null for unknown user', async () => {
+    const store = new MemoryUserStore();
+    expect(await revokeAccess(store, 'missing')).toBeNull();
   });
 });
 
