@@ -23,6 +23,7 @@ test.describe('admin users', () => {
     await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
 
     await page.getByLabel('Search users by email').fill(email);
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
 
     const userRow = page.getByRole('button', { name: /E2E Admin Target/i });
     await expect(userRow).toBeVisible({ timeout: 15_000 });
@@ -39,5 +40,22 @@ test.describe('admin users', () => {
     await dialog.getByRole('button', { name: 'Confirm grant' }).click();
 
     await expect(page.getByText(/Active until/i)).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('Search with an empty box lists unverified players', async ({ page, request }) => {
+    const email = uniqueEmail();
+    const registerRes = await request.post(`${serverUrl}/api/auth/register`, {
+      data: { email, password: 'e2e-password-12', displayName: 'E2E Unverified Player' },
+    });
+    expect(registerRes.ok()).toBeTruthy();
+
+    await adminLoginViaForm(page, { next: '/admin/users' });
+    await expect(page.getByText(/Enter an email fragment and press Search/i)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+
+    const userRow = page.getByRole('button', { name: /E2E Unverified Player/i });
+    await expect(userRow).toBeVisible({ timeout: 15_000 });
+    await expect(userRow).toContainText('Unverified');
   });
 });

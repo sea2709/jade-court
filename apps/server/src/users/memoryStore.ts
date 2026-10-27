@@ -227,7 +227,7 @@ export class MemoryUserStore implements UserStore {
   async searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult> {
     const q = options.q.trim();
     const re = new RegExp(escapeRegex(q), 'i');
-    let rows = [...this.byId.values()].filter((u) => u.email && re.test(u.email));
+    let rows = [...this.byId.values()].filter((u) => !q || (u.email && re.test(u.email)));
 
     rows.sort((a, b) => {
       const t = b.createdAt.getTime() - a.createdAt.getTime();

@@ -77,15 +77,43 @@ describe('admin users and payments API', () => {
     }
   });
 
-  it('GET /users returns 400 invalid_query when q is missing or blank', async () => {
-    const missing = await app.request('/api/admin/users', { headers: adminAuth() });
-    expect(missing.status).toBe(400);
-    expect(await missing.json()).toEqual({ error: 'invalid_query' });
+  it('GET /users lists all users when q is missing or blank', async () => {
+    const noEmail = await userStore.createOAuthUser({
+      emailVerified: false,
+      displayName: 'No Email',
+      identity: { provider: 'facebook', sub: 'fb-no-email' },
+    });
 
-    const blank = await app.request('/api/admin/users?q=%20%20', { headers: adminAuth() });
-    expect(blank.status).toBe(400);
-    expect(await blank.json()).toEqual({ error: 'invalid_query' });
+    for (const path of ['/api/admin/users', '/api/admin/users?q=', '/api/admin/users?q=%20%20']) {
+      const res = await app.request(path, { headers: adminAuth() });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        users: { id: string; emailVerified: boolean }[];
+        nextCursor: string | null;
+      };
+      expect(body.users.map((u) => u.id).sort()).toEqual([noEmail.id, playerA, playerB].sort());
+      expect(body.users.find((u) => u.id === playerB)?.emailVerified).toBe(false);
+      expect(body.nextCursor).toBeNull();
+    }
+  });
 
+  it('GET /users paginates the empty-query listing', async () => {
+    const first = await app.request('/api/admin/users?q=&limit=1', { headers: adminAuth() });
+    const page1 = (await first.json()) as { users: { id: string }[]; nextCursor: string };
+    expect(page1.users).toHaveLength(1);
+    expect(page1.nextCursor).toBeTruthy();
+
+    const second = await app.request(
+      `/api/admin/users?q=&limit=1&cursor=${encodeURIComponent(page1.nextCursor)}`,
+      { headers: adminAuth() },
+    );
+    const page2 = (await second.json()) as { users: { id: string }[]; nextCursor: string | null };
+    expect(page2.users).toHaveLength(1);
+    expect(page2.nextCursor).toBeNull();
+    expect([page1.users[0]?.id, page2.users[0]?.id].sort()).toEqual([playerA, playerB].sort());
+  });
+
+  it('GET /users returns 400 invalid_query when q is too long', async () => {
     const tooLong = await app.request(`/api/admin/users?q=${'a'.repeat(257)}`, {
       headers: adminAuth(),
     });

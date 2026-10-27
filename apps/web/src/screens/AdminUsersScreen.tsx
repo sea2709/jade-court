@@ -1,7 +1,7 @@
 /**
  * Admin player lookup, access grant/revoke at `/admin/users`.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAdminSession } from '../admin/AdminSessionContext';
 import { formatAdminAmount, formatAdminDateTime, formatPaymentStatus } from '../lib/adminFormat';
@@ -47,9 +47,14 @@ export function AdminUsersScreen() {
   const [searchParams] = useSearchParams();
 
   const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
-  const [debouncedSearch, setDebouncedSearch] = useState(() =>
-    (searchParams.get('q') ?? '').trim(),
-  );
+  /**
+   * Query from the last Search submit; `null` until the first one. An empty `q` lists every
+   * user. A new object per submit so pressing Search again refetches the same query.
+   */
+  const [submitted, setSubmitted] = useState<{ q: string } | null>(() => {
+    const q = (searchParams.get('q') ?? '').trim();
+    return q ? { q } : null;
+  });
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [listCursor, setListCursor] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(false);
@@ -65,8 +70,7 @@ export function AdminUsersScreen() {
   const [grantError, setGrantError] = useState<string | null>(null);
   const [accessBusy, setAccessBusy] = useState(false);
 
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Bumped when `debouncedSearch` changes so in-flight list requests are ignored. */
+  /** Bumped on each Search submit so in-flight list requests are ignored. */
   const listRequestGen = useRef(0);
   /** Bumped on each detail fetch / selection clear so stale profile responses are ignored. */
   const detailRequestGen = useRef(0);
@@ -88,14 +92,6 @@ export function AdminUsersScreen() {
   useEffect(() => {
     document.title = 'Users · Jade Court Admin';
   }, []);
-
-  useEffect(() => {
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => {
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-    };
-  }, [search]);
 
   const handleApiError = useCallback(
     (err: unknown): boolean => {
@@ -144,9 +140,9 @@ export function AdminUsersScreen() {
 
   const loadList = useCallback(
     async (opts?: { cursor?: string; append?: boolean }) => {
-      const q = debouncedSearch;
+      const q = submitted?.q;
       const gen = listRequestGen.current;
-      if (!q) {
+      if (q === undefined) {
         if (gen !== listRequestGen.current) return;
         setUsers([]);
         setListCursor(null);
@@ -169,7 +165,7 @@ export function AdminUsersScreen() {
         if (gen === listRequestGen.current) setListLoading(false);
       }
     },
-    [debouncedSearch, handleApiError],
+    [submitted, handleApiError],
   );
 
   useEffect(() => {
@@ -186,8 +182,7 @@ export function AdminUsersScreen() {
       await Promise.resolve();
       if (cancelled || gen !== listRequestGen.current) return;
 
-      const q = debouncedSearch;
-      if (!q) {
+      if (!submitted) {
         setUsers([]);
         setListCursor(null);
         setListError(null);
@@ -200,7 +195,7 @@ export function AdminUsersScreen() {
       setListLoading(true);
       setListError(null);
       try {
-        const res = await searchAdminUsers({ q });
+        const res = await searchAdminUsers({ q: submitted.q });
         if (cancelled || gen !== listRequestGen.current) return;
         setUsers(res.users);
         setListCursor(res.nextCursor);
@@ -227,7 +222,7 @@ export function AdminUsersScreen() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, clearSelection, handleApiError, selectUser]);
+  }, [submitted, clearSelection, handleApiError, selectUser]);
 
   useEffect(() => {
     const userId = searchParams.get('userId');
@@ -237,7 +232,11 @@ export function AdminUsersScreen() {
     void (async () => {
       await Promise.resolve();
       if (cancelled) return;
-      if (q) setSearch(q);
+      if (q) {
+        setSearch(q);
+        const trimmed = q.trim();
+        setSubmitted((prev) => (prev?.q === trimmed ? prev : { q: trimmed }));
+      }
       if (userId) {
         pendingDeepLinkUserId.current = userId;
         if (!q) selectUser(userId);
@@ -247,6 +246,11 @@ export function AdminUsersScreen() {
       cancelled = true;
     };
   }, [searchParams, selectUser]);
+
+  const submitSearch = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitted({ q: search.trim() });
+  };
 
   const openGrantDialog = () => {
     setGrantHours(String(DEFAULT_GRANT_ACCESS_HOURS));
@@ -326,16 +330,23 @@ export function AdminUsersScreen() {
         Search by email, inspect accounts, and grant or revoke Play AI access.
       </p>
 
-      <div className="mb-6">
+      <form
+        role="search"
+        className="mb-6 flex flex-wrap items-center gap-2"
+        onSubmit={submitSearch}
+      >
         <input
           type="search"
           placeholder="Search by email…"
-          className="room-link-input w-full max-w-md text-left font-body"
+          className="room-link-input min-w-0 max-w-md flex-1 text-left font-body"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Search users by email"
         />
-      </div>
+        <button type="submit" className="btn btn-primary">
+          Search
+        </button>
+      </form>
 
       {listError ? (
         <p className="mb-4 text-sm font-bold text-red-deep" role="alert">
@@ -343,12 +354,16 @@ export function AdminUsersScreen() {
         </p>
       ) : null}
 
-      {!debouncedSearch ? (
-        <p className="text-sm font-semibold text-muted">Type an email fragment to search.</p>
+      {!submitted ? (
+        <p className="text-sm font-semibold text-muted">
+          Enter an email fragment and press Search. Leave it empty to list all users.
+        </p>
       ) : listLoading && users.length === 0 ? (
         <p className="text-sm font-semibold text-muted">Searching…</p>
       ) : users.length === 0 ? (
-        <p className="text-sm font-semibold text-muted">No users match that search.</p>
+        <p className="text-sm font-semibold text-muted">
+          {submitted.q ? 'No users match that search.' : 'No users yet.'}
+        </p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {users.map((user) => (
