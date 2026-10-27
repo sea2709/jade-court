@@ -9,8 +9,8 @@ import { MultiplayerScreen } from './screens/MultiplayerScreen';
 import { PlayScreen } from './screens/PlayScreen';
 import { PlayAiScreen } from './screens/PlayAiScreen';
 import { NewsScreen } from './screens/NewsScreen';
-import { LoginScreen } from './screens/LoginScreen';
-import { RegisterScreen } from './screens/RegisterScreen';
+import { AuthScreen } from './screens/AuthScreen';
+import { RegisterRedirect } from './screens/RegisterRedirect';
 import { AccountScreen } from './screens/AccountScreen';
 import { DataDeletionStatusScreen } from './screens/DataDeletionStatusScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
@@ -47,8 +47,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="play-ai" element={<PlayAiScreen />} />
             <Route path="multiplayer" element={<MultiplayerScreen />} />
             <Route path="news" element={<NewsScreen />} />
-            <Route path="login" element={<LoginScreen />} />
-            <Route path="register" element={<RegisterScreen />} />
+            <Route path="login" element={<AuthScreen />} />
+            <Route path="register" element={<RegisterRedirect />} />
             <Route path="register/sent" element={<RegisterSentScreen />} />
             <Route path="verify-email" element={<VerifyEmailScreen />} />
             <Route path="forgot-password" element={<ForgotPasswordScreen />} />

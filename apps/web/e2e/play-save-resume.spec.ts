@@ -8,7 +8,7 @@ test.describe('Play vs Computer save/resume', () => {
     const email = uniqueEmail();
     const password = 'e2e-password-12';
 
-    await page.goto('/register');
+    await page.goto('/login?mode=register');
     await page.getByLabel(/Display name/).fill('E2E Save');
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Password/).fill(password);

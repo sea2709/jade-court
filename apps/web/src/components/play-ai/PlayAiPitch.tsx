@@ -24,7 +24,7 @@ export function PlayAiPitch() {
           <Link to="/login" className="btn btn-primary btn-lg">
             Sign in
           </Link>
-          <Link to="/register" className="btn btn-ghost btn-lg">
+          <Link to="/login?mode=register" className="btn btn-ghost btn-lg">
             Create account
           </Link>
         </div>
