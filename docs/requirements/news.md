@@ -13,7 +13,7 @@
 
 - **Public `/news`:** a list of curated Xiangqi news (tournaments, players, culture, learning resources, engines/AI). Each card shows a title, our own short summary, the publisher, the date and a thumbnail, and links to the **original source** in a new tab.
 - **Admin `/admin/news`:** curators paste a source URL. The server fetches the page's Open Graph metadata to prefill the form. The curator edits the fields, writes a summary, adds tags, and saves the item as a draft or publishes it.
-- **Storage:** MongoDB `news` collection, with new Hono routes. Admin access uses username/password login and HMAC session tokens (`ADMIN_USERS`, `ADMIN_SESSION_SECRET`); Clerk admin roles may replace this later.
+- **Storage:** MongoDB `news` collection, with new Hono routes. Admin access uses username/password login and HMAC session tokens (`ADMIN_USERS`; signing key random per server process); Clerk admin roles may replace this later.
 
 **Scope: P0 only.** Delivered as one PR containing this document and the implementation. **Design:** desktop prototype at [`docs/design/news/Main.dc.html`](../design/news/Main.dc.html) (public page only).
 
@@ -173,8 +173,8 @@ When MongoDB is not configured, `GET /api/news` returns `{ items: [], nextCursor
 
 - **Login** (`POST /api/admin/login`, public): body `{ username, password }` checked against `ADMIN_USERS` (`user:pass,user2:pass2`, split on first `:`). Wrong user or password → **401** `{ error: 'invalid_credentials' }` (same response shape for both). After 10 failures per IP + username within 15 minutes → **429** `{ error: 'rate_limited' }`. Success → **200** `{ token, username, expiresAt }` (HMAC-signed Bearer token). All admin responses include `Cache-Control: no-store`.
 - **`GET /api/admin/me`:** Bearer session required (`adminAuth` per route); **200** `{ username }`.
-- **`adminAuth` on `/api/admin/news/*`:** verify HMAC session (`ADMIN_SESSION_SECRET`), expiry, and that `sub` is still in `ADMIN_USERS`. Missing/malformed/bad signature → **401** `{ error: 'unauthorized' }` (counts toward per-IP token bucket). Expired or revoked user → **401** without counting toward the IP bucket.
-- No configured users or blank `ADMIN_SESSION_SECRET` → **503** `{ error: 'admin_disabled' }` on login, `/me`, and news admin.
+- **`adminAuth` on `/api/admin/news/*`:** verify HMAC session (random per-process key, so restarts invalidate sessions), expiry, and that `sub` is still in `ADMIN_USERS`. Missing/malformed/bad signature → **401** `{ error: 'unauthorized' }` (counts toward per-IP token bucket). Expired or revoked user → **401** without counting toward the IP bucket.
+- No configured users → **503** `{ error: 'admin_disabled' }` on login, `/me`, and news admin.
 - Bad Bearer tokens: 10 failures per remote IP within 15 minutes → **429** (in-memory; `@hono/node-server/conninfo`, constant fallback in tests).
 
 ### 7.4 Validation rules
@@ -191,7 +191,7 @@ SSRF-guarded: http(s) only; ports 80/443; DNS resolve and reject loopback/privat
 
 ### 7.6 Env
 
-- `.env.example`: `ADMIN_USERS=`, `ADMIN_SESSION_SECRET=` (32+ random chars), `ADMIN_SESSION_TTL_HOURS=8`, optional `NEWS_IMAGE_DIR=` (server only, no `VITE_` prefix; default `<repo>/data/news-images`).
+- `.env.example`: `ADMIN_USERS=`, `ADMIN_SESSION_TTL_HOURS=8`, optional `NEWS_IMAGE_DIR=` (server only, no `VITE_` prefix; default `<repo>/data/news-images`).
 
 ## 8. Web (`apps/web`)
 

@@ -7,12 +7,11 @@ import { MemorySessionStore } from '../users/memorySessionStore.js';
 import { MemoryUserStore } from '../users/memoryStore.js';
 import { hashPassword } from '../users/password.js';
 
-const ADMIN_SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
+const PLAYER_SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
 
 function setupEnv() {
   process.env.ADMIN_USERS = 'alice:alice-pass';
-  process.env.ADMIN_SESSION_SECRET = ADMIN_SECRET;
-  process.env.SESSION_SECRET = ADMIN_SECRET;
+  process.env.SESSION_SECRET = PLAYER_SECRET;
   process.env.NODE_ENV = 'test';
 }
 
@@ -55,7 +54,6 @@ describe('admin users and payments API', () => {
 
   afterEach(() => {
     delete process.env.ADMIN_USERS;
-    delete process.env.ADMIN_SESSION_SECRET;
     delete process.env.SESSION_SECRET;
     delete process.env.NODE_ENV;
     resetAdminAuthRateLimitsForTests();

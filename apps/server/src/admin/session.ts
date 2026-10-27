@@ -1,8 +1,11 @@
 /**
  * HMAC-signed admin session Bearer tokens (`sub` + `exp`, verified with timing-safe compare).
+ * The signing key is random per process, so a server restart logs every admin out.
  */
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { isAdminEnabled, parseAdminUsers } from './users.js';
+
+let sessionSecret = randomBytes(32);
 
 export type VerifySessionResult =
   { status: 'valid'; username: string } | { status: 'invalid_auth' } | { status: 'unauthorized' };
@@ -15,19 +18,18 @@ function sessionTtlHours(): number {
   return n;
 }
 
-function sessionSecret(): string | null {
-  const secret = process.env.ADMIN_SESSION_SECRET?.trim() ?? '';
-  return secret.length > 0 ? secret : null;
+function signPayload(payloadPart: string): string {
+  return createHmac('sha256', sessionSecret).update(payloadPart).digest('base64url');
 }
 
-function signPayload(payloadPart: string, secret: string): string {
-  return createHmac('sha256', secret).update(payloadPart).digest('base64url');
+/** Replace the signing key, invalidating every issued token (Vitest only — simulates a restart). */
+export function rotateAdminSessionSecretForTests(): void {
+  sessionSecret = randomBytes(32);
 }
 
 /** Issue a signed session token for `username`. Requires admin config to be enabled. */
 export function createSessionToken(username: string): { token: string; expiresAt: string } {
-  const secret = sessionSecret();
-  if (!secret || !isAdminEnabled()) {
+  if (!isAdminEnabled()) {
     throw new Error('admin_disabled');
   }
   const ttlHours = sessionTtlHours();
@@ -35,7 +37,7 @@ export function createSessionToken(username: string): { token: string; expiresAt
   const payloadPart = Buffer.from(JSON.stringify({ sub: username, exp }), 'utf8').toString(
     'base64url',
   );
-  const sig = signPayload(payloadPart, secret);
+  const sig = signPayload(payloadPart);
   const token = `${payloadPart}.${sig}`;
   return { token, expiresAt: new Date(exp * 1000).toISOString() };
 }
@@ -48,8 +50,7 @@ export function verifySessionToken(
   token: string,
   nowSec = Math.floor(Date.now() / 1000),
 ): VerifySessionResult {
-  const secret = sessionSecret();
-  if (!secret || !isAdminEnabled()) {
+  if (!isAdminEnabled()) {
     return { status: 'unauthorized' };
   }
 
@@ -60,7 +61,7 @@ export function verifySessionToken(
   const payloadPart = token.slice(0, dot);
   const sigPart = token.slice(dot + 1);
 
-  const expectedSig = signPayload(payloadPart, secret);
+  const expectedSig = signPayload(payloadPart);
   const a = Buffer.from(sigPart);
   const b = Buffer.from(expectedSig);
   if (a.length !== b.length || !timingSafeEqual(a, b)) {

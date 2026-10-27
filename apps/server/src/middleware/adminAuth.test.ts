@@ -11,7 +11,6 @@ import {
   setMaxBucketsForTests,
 } from './adminAuth.js';
 
-const SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
 const USER = 'admin';
 const PASS = 'pass';
 
@@ -24,7 +23,6 @@ function appWithAuth() {
 
 function setupEnv() {
   process.env.ADMIN_USERS = `${USER}:${PASS}`;
-  process.env.ADMIN_SESSION_SECRET = SECRET;
 }
 
 describe('adminAuth', () => {
@@ -36,13 +34,12 @@ describe('adminAuth', () => {
 
   afterEach(() => {
     delete process.env.ADMIN_USERS;
-    delete process.env.ADMIN_SESSION_SECRET;
     resetAdminAuthRateLimitsForTests();
     vi.restoreAllMocks();
   });
 
   it('returns 503 when admin is disabled', async () => {
-    delete process.env.ADMIN_SESSION_SECRET;
+    delete process.env.ADMIN_USERS;
     const res = await appWithAuth().request('/', { headers: { Authorization: 'Bearer x' } });
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: 'admin_disabled' });

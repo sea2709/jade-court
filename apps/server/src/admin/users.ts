@@ -54,9 +54,7 @@ export function verifyAdminCredentials(username: string, password: string): bool
   return passwordsMatch(password, expected);
 }
 
-/** True when at least one admin user and a non-blank session secret are configured. */
+/** True when at least one admin user is configured. */
 export function isAdminEnabled(): boolean {
-  const users = parseAdminUsers(process.env.ADMIN_USERS ?? '');
-  const secret = process.env.ADMIN_SESSION_SECRET?.trim() ?? '';
-  return users.size > 0 && secret.length > 0;
+  return parseAdminUsers(process.env.ADMIN_USERS ?? '').size > 0;
 }

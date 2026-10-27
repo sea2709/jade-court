@@ -5,13 +5,11 @@ import { createApp } from '../app.js';
 import { MemoryNewsStore } from '../news/memoryStore.js';
 import { resetAdminAuthRateLimitsForTests } from '../middleware/adminAuth.js';
 
-const SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
 const ALICE = 'alice';
 const BOB = 'bob';
 
 function setupAdminEnv() {
   process.env.ADMIN_USERS = `${ALICE}:alice-pass,${BOB}:bob-pass`;
-  process.env.ADMIN_SESSION_SECRET = SECRET;
 }
 
 function loginBody(username: string, password: string) {
@@ -27,7 +25,6 @@ describe('admin session routes', () => {
 
   afterEach(() => {
     delete process.env.ADMIN_USERS;
-    delete process.env.ADMIN_SESSION_SECRET;
     delete process.env.ADMIN_SESSION_TTL_HOURS;
     resetAdminAuthRateLimitsForTests();
     vi.restoreAllMocks();
@@ -182,25 +179,22 @@ describe('admin session routes', () => {
     }
   });
 
-  it('returns 503 admin_disabled when secret missing or no users', async () => {
-    delete process.env.ADMIN_SESSION_SECRET;
-    let app = createApp({ newsStore: null });
-    let res = await app.request('/api/admin/login', {
+  it('returns 503 admin_disabled when no users are configured', async () => {
+    const token = createSessionToken(ALICE).token;
+    process.env.ADMIN_USERS = '';
+    const app = createApp({ newsStore: null });
+    const login = await app.request('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: loginBody(ALICE, 'alice-pass'),
     });
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: 'admin_disabled' });
+    expect(login.status).toBe(503);
+    expect(await login.json()).toEqual({ error: 'admin_disabled' });
 
-    process.env.ADMIN_SESSION_SECRET = SECRET;
-    const token = createSessionToken(ALICE).token;
-    process.env.ADMIN_USERS = '';
-    app = createApp({ newsStore: null });
-    res = await app.request('/api/admin/me', {
+    const me = await app.request('/api/admin/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    expect(res.status).toBe(503);
+    expect(me.status).toBe(503);
   });
 
   it('GET /me returns username for valid token', async () => {

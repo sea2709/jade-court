@@ -1,21 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSessionToken, verifySessionToken } from './session.js';
-
-const SECRET = 'test-session-secret-0123456789abcdef0123456789ab';
+import {
+  createSessionToken,
+  rotateAdminSessionSecretForTests,
+  verifySessionToken,
+} from './session.js';
 
 describe('admin session tokens', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'));
     process.env.ADMIN_USERS = 'alice:pass';
-    process.env.ADMIN_SESSION_SECRET = SECRET;
     delete process.env.ADMIN_SESSION_TTL_HOURS;
   });
 
   afterEach(() => {
     vi.useRealTimers();
     delete process.env.ADMIN_USERS;
-    delete process.env.ADMIN_SESSION_SECRET;
     delete process.env.ADMIN_SESSION_TTL_HOURS;
   });
 
@@ -56,10 +56,19 @@ describe('admin session tokens', () => {
     expect(verifySessionToken(token)).toEqual({ status: 'unauthorized' });
   });
 
-  it('rejects token signed with wrong secret', () => {
+  it('rejects tokens issued before the signing key changed (server restart)', () => {
     const { token } = createSessionToken('alice');
-    process.env.ADMIN_SESSION_SECRET = 'other-secret-0123456789abcdef0123456789ab';
+    rotateAdminSessionSecretForTests();
     expect(verifySessionToken(token)).toEqual({ status: 'invalid_auth' });
+    const fresh = createSessionToken('alice');
+    expect(verifySessionToken(fresh.token)).toEqual({ status: 'valid', username: 'alice' });
+  });
+
+  it('does not issue or accept tokens when no admin users are configured', () => {
+    const { token } = createSessionToken('alice');
+    delete process.env.ADMIN_USERS;
+    expect(() => createSessionToken('alice')).toThrow('admin_disabled');
+    expect(verifySessionToken(token)).toEqual({ status: 'unauthorized' });
   });
 
   it('uses default TTL 8h and falls back on invalid ADMIN_SESSION_TTL_HOURS', () => {

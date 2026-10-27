@@ -66,21 +66,16 @@ describe('verifyAdminCredentials', () => {
 describe('isAdminEnabled', () => {
   afterEach(() => {
     delete process.env.ADMIN_USERS;
-    delete process.env.ADMIN_SESSION_SECRET;
   });
 
-  it('is false with no users or secret', () => {
+  it('is false with no valid users', () => {
     expect(isAdminEnabled()).toBe(false);
-    process.env.ADMIN_USERS = 'a:b';
-    expect(isAdminEnabled()).toBe(false);
-    delete process.env.ADMIN_USERS;
-    process.env.ADMIN_SESSION_SECRET = 'x';
+    process.env.ADMIN_USERS = 'nocolon, :empty';
     expect(isAdminEnabled()).toBe(false);
   });
 
-  it('is true when users and secret are set', () => {
+  it('is true when at least one user is set', () => {
     process.env.ADMIN_USERS = 'a:b';
-    process.env.ADMIN_SESSION_SECRET = 'secret';
     expect(isAdminEnabled()).toBe(true);
   });
 });

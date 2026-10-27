@@ -5,12 +5,10 @@ import { attachRoomSockets, createApp } from './app.js';
 import { getDb } from './db.js';
 import { isPikafishConfigured, pikafishPath, playOpponentProvider } from './engine/config.js';
 import { isLlmConfigured, llmModel, llmProviderId, shouldLogLlmTokenUsage } from './llm/config.js';
-import { warnAdminConfigAtStartup } from './admin/startupWarnings.js';
 import { warnPlayerAuthConfigAtStartup } from './auth/startupWarnings.js';
 import { isStripeConfigured } from './billing/config.js';
 import { warnIntegrationsConfigAtStartup } from './integrations/startupWarnings.js';
 
-warnAdminConfigAtStartup();
 warnPlayerAuthConfigAtStartup();
 warnIntegrationsConfigAtStartup();
 
