@@ -23,14 +23,12 @@ export function OAuthSignInButtons({
   }
 
   return (
-    <div className="mb-4 flex flex-col gap-3">
+    <div className="flex flex-col gap-3.5">
       {googleProvider ? <GoogleSignInButton provider={googleProvider} returnTo={returnTo} /> : null}
       {facebookProvider ? (
         <FacebookSignInButton provider={facebookProvider} returnTo={returnTo} />
       ) : null}
-      <p className="m-0 text-center text-xs font-bold uppercase tracking-wide text-muted">
-        {dividerLabel}
-      </p>
+      <p className="auth-divider">{dividerLabel}</p>
     </div>
   );
 }
