@@ -948,6 +948,66 @@
   .admin-section-link-active {
     @apply bg-ink text-cream;
   }
+
+  /* Player sign-in / create account card (`AuthScreen`). Left-aligned, full-width
+     fields; unlike .news-panel it does not centre and shrink its children. */
+  .auth-card {
+    @apply mx-auto flex w-full max-w-[420px] flex-col gap-3.5 rounded-[20px] border border-line-soft bg-paper p-[22px] sm:p-7;
+    box-shadow: 0 10px 26px -8px rgba(80, 55, 20, 0.3);
+  }
+
+  .auth-heading {
+    font-family: var(--font-display);
+    @apply m-0 text-center text-2xl leading-[1.15] font-extrabold;
+  }
+
+  .auth-subtitle {
+    @apply m-0 -mt-1.5 text-center text-[13.5px] font-bold text-muted;
+  }
+
+  .auth-form {
+    @apply m-0 flex flex-col gap-3;
+  }
+
+  .auth-label {
+    @apply flex flex-col gap-1.5 text-sm font-extrabold text-ink-soft;
+  }
+
+  .auth-input {
+    @apply w-full rounded-[12px] border-2 border-line-soft bg-cream px-3.5 py-[11px] text-left text-sm font-semibold text-ink;
+    font-family: var(--font-body);
+  }
+
+  .auth-input:focus {
+    @apply border-jade outline-none;
+  }
+
+  /* Slightly smaller than the global .btn so the card stays compact. */
+  .auth-card .btn {
+    @apply w-full gap-2.5 px-[22px] py-[11px] text-[15px];
+  }
+
+  .auth-divider {
+    @apply m-0 flex items-center gap-2.5 text-[11.5px] font-extrabold tracking-[0.06em] text-muted uppercase;
+  }
+
+  .auth-divider::before,
+  .auth-divider::after {
+    @apply h-px flex-1 bg-line-soft;
+    content: '';
+  }
+
+  .auth-alert {
+    @apply m-0 rounded-[12px] bg-red-soft px-3 py-2.5 text-[13.5px] leading-[1.45] font-extrabold text-red-deep;
+  }
+
+  .auth-link {
+    @apply bg-transparent p-0 text-[13.5px] font-extrabold text-jade-deep no-underline hover:underline;
+  }
+
+  .auth-note {
+    @apply m-0 text-center text-xs font-bold text-muted;
+  }
 }
 
 @import './styles/board.css';

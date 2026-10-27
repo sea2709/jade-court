@@ -168,24 +168,17 @@ export function AuthScreen() {
   const signInSwitchSearch = authLoginSearch(searchParams, 'signin');
 
   return (
-    <div className="page-container-sm py-10">
-      <div className="news-panel mx-auto max-w-md border border-line-soft p-8 shadow-md">
-        <h1 className="m-0 mb-2 text-center font-display text-2xl font-extrabold">
-          {isRegister ? 'Create account' : 'Sign in'}
-        </h1>
-        <p className="mb-6 text-center text-sm font-semibold text-muted">
+    <div className="page-container-sm pt-[22px] pb-11">
+      <div className="auth-card">
+        <h1 className="auth-heading">{isRegister ? 'Create account' : 'Sign in'}</h1>
+        <p className="auth-subtitle">
           {isRegister
             ? 'Free to join — your games sync when you sign in.'
             : 'Save progress and pick up your games on any device.'}
         </p>
         {oauthError ? (
-          <p className="mb-4 text-sm font-bold text-red-deep" role="alert">
+          <p className="auth-alert" role="alert">
             {oauthErrorMessage(oauthError)}
-          </p>
-        ) : null}
-        {isRegister ? (
-          <p className="mb-4 text-xs font-semibold text-muted">
-            <RequiredMark /> Required field
           </p>
         ) : null}
         {!providersLoading && (googleProvider || facebookProvider) ? (
@@ -197,11 +190,11 @@ export function AuthScreen() {
           />
         ) : null}
         {isRegister ? (
-          <form onSubmit={(e) => void onSubmitRegister(e)} className="flex flex-col gap-4">
-            <label
-              htmlFor="auth-display-name"
-              className="flex flex-col gap-2 text-sm font-bold text-ink-soft"
-            >
+          <form onSubmit={(e) => void onSubmitRegister(e)} className="auth-form">
+            <p className="m-0 text-xs font-bold text-muted">
+              <RequiredMark /> Required field
+            </p>
+            <label htmlFor="auth-display-name" className="auth-label">
               <span>
                 Display name <RequiredMark />
               </span>
@@ -212,15 +205,12 @@ export function AuthScreen() {
                 autoComplete="nickname"
                 required
                 maxLength={64}
-                className="room-link-input w-full text-left font-body"
+                className="auth-input"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
               />
             </label>
-            <label
-              htmlFor="auth-email-register"
-              className="flex flex-col gap-2 text-sm font-bold text-ink-soft"
-            >
+            <label htmlFor="auth-email-register" className="auth-label">
               <span>
                 Email <RequiredMark />
               </span>
@@ -230,15 +220,12 @@ export function AuthScreen() {
                 type="email"
                 autoComplete="email"
                 required
-                className="room-link-input w-full text-left font-body"
+                className="auth-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </label>
-            <label
-              htmlFor="auth-password-register"
-              className="flex flex-col gap-2 text-sm font-bold text-ink-soft"
-            >
+            <label htmlFor="auth-password-register" className="auth-label">
               <span>
                 Password <RequiredMark />
               </span>
@@ -249,20 +236,20 @@ export function AuthScreen() {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                className="room-link-input w-full text-left font-body"
+                className="auth-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
             {error ? (
-              <p className="text-sm font-bold text-red-deep" role="alert">
+              <p className="auth-alert" role="alert">
                 {error}
                 {emailTaken ? (
                   <>
                     {' '}
                     <button
                       type="button"
-                      className="text-jade-deep font-bold underline"
+                      className="bg-transparent p-0 font-extrabold text-red-deep underline"
                       onClick={() => switchMode('signin')}
                     >
                       Sign in instead
@@ -274,52 +261,41 @@ export function AuthScreen() {
             <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
               {submitting ? 'Creating account…' : 'Create account'}
             </button>
-            <p className="m-0 text-center text-xs font-semibold text-muted">
-              We&apos;ll email you a link to verify your address.
-            </p>
+            <p className="auth-note">We&apos;ll email you a link to verify your address.</p>
           </form>
         ) : (
-          <form onSubmit={(e) => void onSubmitSignIn(e)} className="flex flex-col gap-4">
-            <label
-              htmlFor="auth-email-signin"
-              className="flex flex-col gap-2 text-sm font-bold text-ink-soft"
-            >
+          <form onSubmit={(e) => void onSubmitSignIn(e)} className="auth-form">
+            <label htmlFor="auth-email-signin" className="auth-label">
               Email
               <input
                 id="auth-email-signin"
                 name="email"
                 type="email"
                 autoComplete="email"
-                className="room-link-input w-full text-left font-body"
+                className="auth-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </label>
-            <label
-              htmlFor="auth-password-signin"
-              className="flex flex-col gap-2 text-sm font-bold text-ink-soft"
-            >
+            <label htmlFor="auth-password-signin" className="auth-label">
               Password
               <input
                 id="auth-password-signin"
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                className="room-link-input w-full text-left font-body"
+                className="auth-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
-            <p className="m-0 text-right text-sm font-semibold">
-              <Link
-                to="/forgot-password"
-                className="text-jade-deep font-bold no-underline hover:underline"
-              >
+            <p className="m-0 -mt-1 text-right">
+              <Link to="/forgot-password" className="auth-link">
                 Forgot password?
               </Link>
             </p>
             {error ? (
-              <p className="text-sm font-bold text-red-deep" role="alert">
+              <p className="auth-alert" role="alert">
                 {error}
               </p>
             ) : null}
@@ -328,13 +304,13 @@ export function AuthScreen() {
             </button>
           </form>
         )}
-        <p className="mt-6 text-center text-sm font-semibold text-muted">
+        <p className="m-0 text-center text-[13.5px] font-bold text-muted">
           {isRegister ? (
             <>
               Already have an account?{' '}
               <Link
                 to={`/login${signInSwitchSearch}`}
-                className="text-jade-deep font-bold no-underline hover:underline"
+                className="auth-link"
                 onClick={() => {
                   setError(null);
                   setEmailTaken(false);
@@ -349,7 +325,7 @@ export function AuthScreen() {
               No account yet?{' '}
               <Link
                 to={`/login${registerSwitchSearch}`}
-                className="text-jade-deep font-bold no-underline hover:underline"
+                className="auth-link"
                 onClick={() => {
                   setError(null);
                   setEmailTaken(false);
