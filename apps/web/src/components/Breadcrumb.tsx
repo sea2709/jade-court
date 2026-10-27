@@ -2,6 +2,7 @@
  * Public-app breadcrumb below the topbar: Home / current section from the shared NAV list.
  */
 import { Link, useLocation } from 'react-router-dom';
+import { breadcrumbSectionLabel } from '../lib/breadcrumbNav';
 
 /** One top-nav entry: route path and display label (same shape as `NAV` in App.tsx). */
 export type BreadcrumbNavItem = readonly [path: string, label: string];
@@ -16,20 +17,19 @@ export type BreadcrumbProps = {
  * and unknown paths. Query strings on the URL are ignored; only `pathname` is matched.
  */
 export function Breadcrumb({ nav }: BreadcrumbProps) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   if (pathname === '/') {
     return null;
   }
 
-  const section = nav.find(([path]) => path === pathname);
-  if (!section) {
+  const sectionLabel = breadcrumbSectionLabel(pathname, search);
+  if (!sectionLabel) {
     return null;
   }
 
   const homeEntry = nav.find(([path]) => path === '/');
   const homeLabel = homeEntry?.[1] ?? 'Home';
-  const sectionLabel = section[1];
 
   return (
     <nav aria-label="Breadcrumb" className="breadcrumb">

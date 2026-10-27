@@ -10,7 +10,7 @@ test.describe('player auth', () => {
     const email = uniqueEmail();
     const password = 'e2e-password-12';
 
-    await page.goto('/register');
+    await page.goto('/login?mode=register');
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Password/).fill(password);
     await page.getByLabel(/Display name/).fill('E2E Player');
@@ -44,7 +44,8 @@ test.describe('player auth', () => {
     const email = uniqueEmail();
     const password = 'e2e-password-12';
 
-    await page.goto('/register');
+    await page.goto('/register?next=%2Fplay');
+    await expect(page).toHaveURL(/\/login\?.*mode=register/);
     await page.getByLabel(/Display name/).fill('E2E Verifier');
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Password/).fill(password);

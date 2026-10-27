@@ -44,7 +44,7 @@ test.describe('Play with AI full journey', () => {
       });
     });
 
-    await page.goto('/register');
+    await page.goto('/login?mode=register');
     await page.getByLabel(/Display name/).fill(displayName);
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Password/).fill(password);

@@ -48,6 +48,20 @@ describe('Breadcrumb', () => {
     );
   });
 
+  it('renders Home / Sign in on /login', () => {
+    renderAt('/login');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Home/Sign in',
+    );
+  });
+
+  it('renders Home / Create account on /login?mode=register', () => {
+    renderAt('/login?mode=register');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Home/Create account',
+    );
+  });
+
   it('renders nothing for an unknown path', () => {
     const { container } = renderAt('/not-a-route');
     expect(container).toBeEmptyDOMElement();
