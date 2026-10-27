@@ -36,6 +36,13 @@ Run all of these from the repo root; each must pass with no errors and no warnin
 4. `pnpm test:coverage` — all packages; fails if coverage drops below the thresholds (same as CI).
 5. `pnpm test:e2e` — when a user flow, or an endpoint/message it uses, changed.
 
+### Running the checks from an agent shell
+
+The agent sandbox breaks the test runners in ways unrelated to the code:
+
+- `pnpm test:coverage` fails with `kill EACCES` (Vitest can't stop its workers). Run it with `required_permissions: ["all"]`.
+- `pnpm test:e2e` fails with "Executable doesn't exist" because the sandbox points `PLAYWRIGHT_BROWSERS_PATH` at an empty cache. Run it with `required_permissions: ["all"]` and the variable unset: `env -u PLAYWRIGHT_BROWSERS_PATH pnpm test:e2e`. Browsers are already installed in `~/.cache/ms-playwright`; don't reinstall them.
+
 Also read the test output, not just the exit code: new React `act(...)` warnings, unhandled rejections, or `console.error` noise from your change count as failures to fix. Pre-existing environment noise (for example Node's `localStorage` ExperimentalWarning in Vitest) is fine.
 
 List the checks you ran, the tests you added or updated — and anything left untested, with why — in your report or PR test plan.
