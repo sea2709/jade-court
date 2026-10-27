@@ -67,7 +67,10 @@ export interface UserStore {
   setPreferredModelId(userId: string, preferredModelId: string): Promise<UserRecord | null>;
   /** Remove PII and OAuth identities (e.g. Meta data-deletion). Returns false if user missing. */
   anonymizeUser(userId: string): Promise<boolean>;
-  /** Case-insensitive email substring search, newest `createdAt` first. */
+  /**
+   * Case-insensitive email substring search, newest `createdAt` first.
+   * An empty `q` lists every user, including accounts without an email.
+   */
   searchByEmail(options: UserEmailSearchOptions): Promise<UserEmailSearchResult>;
   /** Clears play access (`accessUntil` removed). */
   revokeAccess(userId: string): Promise<UserRecord | null>;

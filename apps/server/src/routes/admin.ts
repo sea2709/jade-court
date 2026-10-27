@@ -114,7 +114,7 @@ export function createAdminRoutes(deps: CreateAdminRoutesDeps) {
     noStore(c);
     const qRaw = c.req.query('q');
     const q = typeof qRaw === 'string' ? qRaw.trim() : '';
-    if (!q || q.length > MAX_USER_SEARCH_Q_LEN) {
+    if (q.length > MAX_USER_SEARCH_Q_LEN) {
       return c.json({ error: 'invalid_query' }, 400);
     }
     const limit = parseListLimit(c.req.query('limit'));

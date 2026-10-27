@@ -362,8 +362,9 @@ export class MongoUserStore implements UserStore {
       return { users: [], nextCursor: null };
     }
     const q = options.q.trim();
-    const re = new RegExp(escapeRegex(q), 'i');
-    const clauses: Record<string, unknown>[] = [{ email: re }];
+    const clauses: Record<string, unknown>[] = q
+      ? [{ email: new RegExp(escapeRegex(q), 'i') }]
+      : [];
     if (options.cursor) {
       const decoded = decodeNewsCursor(options.cursor);
       if (!decoded) throw new InvalidCursorError();
@@ -380,7 +381,8 @@ export class MongoUserStore implements UserStore {
         ],
       });
     }
-    const mongoFilter = clauses.length === 1 ? clauses[0]! : { $and: clauses };
+    const mongoFilter =
+      clauses.length === 0 ? {} : clauses.length === 1 ? clauses[0]! : { $and: clauses };
     const limit = options.limit;
     const col = db.collection<MongoUserDoc>(COLLECTION);
     const docs = await col

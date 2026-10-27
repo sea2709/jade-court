@@ -54,6 +54,14 @@ function renderUsers(initialEntry = '/admin/users') {
   );
 }
 
+async function searchFor(text: string) {
+  if (text) await userEvent.type(screen.getByLabelText(/Search users by email/i), text);
+  await userEvent.click(screen.getByRole('button', { name: 'Search' }));
+}
+
+const listCallUrls = () =>
+  fetchMock.mock.calls.map(([u]) => String(u)).filter((u) => u.includes('/api/admin/users?'));
+
 beforeEach(() => {
   setAdminSession({ token: 'tok', username: 'test-admin', expiresAt: futureExpiry() });
   vi.stubGlobal('fetch', fetchMock);
@@ -68,7 +76,81 @@ afterEach(() => {
 describe('AdminUsersScreen', () => {
   it('shows hint until search is entered', () => {
     renderUsers();
-    expect(screen.getByText(/Type an email fragment/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enter an email fragment and press Search/i)).toBeInTheDocument();
+  });
+
+  it('does not search while typing; Enter submits the query', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(json({ users: [summaryUser], nextCursor: null })),
+    );
+
+    renderUsers();
+    const input = screen.getByLabelText(/Search users by email/i);
+    await userEvent.type(input, 'player');
+    await new Promise((r) => setTimeout(r, 400));
+    expect(listCallUrls()).toEqual([]);
+    expect(screen.getByText(/Enter an email fragment and press Search/i)).toBeInTheDocument();
+
+    await userEvent.type(input, '{Enter}');
+    expect(await screen.findByRole('button', { name: /Player One/i })).toBeInTheDocument();
+    expect(listCallUrls()).toEqual(['/api/admin/users?q=player']);
+  });
+
+  it('pressing Search again refetches the same query', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(json({ users: [summaryUser], nextCursor: null })),
+    );
+
+    renderUsers();
+    await searchFor('player');
+    await screen.findByRole('button', { name: /Player One/i });
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() => expect(listCallUrls()).toHaveLength(2));
+    expect(listCallUrls()[1]).toBe('/api/admin/users?q=player');
+  });
+
+  it('lists all users when Search is pressed with an empty box, including unverified', async () => {
+    const unverified = {
+      ...summaryUser,
+      id: 'user-2',
+      email: 'new@example.com',
+      displayName: 'New Player',
+      emailVerified: false,
+    };
+    fetchMock.mockImplementation((url, init) => {
+      const path = String(url);
+      if (path.includes('/api/admin/users?') && (init?.method ?? 'GET') === 'GET') {
+        return Promise.resolve(json({ users: [unverified, summaryUser], nextCursor: null }));
+      }
+      return Promise.resolve(json({ error: 'not_found' }, 404));
+    });
+
+    renderUsers();
+    await searchFor('');
+
+    const row = await screen.findByRole('button', { name: /New Player/i });
+    expect(row).toHaveTextContent('Unverified');
+    expect(screen.getByRole('button', { name: /Player One/i })).toHaveTextContent('Verified');
+    expect(listCallUrls()).toEqual(['/api/admin/users?q=']);
+  });
+
+  it('says there are no users yet when the full listing is empty', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(json({ users: [], nextCursor: null })));
+
+    renderUsers();
+    await searchFor('');
+
+    expect(await screen.findByText('No users yet.')).toBeInTheDocument();
+  });
+
+  it('says no users match when a non-empty search is empty', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(json({ users: [], nextCursor: null })));
+
+    renderUsers();
+    await searchFor('nobody');
+
+    expect(await screen.findByText('No users match that search.')).toBeInTheDocument();
   });
 
   it('lists users from search and opens detail', async () => {
@@ -85,7 +167,7 @@ describe('AdminUsersScreen', () => {
     });
 
     renderUsers();
-    await userEvent.type(screen.getByLabelText(/Search users by email/i), 'player@');
+    await searchFor('player@');
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Player One/i })).toBeInTheDocument();
@@ -124,7 +206,7 @@ describe('AdminUsersScreen', () => {
     });
 
     renderUsers();
-    await userEvent.type(screen.getByLabelText(/Search users by email/i), 'player');
+    await searchFor('player');
     await userEvent.click(await screen.findByRole('button', { name: /Player One/i }));
     await userEvent.click(screen.getByRole('button', { name: 'Grant access' }));
 
@@ -166,7 +248,7 @@ describe('AdminUsersScreen', () => {
     });
 
     renderUsers();
-    await userEvent.type(screen.getByLabelText(/Search users by email/i), 'player');
+    await searchFor('player');
     await userEvent.click(await screen.findByRole('button', { name: /Player One/i }));
     await userEvent.click(screen.getByRole('button', { name: 'Revoke access' }));
 
@@ -204,12 +286,14 @@ describe('AdminUsersScreen', () => {
 
     renderUsers();
     const input = screen.getByLabelText(/Search users by email/i);
-    await userEvent.type(input, 'player');
+    await searchFor('player');
     await userEvent.click(await screen.findByRole('button', { name: /Player One/i }));
     expect(await screen.findByRole('region', { name: /User detail/i })).toBeInTheDocument();
 
     await userEvent.clear(input);
     await userEvent.type(input, 'other@');
+    expect(screen.getByRole('region', { name: /User detail/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: /User detail/i })).not.toBeInTheDocument();
@@ -245,15 +329,14 @@ describe('AdminUsersScreen', () => {
     });
 
     renderUsers();
-    await userEvent.type(screen.getByLabelText(/Search users by email/i), 'player');
+    await searchFor('player');
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Player One/i })).toBeInTheDocument();
     });
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
 
-    const input = screen.getByLabelText(/Search users by email/i);
-    await userEvent.clear(input);
-    await userEvent.type(input, 'other@');
+    await userEvent.clear(screen.getByLabelText(/Search users by email/i));
+    await searchFor('other@');
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Other User/i })).toBeInTheDocument();
     });
@@ -308,7 +391,7 @@ describe('AdminUsersScreen', () => {
     });
 
     renderUsers();
-    await userEvent.type(screen.getByLabelText(/Search users by email/i), 'player');
+    await searchFor('player');
     await userEvent.click(await screen.findByRole('button', { name: /Player One/i }));
     await userEvent.click(screen.getByRole('button', { name: /User Two/i }));
 
